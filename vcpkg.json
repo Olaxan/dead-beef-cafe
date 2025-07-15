@@ -1,0 +1,11 @@
+{
+  "dependencies": [
+    "asio",
+    "protobuf",
+    "freetype",
+    "glfw3",
+    "lunasvg",
+    "glad",
+    "stb"
+  ]
+}
