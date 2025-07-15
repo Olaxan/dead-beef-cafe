@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <chrono>
 
-#include "cmd.h"
-#include "process.h"
+#include "task.h"
+#include "msg_queue.h"
 
 class Host;
 class Process;
@@ -29,6 +29,12 @@ public:
 	/* Shut down the host environment (and then the host). */
 	void shutdown_os();
 
+	/* Get the hostname from the owning Host. */
+	std::string get_hostname() const;
+
+	/* Get the os message queue. */
+	MessageQueue& get_msg_queue() { return msg_queue_; }
+
 	template<typename T = Process>
 	int32_t create_process(process_entry_t program)
 	{
@@ -39,10 +45,9 @@ public:
 		return pid;
 	}
 
-	template <typename T = Command>
 	void add_command(std::string cmd_name, process_args_t command)
 	{
-		commands_[cmd_name] = std::move(ptr);
+		commands_[cmd_name] = std::move(command);
 	}
 
 	struct AsyncTimeAwaiter
@@ -81,6 +86,8 @@ protected:
 
 	Host& owner_;
 	int32_t pid_counter_{0};
+	std::string hostname_ = {};
+	MessageQueue msg_queue_{};
 	std::chrono::steady_clock::time_point last_update_{};
 	std::vector<std::pair<float, schedule_fn>> task_queue_{};
 	std::unordered_map<int32_t, std::coroutine_handle<>> processes_{};

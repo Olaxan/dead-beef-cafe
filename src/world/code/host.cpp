@@ -7,7 +7,6 @@
 #include "filesystem.h"
 #include "cpu.h"
 #include "nic.h"
-#include "cmd.h"
 #include "os.h"
 
 #include <optional>
@@ -78,16 +77,18 @@ void Host::launch()
     while (state_)
     {
         os_->run();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
-Host Host::create_skeleton_host(World& world, std::string hostname)
+std::unique_ptr<Host> Host::create_skeleton_host(World& world, std::string hostname)
 {
-	Host skel = Host(world, hostname);
+    auto ptr = std::make_unique<Host>(world, hostname);
+	Host& skel = *ptr;
     
 	Disk& my_disk = skel.create_device<Disk>(500);
     CPU& my_cpu = skel.create_device<CPU>(1.5f);
-    NIC& my_nic = skel.create_device<NIC>(100);
+    NIC& my_nic = skel.create_device<NIC>(100.f);
     FileSystem& fs = my_disk.create_fs();
     
     fs.add_file("welcome.txt");
@@ -101,7 +102,7 @@ Host Host::create_skeleton_host(World& world, std::string hostname)
 
     fs.add_file("boot.os", boot.str(), FileModeFlags::Execute);
 
-    skel.os_ = std::make_unique<OS>(skel);
+    skel.create_os<OS>();
 
-    return skel;
+    return std::move(ptr);
 }

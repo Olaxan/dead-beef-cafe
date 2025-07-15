@@ -18,7 +18,7 @@ public:
     template<typename T = Host>
     Host& create_host(std::string hostname)
     {
-        return *hosts_.emplace_back(std::make_unique<T>(Host::create_skeleton_host(*this, hostname)));
+        return *hosts_.emplace_back(Host::create_skeleton_host(*this, hostname));
     }
 
 private:

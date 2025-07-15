@@ -19,7 +19,7 @@ public:
 	Host() = delete;
 	Host(World& world, std::string Hostname);
 
-	std::string get_hostname() { return hostname_; }
+	std::string get_hostname() const { return hostname_; }
 	OS& get_os() { return *os_; }
 
 	void start_host();
@@ -29,15 +29,18 @@ public:
 	/* Starts threaded host process */
 	void launch();
 
-	static Host create_skeleton_host(World& world, std::string hostname = {});
+	static std::unique_ptr<Host> create_skeleton_host(World& world, std::string hostname = {});
 
 	template<typename T = Device, typename ...Args>
 	T& create_device(Args&& ...args)
 	{
-		auto ptr = std::make_unique<T>(std::forward<Args>(args)...);
-    	T& ref = *ptr;
-    	devices_.push_back(std::move(ptr));
-    	return ref;
+		return static_cast<T&>(*devices_.emplace_back(std::make_unique<T>(std::forward<Args>(args)...)));
+	}
+
+	template<typename T = OS, typename ...Args>
+	T& create_os(Args&& ...args)
+	{
+		return *(os_ = std::make_unique<T>(*this, std::forward<Args>(args)...));
 	}
 
 private:

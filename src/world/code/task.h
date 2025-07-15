@@ -4,10 +4,11 @@
 #include <string_view>
 #include <functional>
 #include <coroutine>
+#include <print>
 
 class OS;
 
-using process_entry_t = std::function<bool(OS& os, std::string_view cmd)>;
+using process_entry_t = std::function<bool(OS* os, std::string_view cmd)>;
 using process_event_t = std::function<void(int32_t, int32_t)>;
 
 struct ProcessTask
@@ -27,7 +28,7 @@ struct ProcessTask
 
 		std::suspend_never initial_suspend() { return {}; }
 		std::suspend_never final_suspend() noexcept { return {}; }
-		void return_void() {}
+		void return_void() { }
 		void unhandled_exception() {}
 	};
 
@@ -38,7 +39,7 @@ struct ProcessTask
 	operator std::coroutine_handle<>() const { return h; }
 };
 
-using process_args_t = std::function<ProcessTask(OS&, std::vector<std::string>)>;
+using process_args_t = std::function<ProcessTask(OS*, std::vector<std::string>)>;
 
 class Process
 {

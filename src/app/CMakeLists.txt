@@ -15,8 +15,10 @@ SOURCE_GROUP("server_app" FILES ${files_server_app})
 
 FIND_PACKAGE(asio CONFIG REQUIRED)
 
+FIND_PACKAGE(Threads REQUIRED)
+
 ADD_EXECUTABLE(test_app ${files_test_app})
-TARGET_LINK_LIBRARIES(test_app PRIVATE world prog)
+TARGET_LINK_LIBRARIES(test_app PRIVATE world prog Threads::Threads)
 
 ADD_EXECUTABLE(client_app ${files_client_app})
 TARGET_LINK_LIBRARIES(client_app PRIVATE asio::asio)

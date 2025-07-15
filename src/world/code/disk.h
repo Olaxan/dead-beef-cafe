@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "device.h"
+#include <print>
 
 class File;
 class FileSystem;
@@ -15,7 +16,7 @@ public:
 	Disk(int32_t size) : size_(size) {}
 
 	virtual void start_device() override {};
-	virtual void shutdown_device() override {};
+	virtual void shutdown_device() override { std::println("Shutdown disk."); };
 	virtual void config_device(std::string_view cmd) override {};
 
 	FileSystem& create_fs();
