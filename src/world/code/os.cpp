@@ -1,5 +1,6 @@
 #include "os.h"
 #include "host.h"
+#include "world.h"
 
 #include <sstream>
 #include <string>
@@ -34,34 +35,6 @@ void OS::exec(std::string cmd)
     }
 }
 
-void OS::run()
-{
-    if (auto opt = msg_queue_.pop(); opt.has_value())
-    {
-        exec(*opt);
-    }
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float> sec(t1 - last_update_);
-    last_update_ = t1;
-
-    std::vector<schedule_fn> callbacks{};
-    for (auto it = task_queue_.begin(); it != task_queue_.end();)
-    {
-        auto& [time, fn] = *it;
-
-        if (time -= sec.count(); time < 0.f)
-        {
-            callbacks.push_back(std::move(fn));
-            it = task_queue_.erase(it);
-        }
-        else ++it;
-    }
-
-    for (auto& cb : callbacks)
-        std::invoke(cb);
-}
-
 void OS::shutdown_os()
 {
     owner_.shutdown_host();
@@ -70,4 +43,19 @@ void OS::shutdown_os()
 std::string OS::get_hostname() const
 {
 	return owner_.get_hostname();
+}
+
+World& OS::get_world()
+{
+    return owner_.get_world();
+}
+
+AsyncTimeAwaiter OS::wait(float seconds)
+{
+	return get_world().get_timer_manager().wait(seconds);
+}
+
+void OS::schedule(float seconds, schedule_fn callback)
+{
+    get_world().get_timer_manager().set_timer(seconds, callback);
 }

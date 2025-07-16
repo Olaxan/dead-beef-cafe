@@ -13,7 +13,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
-#include <thread>
+//#include <thread>
 #include <chrono>
 
 Host::Host(World& world, std::string Hostname)
@@ -72,14 +72,14 @@ void Host::boot_from(const File& boot_file)
     }
 }
 
-void Host::launch()
-{
-    while (state_)
-    {
-        os_->run();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
+// void Host::launch()
+// {
+//     while (state_)
+//     {
+//         os_->run();
+//         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//     }
+// }
 
 std::unique_ptr<Host> Host::create_skeleton_host(World& world, std::string hostname)
 {

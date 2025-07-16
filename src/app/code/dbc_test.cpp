@@ -23,21 +23,24 @@ int main(int argc, char* argv[])
 	our_os.add_command("shutdown", Programs::CmdShutdown);
 	our_os.add_command("count", Programs::CmdCount);
 
-	MessageQueue& queue = our_os.get_msg_queue();
+	//MessageQueue& queue = our_os.get_msg_queue();
+	WorldUpdateQueue& queue = our_world.get_update_queue();
 
 	our_host.start_host();
 	
-	std::thread our_runner([&our_host] { our_host.launch(); });
+	//std::thread our_runner([&our_host] { our_host.launch(); });
+
+	our_world.launch();
 
 	while (true)
 	{
 		std::cout << our_host.get_hostname() << "> ";
 		std::string input{};
 		std::getline(std::cin, input);
-		queue.push(input);
+		queue.push([&our_os, input] { our_os.exec(input); });
 	}
 
-	our_runner.join();
+	//our_runner.join();
 
 	return 0;
 }
