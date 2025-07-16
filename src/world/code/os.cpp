@@ -30,8 +30,7 @@ void OS::exec(std::string cmd)
     {
         auto& prog = it->second;
         std::println("Run {0} on {1}.", cmd, (int64_t)this);
-        std::invoke(prog, this, args);
-		//int32_t pid = create_process();
+		int32_t pid = create_process(prog, args);
     }
 }
 
@@ -50,7 +49,15 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
-AsyncTimeAwaiter OS::wait(float seconds)
+void OS::list_processes() const
+{
+    std::println("Processes on {0}:", get_hostname());
+
+    for (auto& [pid, proc] : processes_)
+        std::println("pid {0}: ready='{1}'", pid, proc.is_ready());
+}
+
+TimerAwaiter OS::wait(float seconds)
 {
 	return get_world().get_timer_manager().wait(seconds);
 }

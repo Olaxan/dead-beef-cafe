@@ -8,9 +8,12 @@
 #include "task.h"
 #include "timer_mgr.h"
 
+class OS;
 class Host;
 class Process;
 class World;
+
+using process_args_t = std::function<Task<int32_t>(OS*, std::vector<std::string>)>;
 
 class OS
 {
@@ -33,21 +36,21 @@ public:
 	World& get_world();
 
 	template<typename T = Process>
-	int32_t create_process(process_entry_t program)
+	int32_t create_process(process_args_t program, std::vector<std::string> args)
 	{
 		int32_t pid = pid_counter_++;
-		auto exit_callback = [this](int32_t pid, int32_t ec) { processes_.erase(pid); };
-		auto new_process = std::make_unique<T>(pid, program, exit_callback);
-		processes_[pid] = std::move(new_process);
+		processes_.emplace(pid, std::invoke(program, this, std::move(args)));
 		return pid;
 	}
+
+	void list_processes() const;
 
 	void add_command(std::string cmd_name, process_args_t command)
 	{
 		commands_[cmd_name] = std::move(command);
 	}
 
-	AsyncTimeAwaiter wait(float seconds);
+	TimerAwaiter wait(float seconds);
 
 	void schedule(float seconds, schedule_fn callback);
 
@@ -57,7 +60,7 @@ protected:
 	int32_t pid_counter_{0};
 	std::string hostname_ = {};
 	std::chrono::steady_clock::time_point last_update_{};
-	std::unordered_map<int32_t, std::coroutine_handle<>> processes_{};
+	std::unordered_map<int32_t, Task<int32_t>> processes_{};
 	std::unordered_map<std::string, process_args_t> commands_{}; //bad, also remove include when remove this
 
 };

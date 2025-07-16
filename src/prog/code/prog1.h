@@ -11,20 +11,20 @@
 
 namespace Programs
 {
-	ProcessTask CmdEcho(OS* env, std::vector<std::string> args)
+	Task<int32_t> CmdEcho(OS* env, std::vector<std::string> args)
 	{
 		std::println("echo: {0}.", args);
-		co_return;
+		co_return 0;
 	}
 
-	ProcessTask CmdShutdown(OS* env, std::vector<std::string> args)
+	Task<int32_t> CmdShutdown(OS* env, std::vector<std::string> args)
 	{
 		std::println("Shutting down {0}...", env->get_hostname());
 		env->shutdown_os();
-		co_return;
+		co_return 0;
 	}
 
-	ProcessTask CmdCount(OS* env, std::vector<std::string> args)
+	Task<int32_t> CmdCount(OS* env, std::vector<std::string> args)
 	{
 		std::println("Counting to ten...");
 
@@ -33,5 +33,13 @@ namespace Programs
 			co_await env->wait(1.f);
 			std::println("{0}...", i);
 		}
+
+		co_return 0;
+	}
+
+	Task<int32_t> CmdProc(OS* env, std::vector<std::string> args)
+	{
+		env->list_processes();
+		co_return 0;
 	}
 }

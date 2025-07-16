@@ -27,9 +27,6 @@ public:
 	void shutdown_host();
 	void boot_from(const File& boot_file);
 
-	/* Starts threaded host process */
-	//void launch();
-
 	static std::unique_ptr<Host> create_skeleton_host(World& world, std::string hostname = {});
 
 	template<typename T = Device, typename ...Args>

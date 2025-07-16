@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "soa_helpers.h"
+#include "task.h"
 
 class TimerManager;
 
@@ -50,9 +51,9 @@ struct TimerHandle
 	int32_t idx{-1};
 };
 
-struct AsyncTimeAwaiter
+struct TimerAwaiter
 {
-	explicit AsyncTimeAwaiter(TimerManager* mgr, float seconds)
+	explicit TimerAwaiter(TimerManager* mgr, float seconds)
 		: mgr_(mgr), time_(seconds) { }
 
 	bool await_ready() const { return time_ == 0.f; }
@@ -91,7 +92,7 @@ public:
 		return (handle.idx >= 0 && handle.idx < static_cast<int32_t>(timers_.size()));
 	};
 
-	AsyncTimeAwaiter wait(float seconds) { return AsyncTimeAwaiter{this, seconds}; }
+	TimerAwaiter wait(float seconds) { return TimerAwaiter{this, seconds}; }
 
 private:
 

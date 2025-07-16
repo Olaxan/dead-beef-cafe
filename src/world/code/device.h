@@ -2,8 +2,7 @@
 
 #include <string_view>
 #include <optional>
-
-class File;
+#include <coroutine>
 
 class Device
 {
