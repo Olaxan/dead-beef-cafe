@@ -38,7 +38,5 @@ int main(int argc, char* argv[])
 		queue.push([&our_os, input] { our_os.exec(input); });
 	}
 
-	//our_runner.join();
-
 	return 0;
 }

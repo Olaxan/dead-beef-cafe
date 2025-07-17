@@ -51,18 +51,18 @@ struct DataLayoutPolicy<Container, DataLayout::SoA, TItem<Types...>>
 
 	constexpr static value_type get( type& c_, std::size_t position_ )
 	{
-		return doGet( c_, position_, std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
+		return do_get( c_, position_, std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
 	}
 
 	constexpr static void resize( type& c_, std::size_t size_ )	
 	{
-		doResize( c_, size_, std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
+		do_resize( c_, size_, std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
 	}
 
 	template <typename TValue>
 	constexpr static void push_back( type& c_, TValue&& val_ )
 	{
-		doPushBack( c_, std::forward<TValue>(val_), std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
+		do_push_back( c_, std::forward<TValue>(val_), std::make_integer_sequence<unsigned, sizeof...( Types )>() ); // unrolling parameter pack
 	}
 
 	static constexpr std::size_t size(type& c_) { return std::get<0>( c_ ).size(); }
@@ -70,19 +70,19 @@ struct DataLayoutPolicy<Container, DataLayout::SoA, TItem<Types...>>
 private:
 
 	template <unsigned... Ids>
-	constexpr static auto doGet( type& c_, std::size_t position_, std::integer_sequence<unsigned, Ids...> )
+	constexpr static auto do_get( type& c_, std::size_t position_, std::integer_sequence<unsigned, Ids...> )
 	{
 		return value_type{ ref_wrap( std::get<Ids>( c_ )[ position_ ] )... }; // guaranteed copy elision
 	}
 
 	template <unsigned... Ids>
-	constexpr static void doResize( type& c_, unsigned size_, std::integer_sequence<unsigned, Ids...> )
+	constexpr static void do_resize( type& c_, unsigned size_, std::integer_sequence<unsigned, Ids...> )
 	{
 		( std::get<Ids>( c_ ).resize( size_ ), ... ); //fold expressions
 	}
 
 	template <typename TValue, unsigned... Ids>
-	constexpr static void doPushBack( type& c_, TValue&& val_, std::integer_sequence<unsigned, Ids...> )
+	constexpr static void do_push_back( type& c_, TValue&& val_, std::integer_sequence<unsigned, Ids...> )
 	{
 		( std::get<Ids>( c_ ).push_back( std::get<Ids>( std::forward<TValue>( val_ ) ) ), ... ); // fold expressions
 	}

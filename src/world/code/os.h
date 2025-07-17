@@ -3,7 +3,6 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
-#include <chrono>
 
 #include "task.h"
 #include "proc.h"
@@ -56,7 +55,6 @@ protected:
 	Host& owner_;
 	int32_t pid_counter_{0};
 	std::string hostname_ = {};
-	std::chrono::steady_clock::time_point last_update_{};
 	std::unordered_map<int32_t, ProcessTask> processes_{};
 	std::unordered_map<std::string, process_args_t> commands_{}; //bad, also remove include when remove this
 
