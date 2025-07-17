@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 	our_os.add_command("shutdown", Programs::CmdShutdown);
 	our_os.add_command("count", Programs::CmdCount);
 	our_os.add_command("proc", Programs::CmdProc);
+	our_os.add_command("wait", Programs::CmdWait);
 
 	WorldUpdateQueue& queue = our_world.get_update_queue();
 

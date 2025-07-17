@@ -33,25 +33,21 @@ public:
 	/* Get the hostname from the owning Host. */
 	std::string get_hostname() const;
 
+	/* Gets the world from the owning Host. */
 	World& get_world();
 
-	template<typename T = Process>
-	int32_t create_process(process_args_t program, std::vector<std::string> args)
-	{
-		int32_t pid = pid_counter_++;
-		processes_.emplace(pid, std::invoke(program, this, std::move(args)));
-		return pid;
-	}
+	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args);
 
 	void list_processes() const;
+
 
 	void add_command(std::string cmd_name, process_args_t command)
 	{
 		commands_[cmd_name] = std::move(command);
 	}
 
-	TimerAwaiter wait(float seconds);
 
+	TimerAwaiter wait(float seconds);
 	void schedule(float seconds, schedule_fn callback);
 
 protected:

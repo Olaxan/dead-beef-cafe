@@ -29,8 +29,7 @@ void OS::exec(std::string cmd)
     if (auto it = commands_.find(word); it != commands_.end())
     {
         auto& prog = it->second;
-        std::println("Run {0} on {1}.", cmd, (int64_t)this);
-		int32_t pid = create_process(prog, args);
+		create_process(prog, args);
     }
 }
 
@@ -49,12 +48,29 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
+EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args)
+{
+    int32_t pid = pid_counter_++;
+    std::println("Run {0} on {1} (pid = {2}).", args[0], (int64_t)this, pid);
+    auto [it, success] = processes_.emplace(pid, std::invoke(program, this, std::move(args)));
+
+    if (!success)
+        co_return 1;
+
+    it->second.handle.resume();
+    int32_t ret = co_await it->second;
+    
+    std::println("Task {0} finished with code {1}.", pid, ret);
+    processes_.erase(pid); // Use pid instead of iterator in case it's been invalidated.
+    co_return ret;
+}
+
 void OS::list_processes() const
 {
     std::println("Processes on {0}:", get_hostname());
 
     for (auto& [pid, proc] : processes_)
-        std::println("pid {0}: ready='{1}'", pid, proc.is_ready());
+        std::println("pid {0}: done='{1}', ready='{2}'", pid, proc.is_done(), proc.is_ready());
 }
 
 TimerAwaiter OS::wait(float seconds)

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 #include <print>
 
 namespace Programs
@@ -26,12 +27,18 @@ namespace Programs
 
 	Task<int32_t> CmdCount(OS* env, std::vector<std::string> args)
 	{
-		std::println("Counting to ten...");
+		if (args.size() < 2)
+		{
+			std::println("Usage: count [num]");
+			co_return 1;
+		}
 
-		for (int32_t i = 0; i < 10; ++i)
+		int32_t max = std::atoi(args[1].c_str());
+
+		for (int32_t i = 0; i < max; ++i)
 		{
 			co_await env->wait(1.f);
-			std::println("{0}...", i);
+			std::println("{0}...", i + 1);
 		}
 
 		co_return 0;
@@ -40,6 +47,21 @@ namespace Programs
 	Task<int32_t> CmdProc(OS* env, std::vector<std::string> args)
 	{
 		env->list_processes();
+		co_return 0;
+	}
+
+	Task<int32_t> CmdWait(OS* env, std::vector<std::string> args)
+	{
+		if (args.size() < 2)
+		{
+			std::println("Usage: wait [time (s)]");
+			co_return 1;
+		}
+
+		float delay = static_cast<float>(std::atof(args[1].c_str()));
+		co_await env->wait(delay);
+
+		std::println("Waited {0} seconds.", delay);
 		co_return 0;
 	}
 }

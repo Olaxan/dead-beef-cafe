@@ -10,10 +10,10 @@
 #include <queue>
 #include <vector>
 
-template<typename T>
+template<typename T, typename InitialSuspendT = std::suspend_always>
 struct Task;
 
-template<typename T>
+template<typename T, typename InitialSuspendT>
 struct TaskPromiseType
 {
     // value to be computed
@@ -28,9 +28,9 @@ struct TaskPromiseType
     // it is created before execution of the coroutine body
     // it can be either co_awaited inside another coroutine
     // or used via special interface for extracting values (is_ready and get)
-    Task<T> get_return_object();
+    Task<T, InitialSuspendT> get_return_object();
 
-    std::suspend_never initial_suspend() { return {}; }
+    InitialSuspendT initial_suspend() { return {}; }
 
     // store value to be returned to awaiting coroutine or accessed through 'get' function
     void return_value(T val)
@@ -73,8 +73,8 @@ struct TaskPromiseType
     }
 
     // also we can await other task<T>
-    template<typename U>
-    auto await_transform(Task<U>& task)
+    template<typename U, typename InitialSuspendU>
+    auto await_transform(Task<U, InitialSuspendU>& task)
     {
         if (!task.handle) {
             throw std::runtime_error("coroutine without promise awaited");
@@ -85,7 +85,7 @@ struct TaskPromiseType
 
         struct TaskAwaitable
         {
-            std::coroutine_handle<TaskPromiseType<U>> handle;
+            std::coroutine_handle<TaskPromiseType<U, InitialSuspendU>> handle;
 
             // check if this task already has value computed
             bool await_ready()
@@ -119,11 +119,11 @@ struct TaskPromiseType
 
 };
 
-template<typename T>
+template<typename T, typename InitialSuspendT>
 struct Task
 {
     // declare promise type
-    using promise_type = TaskPromiseType<T>;
+    using promise_type = TaskPromiseType<T, InitialSuspendT>;
 
     Task(std::coroutine_handle<promise_type> handle) : handle(handle) {}
 
@@ -140,18 +140,27 @@ struct Task
 
     ~Task()
     {
-        if (handle) 
-        {
-            handle.destroy();
-        }
+        // if (handle) 
+        // {
+        //     handle.destroy();
+        // }
+    }
+
+    /* Determine if the coroutine has finished. */
+    bool is_done() const
+    {
+        if (handle)
+            return handle.done();
+        
+        return true;
     }
 
     /* Interface for extracting value without awaiting on it. */
     bool is_ready() const
     {
-        if (handle) {
+        if (handle)
             return handle.promise().value.has_value();
-        }
+
         return false;
     }
 
@@ -166,8 +175,14 @@ struct Task
     std::coroutine_handle<promise_type> handle;
 };
 
-template<typename T>
-Task<T> TaskPromiseType<T>::get_return_object()
+template<typename T, typename InitialSuspendT>
+Task<T, InitialSuspendT> TaskPromiseType<T, InitialSuspendT>::get_return_object()
 {
     return { std::coroutine_handle<TaskPromiseType>::from_promise(*this) };
 }
+
+template<typename T>
+using LazyTask = Task<T, std::suspend_always>;
+
+template<typename T>
+using EagerTask = Task<T, std::suspend_never>;
