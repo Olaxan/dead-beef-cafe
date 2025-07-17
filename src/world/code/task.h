@@ -10,7 +10,7 @@
 #include <queue>
 #include <vector>
 
-template<typename T, typename InitialSuspendT = std::suspend_always>
+template<typename T, typename InitialSuspendT = std::suspend_never>
 struct Task;
 
 template<typename T, typename InitialSuspendT>
@@ -56,67 +56,19 @@ struct TaskPromiseType
             std::coroutine_handle<> awaiting_coroutine;
 
             // always stop at final suspend
-            bool await_ready() noexcept
-            {
-                return false;
-            }
+            bool await_ready() noexcept { return false; }
+
             std::coroutine_handle<> await_suspend(std::coroutine_handle<TaskPromiseType> h) noexcept
             {
-                // resume awaiting coroutine or if there is no coroutine to resume return special coroutine that do
-                // nothing
+                // Resume awaiting coroutine, or no-op coro if there is nothing to resume.
                 return awaiting_coroutine ? awaiting_coroutine : std::noop_coroutine();
             }
+
             void await_resume() noexcept {}
         };
         
         return TransferAwaitable{awaiting_coroutine};
     }
-
-    // also we can await other task<T>
-    template<typename U, typename InitialSuspendU>
-    auto await_transform(Task<U, InitialSuspendU>& task)
-    {
-        if (!task.handle) {
-            throw std::runtime_error("coroutine without promise awaited");
-        }
-        if (task.handle.promise().awaiting_coroutine) {
-            throw std::runtime_error("coroutine already awaited");
-        }
-
-        struct TaskAwaitable
-        {
-            std::coroutine_handle<TaskPromiseType<U, InitialSuspendU>> handle;
-
-            // check if this task already has value computed
-            bool await_ready()
-            {
-                return handle.promise().value.has_value();
-            }
-
-            // h - is a handle to coroutine that calls co_await
-            // store coroutine handle to be resumed after computing task value
-            void await_suspend(std::coroutine_handle<> h)
-            {
-                handle.promise().awaiting_coroutine = h;
-            }
-
-            // when ready return value to a consumer
-            auto await_resume()
-            {
-                return std::move(*(handle.promise().value));
-            }
-        };
-
-        return TaskAwaitable{task.handle};
-    }
-
-    template<typename U>
-    auto await_transform(U&& expr)
-    {
-        /* Leave this awaiter alone. */
-        return std::forward<U>(expr);
-    }
-
 };
 
 template<typename T, typename InitialSuspendT>
@@ -138,13 +90,7 @@ struct Task
         handle = std::exchange(other.handle, nullptr);
     }
 
-    ~Task()
-    {
-        // if (handle) 
-        // {
-        //     handle.destroy();
-        // }
-    }
+    ~Task() = default;
 
     /* Determine if the coroutine has finished. */
     bool is_done() const
@@ -173,6 +119,24 @@ struct Task
     }
 
     std::coroutine_handle<promise_type> handle;
+
+    bool await_ready()
+    {
+        return is_ready();
+    }
+
+    // h - is a handle to coroutine that calls co_await
+    // store coroutine handle to be resumed after computing task value
+    void await_suspend(std::coroutine_handle<> h)
+    {
+        handle.promise().awaiting_coroutine = h;
+    }
+
+    // when ready return value to a consumer
+    auto await_resume()
+    {
+        return std::move(*(handle.promise().value));
+    }
 };
 
 template<typename T, typename InitialSuspendT>

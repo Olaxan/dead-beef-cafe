@@ -1,5 +1,7 @@
 #include "host.h"
 
+#include "task.h"
+#include "proc.h"
 #include "world.h"
 #include "device.h"
 #include "disk.h"
@@ -13,18 +15,17 @@
 #include <sstream>
 #include <string>
 #include <iostream>
-//#include <thread>
 #include <chrono>
 
 Host::Host(World& world, std::string Hostname)
 : world_(world), hostname_(Hostname) { }
 
-void Host::start_host()
+Task<bool> Host::start_host()
 {
-    state_ = true;
+    std::println("{0} is starting...", hostname_);
 
     for (auto& device : devices_)
-        device->start_device();
+        co_await device->start_device(this);
 
     std::optional<File> boot_file = std::invoke([this] 
     {
@@ -36,18 +37,26 @@ void Host::start_host()
         // }
     });
 
-    boot_from(boot_file.value_or({}));
+    co_await boot_from(boot_file.value_or({}));
+
+    state_ = true;
+
+    co_return true;
 }
 
-void Host::shutdown_host()
+Task<bool> Host::shutdown_host()
 {
+    std::println("Shutting down {0}...", hostname_);
+
     for (auto& device : devices_)
-        device->shutdown_device();
+        co_await device->shutdown_device(this);
 
     state_ = false;
+
+    co_return true;
 }
 
-void Host::boot_from(const File& boot_file)
+Task<bool> Host::boot_from(const File& boot_file)
 {
     /*
     Example boot file:
@@ -70,6 +79,8 @@ void Host::boot_from(const File& boot_file)
     {
         os_->exec(line);
     }
+
+    co_return true;
 }
 
 // void Host::launch()

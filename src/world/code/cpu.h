@@ -10,9 +10,8 @@ public:
 	CPU() = default;
 	CPU(float mhz) : mhz_(mhz) {}
 
-	virtual void start_device() override {};
-	virtual void shutdown_device() override { std::println("Shutdown processor."); };
 	virtual void config_device(std::string_view cmd) override {};
+	virtual std::string get_device_id() const override { return "Processor"; }
 
 	void set_physical_speed(float mhz) { mhz_ = mhz; }
 

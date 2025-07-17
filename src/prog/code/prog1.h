@@ -1,7 +1,7 @@
 #pragma once
 
 #include "os.h"
-#include "task.h"
+#include "proc.h"
 
 #include <coroutine>
 #include <string>
@@ -12,20 +12,19 @@
 
 namespace Programs
 {
-	Task<int32_t> CmdEcho(OS* env, std::vector<std::string> args)
+	ProcessTask CmdEcho(OS* env, std::vector<std::string> args)
 	{
 		std::println("echo: {0}.", args);
 		co_return 0;
 	}
 
-	Task<int32_t> CmdShutdown(OS* env, std::vector<std::string> args)
+	ProcessTask CmdShutdown(OS* env, std::vector<std::string> args)
 	{
-		std::println("Shutting down {0}...", env->get_hostname());
 		env->shutdown_os();
 		co_return 0;
 	}
 
-	Task<int32_t> CmdCount(OS* env, std::vector<std::string> args)
+	ProcessTask CmdCount(OS* env, std::vector<std::string> args)
 	{
 		if (args.size() < 2)
 		{
@@ -44,13 +43,13 @@ namespace Programs
 		co_return 0;
 	}
 
-	Task<int32_t> CmdProc(OS* env, std::vector<std::string> args)
+	ProcessTask CmdProc(OS* env, std::vector<std::string> args)
 	{
 		env->list_processes();
 		co_return 0;
 	}
 
-	Task<int32_t> CmdWait(OS* env, std::vector<std::string> args)
+	ProcessTask CmdWait(OS* env, std::vector<std::string> args)
 	{
 		if (args.size() < 2)
 		{

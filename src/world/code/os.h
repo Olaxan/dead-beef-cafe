@@ -6,6 +6,7 @@
 #include <chrono>
 
 #include "task.h"
+#include "proc.h"
 #include "timer_mgr.h"
 
 class OS;
@@ -13,7 +14,7 @@ class Host;
 class Process;
 class World;
 
-using process_args_t = std::function<Task<int32_t>(OS*, std::vector<std::string>)>;
+using process_args_t = std::function<ProcessTask(OS*, std::vector<std::string>)>;
 
 class OS
 {
@@ -56,7 +57,7 @@ protected:
 	int32_t pid_counter_{0};
 	std::string hostname_ = {};
 	std::chrono::steady_clock::time_point last_update_{};
-	std::unordered_map<int32_t, Task<int32_t>> processes_{};
+	std::unordered_map<int32_t, ProcessTask> processes_{};
 	std::unordered_map<std::string, process_args_t> commands_{}; //bad, also remove include when remove this
 
 };

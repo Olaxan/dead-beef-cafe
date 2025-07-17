@@ -23,9 +23,9 @@ public:
 	OS& get_os() { return *os_; }
 	World& get_world() { return world_; }
 
-	void start_host();
-	void shutdown_host();
-	void boot_from(const File& boot_file);
+	Task<bool> start_host();
+	Task<bool> shutdown_host();
+	Task<bool> boot_from(const File& boot_file);
 
 	static std::unique_ptr<Host> create_skeleton_host(World& world, std::string hostname = {});
 

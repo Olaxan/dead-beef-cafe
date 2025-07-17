@@ -15,9 +15,8 @@ public:
 	Disk() = default;
 	Disk(int32_t size) : size_(size) {}
 
-	virtual void start_device() override {};
-	virtual void shutdown_device() override { std::println("Shutdown disk."); };
 	virtual void config_device(std::string_view cmd) override {};
+	virtual std::string get_device_id() const override { return "Drive A"; }
 
 	FileSystem& create_fs();
 

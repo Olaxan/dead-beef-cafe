@@ -10,9 +10,8 @@ public:
 	NIC() = default;
 	NIC(float bandwidth) : bandwidth_(bandwidth) {}
 
-	virtual void start_device() override {};
-	virtual void shutdown_device() override { std::println("Shutdown NIC."); };
 	virtual void config_device(std::string_view cmd) override {};
+	virtual std::string get_device_id() const override { return "Network Interface Card"; }
 
 	void set_physical_bandwidth(float gbps) { bandwidth_ = gbps; }
 
