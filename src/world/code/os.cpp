@@ -29,7 +29,7 @@ void OS::exec(std::string cmd)
     if (auto it = commands_.find(word); it != commands_.end())
     {
         auto& prog = it->second;
-		create_process(prog, args);
+		create_process(prog, std::move(args));
     }
 }
 

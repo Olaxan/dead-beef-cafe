@@ -21,9 +21,9 @@ ADD_EXECUTABLE(test_app ${files_test_app})
 TARGET_LINK_LIBRARIES(test_app PRIVATE world prog Threads::Threads)
 
 ADD_EXECUTABLE(client_app ${files_client_app})
-TARGET_LINK_LIBRARIES(client_app PRIVATE asio::asio)
+TARGET_LINK_LIBRARIES(client_app PRIVATE world prog Threads::Threads asio::asio)
 
 ADD_EXECUTABLE(server_app ${files_server_app})
-TARGET_LINK_LIBRARIES(server_app PRIVATE asio::asio)
+TARGET_LINK_LIBRARIES(server_app PRIVATE world prog Threads::Threads asio::asio)
 
 #ADD_DEPENDENCIES(server_app server)
