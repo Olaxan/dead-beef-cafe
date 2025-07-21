@@ -11,7 +11,5 @@ SET(files_prog ${prog_headers} ${prog_sources})
 SOURCE_GROUP("prog" FILES ${files_prog})
 
 ADD_LIBRARY(prog STATIC ${files_prog})
-
 TARGET_LINK_LIBRARIES(prog PRIVATE world)
-
 TARGET_INCLUDE_DIRECTORIES(prog INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)

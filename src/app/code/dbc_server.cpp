@@ -27,6 +27,7 @@
 #include <asio/steady_timer.hpp>
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
+#include <print>
 
 #include "world.h"
 #include "host.h"
@@ -34,7 +35,7 @@
 #include "msg_queue.h"
 #include "prog1.h"
 
-//#include "proto/test.pb.h"
+#include "proto/test.pb.h"
 //#include "google/protobuf/runtime_version.h"
 
 using asio::ip::tcp;
