@@ -9,6 +9,7 @@
 
 Task<bool> Device::start_device(Host* owner)
 {
+	set_state(DeviceState::Starting);
 	co_await owner->get_world().get_timer_manager().wait(1.f);
 	set_state(DeviceState::PoweredOn);
 	co_return true;
@@ -16,6 +17,7 @@ Task<bool> Device::start_device(Host* owner)
 
 Task<bool> Device::shutdown_device(Host* owner)
 {
+	set_state(DeviceState::Stopping);
 	co_await owner->get_world().get_timer_manager().wait(0.5f);
 	set_state(DeviceState::PoweredOff);
 	co_return true;
@@ -33,12 +35,18 @@ std::string Device::get_state_name(DeviceState state)
 {
 	switch (state)
 	{
+		case DeviceState::Starting:
+			return "STARTING";
+		case DeviceState::Stopping:
+			return "STOPPING";
 		case DeviceState::Disabled:
 			return "DISABLED";
 		case DeviceState::PoweredOff:
 			return "POWER_OFF";
 		case DeviceState::PoweredOn:
 			return "POWER_ON";
+		case DeviceState::Error:
+			return "ERROR";
 		default:
 			return "UNKNOWN";
 	}

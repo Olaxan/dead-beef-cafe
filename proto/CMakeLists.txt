@@ -1,6 +1,12 @@
 INCLUDE(FindProtobuf)
 FIND_PACKAGE(Protobuf REQUIRED)
-PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER test.proto)
+
+FILE(GLOB proto_sources "./*.proto")
+SET(files_proto ${proto_sources})
+
+message("   --> PROTOBUF IN: ${proto_sources}")
+
+PROTOBUF_GENERATE_CPP(PROTO_SRC PROTO_HEADER ${files_proto})
 ADD_LIBRARY(proto ${PROTO_HEADER} ${PROTO_SRC})
 TARGET_INCLUDE_DIRECTORIES(proto PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/proto")
 TARGET_INCLUDE_DIRECTORIES(proto PRIVATE "${Protobuf_INCLUDE_DIRS}")

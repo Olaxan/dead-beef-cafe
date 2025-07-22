@@ -23,7 +23,7 @@ TARGET_LINK_LIBRARIES(dbc_test PRIVATE world prog Threads::Threads)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
 ADD_DEPENDENCIES(dbc_client prog)
-TARGET_LINK_LIBRARIES(dbc_client PRIVATE world prog protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)
+TARGET_LINK_LIBRARIES(dbc_client PRIVATE world prog proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)
 
 ADD_EXECUTABLE(dbc_server ${files_server_app})
 ADD_DEPENDENCIES(dbc_server prog)

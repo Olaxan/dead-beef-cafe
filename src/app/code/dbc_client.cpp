@@ -1,3 +1,7 @@
+#include "proto/test.pb.h"
+#include "proto/query.pb.h"
+#include "proto/reply.pb.h"
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -19,47 +23,68 @@ void stop(tcp::socket& socket)
 	socket.close();
 }
 
-// awaitable<void> reader(tcp::socket& socket)
-// {
-// 	try
-// 	{
-// 		// for (std::string read_msg;;)
-// 		// {
-// 		// 	std::size_t n = co_await asio::async_read_until(socket, asio::dynamic_buffer(read_msg, 1024), "\n", use_awaitable);
+awaitable<void> reader(tcp::socket& socket)
+{
+	try
+	{
+		constexpr std::size_t header_size = sizeof(int32_t);
 
-// 		// 	//room_.deliver(read_msg.substr(0, n));
-// 		// 	read_msg.erase(0, n);
-// 		// }
-// 	}
-// 	catch (std::exception&)
-// 	{
-// 		stop(socket);
-// 	}
-// }
+		asio::streambuf stream{};
+		std::istream input_stream(&stream);
 
-// awaitable<void> writer(tcp::socket& socket)
-// {
-// 	try
-// 	{
-// 		while (socket.is_open())
-// 		{
-// 			// if (write_msgs_.empty())
-// 			// {
-// 			// 	asio::error_code ec;
-// 			// 	//co_await timer_.async_wait(redirect_error(use_awaitable, ec));
-// 			// }
-// 			// else
-// 			// {
-// 			// 	co_await asio::async_write(socket, asio::buffer(write_msgs_.front()), use_awaitable);
-// 			// 	write_msgs_.pop_front();
-// 			// }
-// 		}
-// 	}
-// 	catch (std::exception&)
-// 	{
-// 		stop(socket);
-// 	}
-// }
+		while (true)
+		{
+			stream.prepare(header_size);
+			auto header_bytes = co_await asio::async_read(socket, stream, use_awaitable);
+			std::println("Preparing to read {0} bytes ({1} expected).", header_bytes, header_size);
+			stream.commit(header_size);
+
+			int32_t bytes_to_read = 0;
+			input_stream >> bytes_to_read;
+			stream.prepare(bytes_to_read);
+			auto body_bytes = co_await asio::async_read(socket, stream, use_awaitable);
+			stream.commit(body_bytes);
+
+			com::CommandReply reply{};
+			if (reply.ParseFromIstream(&input_stream))
+			{
+				std::println("Received {0} bytes message body: \n{1}", body_bytes, reply.reply());
+			}
+			else
+			{
+				std::println("Failed to parse {0} byte message body!", body_bytes);
+			}
+		}
+	}
+	catch (std::exception&)
+	{
+		stop(socket);
+	}
+}
+
+awaitable<void> writer(tcp::socket& socket)
+{
+	try
+	{
+		while (socket.is_open())
+		{
+			// if (...)
+			// {
+			// 	asio::error_code ec;
+			// 	//co_await timer_.async_wait(redirect_error(use_awaitable, ec));
+			// }
+			// else
+			// {
+			// 	co_await asio::async_write(socket, asio::buffer(write_msgs_.front()), use_awaitable);
+			// 	write_msgs_.pop_front();
+			// }
+		}
+	}
+	catch (std::exception&)
+	{
+		stop(socket);
+	}
+}
 
 awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 {
@@ -73,8 +98,8 @@ awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 	auto resolved = co_await res.async_resolve(addr, service, asio::redirect_error(asio::use_awaitable, ec));
 	co_await asio::async_connect(socket, resolved, asio::redirect_error(asio::use_awaitable, ec));
 
-	//co_spawn(context, reader(socket), detached);
-	//co_spawn(context, writer(socket), detached);
+	co_spawn(context, reader(socket), detached);
+	co_spawn(context, writer(socket), detached);
 
 	if (!ec)
 		std::cout << "Connected to " << socket.remote_endpoint() << ".\n";

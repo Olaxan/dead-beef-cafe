@@ -12,7 +12,10 @@ enum class DeviceState
 {
 	PoweredOff,
 	PoweredOn,
-	Disabled
+	Starting,
+	Stopping,
+	Disabled,
+	Error
 };
 
 class Device

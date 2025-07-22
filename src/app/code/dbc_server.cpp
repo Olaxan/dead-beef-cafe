@@ -8,6 +8,16 @@
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include "world.h"
+#include "host.h"
+#include "os.h"
+#include "msg_queue.h"
+#include "os_basic.h"
+
+#include "proto/test.pb.h"
+#include "proto/query.pb.h"
+#include "proto/reply.pb.h"
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -16,6 +26,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <asio.hpp>
 #include <asio/awaitable.hpp>
 #include <asio/detached.hpp>
 #include <asio/co_spawn.hpp>
@@ -28,15 +39,6 @@
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
 #include <print>
-
-#include "world.h"
-#include "host.h"
-#include "os.h"
-#include "msg_queue.h"
-#include "prog1.h"
-
-#include "proto/test.pb.h"
-//#include "google/protobuf/runtime_version.h"
 
 using asio::ip::tcp;
 using asio::awaitable;
@@ -63,15 +65,9 @@ class ChatRoom
 public:
 
 	ChatRoom()
-		: local_host_(world_.create_host("LocalHost")), local_os_(local_host_.get_os())
 	{
-		local_os_.add_command("echo", Programs::CmdEcho);
-		local_os_.add_command("shutdown", Programs::CmdShutdown);
-		local_os_.add_command("count", Programs::CmdCount);
-		local_os_.add_command("proc", Programs::CmdProc);
-		local_os_.add_command("wait", Programs::CmdWait);
-
-		local_host_.start_host();
+		server_host_ = world_.create_host<BasicOS>("Server");
+		server_host_->start_host();
 		world_.launch();
 	}
 
@@ -91,7 +87,7 @@ public:
 	{
 		auto& queue = world_.get_update_queue();
 
-		queue.push([this, msg]{ local_os_.exec(msg); });
+		//queue.push([this, msg]{ local_os_.exec(msg); });
 
 		recent_msgs_.push_back(msg);
 		while (recent_msgs_.size() > max_recent_msgs)
@@ -101,11 +97,12 @@ public:
 			participant->deliver(msg);
 	}
 
+	World& get_world() { return world_; }
+
 private:
 
 	World world_{};
-	Host& local_host_;
-	OS& local_os_;
+	Host* server_host_{nullptr};
 	std::set<ChatParticipantPtr> participants_;
 	enum { max_recent_msgs = 100 };
 	std::deque<std::string> recent_msgs_;
@@ -114,19 +111,22 @@ private:
 
 //----------------------------------------------------------------------
 
-class ChatSession : public ChatParticipant, public std::enable_shared_from_this<ChatSession>
+class ShellSession : public ChatParticipant, public std::enable_shared_from_this<ShellSession>
 {
 public:
 
-	ChatSession(tcp::socket socket, ChatRoom& room)
-	: socket_(std::move(socket)), timer_(socket_.get_executor()), room_(room)
+	ShellSession(tcp::socket socket, ChatRoom& room)
+	: socket_(std::move(socket)), timer_(socket_.get_executor()), room_(room), world_(room_.get_world())
 	{
+		local_ = world_.create_host<BasicOS>("Participant");
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
 	}
 
 	void start()
 	{
 		std::cout << "Client joined from " << socket_.remote_endpoint() << ".\n";
+		OS& local_os_ = local_->get_os();
+		Shell shell = local_os_.get_shell(in_stream_, out_stream_);
 
 		room_.join(shared_from_this());
 
@@ -151,14 +151,34 @@ private:
 	{
 		try
 		{
-			for (std::string read_msg;;)
-			{
-				std::size_t n = co_await asio::async_read_until(socket_,
-					asio::dynamic_buffer(read_msg, 1024), "\n", use_awaitable);
+			constexpr std::size_t header_size = sizeof(int32_t);
 
-				std::println("Read: '{0}' ({1} bytes).", read_msg.substr(0, n), n);
-				room_.deliver(read_msg.substr(0, n));
-				read_msg.erase(0, n);
+			asio::streambuf stream{};
+			std::istream input_stream(&stream);
+
+			while (true)
+			{
+				stream.prepare(header_size);
+				auto header_bytes = co_await asio::async_read(socket, stream, use_awaitable);
+				std::println("Preparing to read {0} bytes ({1} expected).", header_bytes, header_size);
+				stream.commit(header_size);
+
+				int32_t bytes_to_read = 0;
+				input_stream >> bytes_to_read;
+				stream.prepare(bytes_to_read);
+				auto body_bytes = co_await asio::async_read(socket, stream, use_awaitable);
+				stream.commit(body_bytes);
+
+				com::CommandQuery query{};
+				if (query.ParseFromIstream(&input_stream))
+				{
+					std::println("Received {0} bytes message body: \n{1}", body_bytes, query.command());
+					deliver(query.command());
+				}
+				else
+				{
+					std::println("Failed to parse {0} byte message body!", body_bytes);
+				}
 			}
 		}
 		catch (std::exception&)
@@ -171,6 +191,11 @@ private:
 	{
 		try
 		{
+			constexpr std::size_t header_size = sizeof(int32_t);
+
+			asio::streambuf stream{};
+			std::ostream output_stream(&stream);
+
 			while (socket_.is_open())
 			{
 				if (write_msgs_.empty())
@@ -180,9 +205,19 @@ private:
 				}
 				else
 				{
-					co_await asio::async_write(socket_,
-						asio::buffer(write_msgs_.front()), use_awaitable);
+
+					com::CommandReply reply{};
+					reply.ParseFromIstream(&in_stream_);
+					reply.set_reply(write_msgs_.front());
 					write_msgs_.pop_front();
+
+					output_stream << static_cast<int32_t>(sizeof(reply));
+					auto header_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
+					reply.SerializeToOstream(&output_stream);
+					auto body_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
+
+					std::println("Sent {0} bytes ({1} header, {2} body).", 
+						(header_bytes_sent + body_bytes_sent), header_bytes_sent, body_bytes_sent);
 				}
 			}
 		}
@@ -194,6 +229,7 @@ private:
 
 	void stop()
 	{
+		google::protobuf::ShutdownProtobufLibrary();
 		room_.leave(shared_from_this());
 		socket_.close();
 		timer_.cancel();
@@ -202,7 +238,18 @@ private:
 	tcp::socket socket_;
 	asio::steady_timer timer_;
 	ChatRoom& room_;
-	std::deque<std::string> write_msgs_;
+	World& world_;
+	Host* local_{nullptr};
+
+	std::deque<std::string> write_msgs_{};
+
+	Shell shell_;
+
+	asio::streambuf in_buf_{};
+	std::istream in_stream_{&in_buf_};
+
+	asio::streambuf out_buf_{};
+	std::ostream out_stream_{&out_buf_};
 
 };
 
@@ -214,7 +261,7 @@ awaitable<void> listener(tcp::acceptor acceptor)
 
 	for (;;)
 	{
-		auto ptr = std::make_shared<ChatSession>(co_await acceptor.async_accept(use_awaitable), room);
+		auto ptr = std::make_shared<ShellSession>(co_await acceptor.async_accept(use_awaitable), room);
 		ptr->start();
 	}
 }

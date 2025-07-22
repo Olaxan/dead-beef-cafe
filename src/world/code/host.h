@@ -19,15 +19,14 @@ public:
 	Host() = delete;
 	Host(World& world, std::string Hostname);
 
-	std::string get_hostname() const { return hostname_; }
+	const std::string& get_hostname() const { return hostname_; }
 	OS& get_os() { return *os_; }
 	World& get_world() { return world_; }
+	DeviceState get_state() const { return state_; }
 
 	Task<bool> start_host();
 	Task<bool> shutdown_host();
 	Task<bool> boot_from(const File& boot_file);
-
-	static std::unique_ptr<Host> create_skeleton_host(World& world, std::string hostname = {});
 
 	template<typename T = Device, typename ...Args>
 	T& create_device(Args&& ...args)
@@ -48,6 +47,6 @@ private:
 	std::string hostname_ = {};
 	std::unique_ptr<OS> os_{nullptr};
 	std::vector<std::unique_ptr<Device>> devices_{};
-	bool state_{false};
+	DeviceState state_{DeviceState::PoweredOff};
 
 };

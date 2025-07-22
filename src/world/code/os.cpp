@@ -1,6 +1,7 @@
 #include "os.h"
 #include "host.h"
 #include "world.h"
+#include "proc.h"
 
 #include <sstream>
 #include <string>
@@ -8,6 +9,10 @@
 #include <chrono>
 #include <iostream>
 #include <print>
+
+void OS::register_commands()
+{
+}
 
 void OS::exec(std::string cmd)
 {
@@ -38,7 +43,7 @@ void OS::shutdown_os()
     owner_.shutdown_host();
 }
 
-std::string OS::get_hostname() const
+const std::string& OS::get_hostname() const
 {
 	return owner_.get_hostname();
 }
@@ -48,11 +53,39 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
-EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args)
+Shell OS::get_shell(std::istream& in_stream, std::ostream& out_stream)
 {
+    auto proc = [this](Proc shell, std::vector<std::string> args) -> ProcessTask
+    { 
+        std::string read{};
+
+        while (true)
+        {
+            if (shell.in_stream >> read)
+            {
+                shell.owning_os->exec(read);
+            }
+            else
+            {
+                shell.owning_os->wait(0.f);
+            }
+        }
+
+        co_return 0;
+    };
+
+    create_process(proc, {}, in_stream, out_stream);
+}
+
+EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::istream& is, std::ostream& os)
+{
+    if (owner_.get_state() != DeviceState::PoweredOn)
+        owner_.start_host(); // Might not be entirely realistic, but let's call it WoL.
+
     int32_t pid = pid_counter_++;
+    Proc proc { pid, this, is, os };
     std::println("Run {0} on {1} (pid = {2}).", args[0], (int64_t)this, pid);
-    auto [it, success] = processes_.emplace(pid, std::invoke(program, this, std::move(args)));
+    auto [it, success] = processes_.emplace(pid, std::invoke(program, proc, std::move(args)));
 
     if (!success)
         co_return 1;

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package com;
+
+message CommandReply
+{
+	string reply = 1;
+};

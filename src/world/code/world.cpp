@@ -1,5 +1,16 @@
 #include "world.h"
 
+#include "task.h"
+#include "proc.h"
+#include "world.h"
+#include "device.h"
+#include "disk.h"
+#include "file.h"
+#include "filesystem.h"
+#include "cpu.h"
+#include "nic.h"
+#include "os.h"
+
 #include <chrono>
 #include <cmath>
 #include <thread>

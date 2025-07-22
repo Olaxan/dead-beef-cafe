@@ -13,7 +13,12 @@ class Host;
 class Process;
 class World;
 
-using process_args_t = std::function<ProcessTask(OS*, std::vector<std::string>)>;
+using process_args_t = std::function<ProcessTask(Proc, std::vector<std::string>)>;
+
+struct Shell
+{
+	void exec(std::string cmd) {};
+};
 
 class OS
 {
@@ -22,7 +27,11 @@ public:
 	using schedule_fn = std::function<void()>;
 
 	OS(Host& owner)
-		: owner_(owner) { }
+		: owner_(owner) { register_commands(); }
+
+
+	/* Placeholder -- just statically add all known commands to command list. */
+	virtual void register_commands();
 
 	/* Execute a command in the OS environment. */
 	void exec(std::string cmd);
@@ -31,12 +40,14 @@ public:
 	void shutdown_os();
 
 	/* Get the hostname from the owning Host. */
-	std::string get_hostname() const;
+	[[nodiscard]] const std::string& get_hostname() const;
 
 	/* Gets the world from the owning Host. */
-	World& get_world();
+	[[nodiscard]] World& get_world();
 
-	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args);
+	[[nodiscard]] Shell get_shell(std::istream& in_stream, std::ostream& out_stream);
+
+	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::istream& is = std::cin, std::ostream& os = std::cout);
 
 	void list_processes() const;
 
