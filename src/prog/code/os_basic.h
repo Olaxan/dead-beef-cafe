@@ -12,20 +12,20 @@
 
 namespace Programs
 {
-	ProcessTask CmdEcho(Proc shell, std::vector<std::string> args)
+	ProcessTask CmdEcho(Proc& shell, std::vector<std::string> args)
 	{
 		//std::println("echo: {0}.", args);
 		shell.write("echo: {0}", args);
 		co_return 0;
 	}
 
-	ProcessTask CmdShutdown(Proc shell, std::vector<std::string> args)
+	ProcessTask CmdShutdown(Proc& shell, std::vector<std::string> args)
 	{
 		shell.owning_os->shutdown_os();
 		co_return 0;
 	}
 
-	ProcessTask CmdCount(Proc shell, std::vector<std::string> args)
+	ProcessTask CmdCount(Proc& shell, std::vector<std::string> args)
 	{
 		if (args.size() < 2)
 		{
@@ -44,13 +44,13 @@ namespace Programs
 		co_return 0;
 	}
 
-	ProcessTask CmdProc(Proc shell, std::vector<std::string> args)
+	ProcessTask CmdProc(Proc& shell, std::vector<std::string> args)
 	{
 		shell.owning_os->list_processes();
 		co_return 0;
 	}
 
-	ProcessTask CmdWait(Proc shell, std::vector<std::string> args)
+	ProcessTask CmdWait(Proc& shell, std::vector<std::string> args)
 	{
 		if (args.size() < 2)
 		{
@@ -64,6 +64,23 @@ namespace Programs
 		std::println("Waited {0} seconds.", delay);
 		co_return 0;
 	}
+
+	ProcessTask CmdShell(Proc& shell, std::vector<std::string> args)
+	{
+		while (true)
+		{
+			std::string in{};
+			if (shell.in_stream >> in) //won't work, just PoC
+			{
+				int32_t ret = co_await shell.exec(in);
+				shell.write("Process return with code {0}.", ret);
+			}
+			else
+			{
+				shell.write("{0}> ", shell.owning_os->get_hostname());
+			}
+		}
+	}
 }
 
 class BasicOS : public OS
@@ -74,8 +91,12 @@ class BasicOS : public OS
 			{"echo", Programs::CmdEcho},
 			{"count", Programs::CmdCount},
 			{"shutdown", Programs::CmdShutdown},
-			{"wait", Programs::CmdShutdown},
-			{"proc", Programs::CmdProc}
+			{"wait", Programs::CmdWait},
+			{"proc", Programs::CmdProc},
+			{"shell", Programs::CmdShell}
 		};
 	}
+
+	process_args_t get_default_shell() const { return Programs::CmdShell; }
+	
 };

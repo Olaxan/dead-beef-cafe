@@ -16,17 +16,19 @@ int main(int argc, char* argv[])
 	Host* our_host = our_world.create_host<BasicOS>("MyComputer");
 	OS& our_os = our_host->get_os();
 
-	WorldUpdateQueue& queue = our_world.get_update_queue();
+	Proc* our_shell = our_os.get_shell();
+
+	//WorldUpdateQueue& queue = our_world.get_update_queue();
 
 	our_host->start_host();
 	our_world.launch();
 
 	while (true)
 	{
-		std::cout << our_host->get_hostname() << "> ";
 		std::string input{};
 		std::getline(std::cin, input);
-		queue.push([&our_os, input] { our_os.exec(input); });
+		our_shell->write(input);
+		//queue.push([&our_os, input] { our_os.exec(input); });
 	}
 
 	return 0;

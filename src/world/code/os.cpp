@@ -10,33 +10,6 @@
 #include <iostream>
 #include <print>
 
-void OS::register_commands()
-{
-}
-
-void OS::exec(std::string cmd)
-{
-	std::string temp{};
-	std::vector<std::string> args{};
-	
-	std::stringstream ss(cmd);
-
-	while (ss >> std::quoted(temp))
-	{
-		args.push_back(std::move(temp));
-	}
-
-    if (args.empty())
-        return;
-
-    std::string& word = *std::begin(args);
-
-    if (auto it = commands_.find(word); it != commands_.end())
-    {
-        auto& prog = it->second;
-		create_process(prog, std::move(args));
-    }
-}
 
 void OS::shutdown_os()
 {
@@ -53,45 +26,49 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
-Shell OS::get_shell(std::istream& in_stream, std::ostream& out_stream)
+Proc* OS::get_shell(std::istream& in_stream, std::ostream& out_stream)
 {
-    auto proc = [this](Proc shell, std::vector<std::string> args) -> ProcessTask
-    { 
-        std::string read{};
+    Proc* proc = create_process(in_stream, out_stream);
 
-        while (true)
-        {
-            if (shell.in_stream >> read)
-            {
-                shell.owning_os->exec(read);
-            }
-            else
-            {
-                shell.owning_os->wait(0.f);
-            }
-        }
+    if (proc == nullptr)
+    {
+        std::println(out_stream, "Failed to create shell process.");
+        return nullptr;
+    }
 
-        co_return 0;
-    };
+    auto sh = get_default_shell();
+    proc->dispatch(sh, {});
 
-    create_process(proc, {}, in_stream, out_stream);
+    return proc;
 }
 
-EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::istream& is, std::ostream& os)
+Proc* OS::create_process(std::istream& is, std::ostream& os)
 {
-    if (owner_.get_state() != DeviceState::PoweredOn)
-        owner_.start_host(); // Might not be entirely realistic, but let's call it WoL.
+	if (owner_.get_state() != DeviceState::PoweredOn)
+        owner_.start_host();
 
+    /* Here, we create the process object, which will hold data for the running process. 
+    The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
-    Proc proc { pid, this, is, os };
-    std::println("Run {0} on {1} (pid = {2}).", args[0], (int64_t)this, pid);
-    auto [it, success] = processes_.emplace(pid, std::invoke(program, proc, std::move(args)));
+    std::println("Created idle process (pid = {0}) on {1}.", pid, (int64_t)this);
+    auto [it, success] = processes_.emplace(pid, /*ARGS:*/ pid, this, is, os);
 
     if (!success)
+        return nullptr;
+
+    return &(it->second);
+}
+
+EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::istream &is, std::ostream &os)
+{
+    Proc* proc = create_process(is, os);
+    int32_t pid = proc->pid;
+
+    if (proc == nullptr)
         co_return 1;
 
-    it->second.handle.resume();
-    int32_t ret = co_await it->second;
+    /* Now we actually run (and await) the process. */
+    int32_t ret = co_await proc->await_dispatch(program, std::move(args));
     
     std::println("Task {0} finished with code {1}.", pid, ret);
     processes_.erase(pid); // Use pid instead of iterator in case it's been invalidated after awaiting.
@@ -103,7 +80,7 @@ void OS::list_processes() const
     std::println("Processes on {0}:", get_hostname());
 
     for (auto& [pid, proc] : processes_)
-        std::println("pid {0}: done='{1}', ready='{2}'", pid, proc.is_done(), proc.is_ready());
+        std::println("pid {0} '{1}'", pid, proc.args[0]);
 }
 
 TimerAwaiter OS::wait(float seconds)

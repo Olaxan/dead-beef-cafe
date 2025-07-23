@@ -126,7 +126,7 @@ public:
 	{
 		std::cout << "Client joined from " << socket_.remote_endpoint() << ".\n";
 		OS& local_os_ = local_->get_os();
-		Shell shell = local_os_.get_shell(in_stream_, out_stream_);
+		shell_ = local_os_.get_shell(in_stream_, out_stream_);
 
 		room_.join(shared_from_this());
 
@@ -243,7 +243,7 @@ private:
 
 	std::deque<std::string> write_msgs_{};
 
-	Shell shell_;
+	Proc* shell_;
 
 	asio::streambuf in_buf_{};
 	std::istream in_stream_{&in_buf_};
