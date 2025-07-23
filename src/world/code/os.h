@@ -61,7 +61,7 @@ protected:
 	{
 		return [](Proc& proc, std::vector<std::string> args) -> ProcessTask 
 		{ 
-			proc.write("No shell installed!");
+			proc.putln("No shell installed!");
 			co_return 1; 
 		};
 	}

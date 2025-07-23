@@ -15,7 +15,7 @@ namespace Programs
 	ProcessTask CmdEcho(Proc& shell, std::vector<std::string> args)
 	{
 		//std::println("echo: {0}.", args);
-		shell.write("echo: {0}", args);
+		shell.putln("echo: {0}", args);
 		co_return 0;
 	}
 
@@ -69,16 +69,10 @@ namespace Programs
 	{
 		while (true)
 		{
-			std::string in{};
-			if (shell.in_stream >> in) //won't work, just PoC
-			{
-				int32_t ret = co_await shell.exec(in);
-				shell.write("Process return with code {0}.", ret);
-			}
-			else
-			{
-				shell.write("{0}> ", shell.owning_os->get_hostname());
-			}
+			shell.putln("{0}> ", shell.owning_os->get_hostname());
+			std::string input = co_await shell.await_input();
+			int32_t ret = co_await shell.exec(input);
+			shell.putln("Process return with code {0}.", ret);
 		}
 	}
 }

@@ -8,6 +8,11 @@
 #include <sstream>
 #include <string>
 
+void Proc::feed(std::string &&input)
+{
+
+}
+
 EagerTask<int32_t> Proc::exec(std::string cmd)
 {
 	std::string temp{};
@@ -30,4 +35,25 @@ EagerTask<int32_t> Proc::exec(std::string cmd)
 		auto& prog = it->second;
 		int32_t ret = co_await owning_os->create_process(prog, std::move(args), in_stream, out_stream);
 	}
+}
+
+EagerTask<std::string> Proc::await_input()
+{
+	co_return (co_await InputAwaiter(this));
+}
+
+/* Awaiters */
+
+bool InputAwaiter::await_ready() const
+{
+	return proc_->has_input();
+}
+
+void InputAwaiter::await_suspend(std::coroutine_handle<> h) const
+{
+	proc_->add_input_listener([this, h](const std::string& input) 
+	{
+		next_ = input;
+		h.resume();
+	});
 }

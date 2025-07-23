@@ -87,7 +87,9 @@ void TimerManager::kill_timer_internal(std::size_t idx)
 	free_instances_.insert(idx);
 }
 
+/* Timer awaiter */
 void TimerAwaiter::await_suspend(std::coroutine_handle<> h) const
 {
 	mgr_->set_timer(time_, [h]{ h.resume(); });
 }
+/* Timer awaiter */

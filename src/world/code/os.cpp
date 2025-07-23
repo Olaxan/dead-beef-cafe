@@ -62,7 +62,7 @@ Proc* OS::create_process(std::istream& is, std::ostream& os)
 EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::istream &is, std::ostream &os)
 {
     Proc* proc = create_process(is, os);
-    int32_t pid = proc->pid;
+    int32_t pid = proc->get_pid();
 
     if (proc == nullptr)
         co_return 1;
@@ -80,7 +80,7 @@ void OS::list_processes() const
     std::println("Processes on {0}:", get_hostname());
 
     for (auto& [pid, proc] : processes_)
-        std::println("pid {0} '{1}'", pid, proc.args[0]);
+        std::println("pid {0} '{1}'", pid, proc.get_name());
 }
 
 TimerAwaiter OS::wait(float seconds)

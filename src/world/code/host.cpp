@@ -77,12 +77,12 @@ Task<bool> Host::boot_from(const File& boot_file)
     exec firewall 500;
     */
 
-    auto view = boot_file.get_stream();
-    std::string line{};
-    while (std::getline(view, line))
-    {
-        os_->exec(line);
-    }
+    // auto view = boot_file.get_stream();
+    // std::string line{};
+    // while (std::getline(view, line))
+    // {
+    //     os_->exec(line);
+    // }
 
     co_return true;
 }
