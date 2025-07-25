@@ -26,9 +26,9 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
-Proc* OS::get_shell(std::istream& in_stream, std::ostream& out_stream)
+Proc* OS::get_shell(std::ostream& out_stream)
 {
-    Proc* proc = create_process(in_stream, out_stream);
+    Proc* proc = create_process(out_stream);
 
     if (proc == nullptr)
     {
@@ -42,7 +42,7 @@ Proc* OS::get_shell(std::istream& in_stream, std::ostream& out_stream)
     return proc;
 }
 
-Proc* OS::create_process(std::istream& is, std::ostream& os)
+Proc* OS::create_process(std::ostream& os)
 {
 	if (owner_.get_state() != DeviceState::PoweredOn)
         owner_.start_host();
@@ -51,17 +51,14 @@ Proc* OS::create_process(std::istream& is, std::ostream& os)
     The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
     std::println("Created idle process (pid = {0}) on {1}.", pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(pid, /*ARGS:*/ pid, this, is, os);
+    auto [it, success] = processes_.emplace(pid, /*ARGS:*/ pid, this, os);
 
-    if (!success)
-        return nullptr;
-
-    return &(it->second);
+    return success ? &(it->second) : nullptr;
 }
 
-EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::istream &is, std::ostream &os)
+EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::ostream &os)
 {
-    Proc* proc = create_process(is, os);
+    Proc* proc = create_process(os);
     int32_t pid = proc->get_pid();
 
     if (proc == nullptr)

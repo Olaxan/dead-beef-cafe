@@ -8,11 +8,6 @@
 #include <sstream>
 #include <string>
 
-void Proc::feed(std::string &&input)
-{
-
-}
-
 EagerTask<int32_t> Proc::exec(std::string cmd)
 {
 	std::string temp{};
@@ -33,8 +28,15 @@ EagerTask<int32_t> Proc::exec(std::string cmd)
 	if (auto [it, success] = owning_os->get_program(word); success)
 	{
 		auto& prog = it->second;
-		int32_t ret = co_await owning_os->create_process(prog, std::move(args), in_stream, out_stream);
+		int32_t ret = co_await owning_os->create_process(prog, std::move(args), out_stream);
 	}
+}
+
+/* Await input, awaiters */
+
+EagerTask<int32_t> Proc::exec(com::CommandQuery query)
+{
+	co_return (co_await exec(query.command()));
 }
 
 EagerTask<std::string> Proc::await_input()
@@ -42,18 +44,17 @@ EagerTask<std::string> Proc::await_input()
 	co_return (co_await InputAwaiter(this));
 }
 
-/* Awaiters */
-
-bool InputAwaiter::await_ready() const
+bool InputAwaiter::await_ready()
 {
-	return proc_->has_input();
+	
 }
 
-void InputAwaiter::await_suspend(std::coroutine_handle<> h) const
+void InputAwaiter::await_suspend(std::coroutine_handle<> h)
 {
-	proc_->add_input_listener([this, h](const std::string& input) 
-	{
-		next_ = input;
-		h.resume();
-	});
+	
+}
+
+std::string InputAwaiter::await_resume() const
+{
+	
 }

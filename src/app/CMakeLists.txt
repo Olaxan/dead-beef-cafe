@@ -19,7 +19,7 @@ FIND_PACKAGE(Threads REQUIRED)
 
 ADD_EXECUTABLE(dbc_test ${files_test_app})
 ADD_DEPENDENCIES(dbc_test prog)
-TARGET_LINK_LIBRARIES(dbc_test PRIVATE world prog Threads::Threads)
+TARGET_LINK_LIBRARIES(dbc_test PRIVATE world prog proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
 ADD_DEPENDENCIES(dbc_client prog)

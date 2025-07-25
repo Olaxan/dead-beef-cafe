@@ -2,6 +2,7 @@
 
 #include "os.h"
 #include "proc.h"
+#include "netw.h"
 
 #include <coroutine>
 #include <string>
@@ -9,6 +10,9 @@
 #include <iostream>
 #include <cstdlib>
 #include <print>
+
+using CmdSocketServer = Socket<com::CommandQuery, com::CommandReply>;
+using CmdSocketClient = Socket<com::CommandReply, com::CommandQuery>;
 
 namespace Programs
 {
@@ -67,12 +71,24 @@ namespace Programs
 
 	ProcessTask CmdShell(Proc& shell, std::vector<std::string> args)
 	{
+		OS* our_os = shell.owning_os;
+		auto* sock = our_os->create_socket<CmdSocketServer>(22);
+
+		/* Replace the writer functor in the process so that output
+		is delivered in the form of command objects via the socket. */
+		shell.writer = [sock](const std::string& out_str)
+		{
+			com::CommandReply reply{};
+			reply.set_reply(out_str);
+			sock->write_one(std::move(reply));
+		};
+
 		while (true)
 		{
-			shell.putln("{0}> ", shell.owning_os->get_hostname());
-			std::string input = co_await shell.await_input();
-			int32_t ret = co_await shell.exec(input);
-			shell.putln("Process return with code {0}.", ret);
+			shell.put("{0}> ", shell.owning_os->get_hostname());
+			com::CommandQuery input = co_await sock->read_one();
+			int32_t ret = co_await shell.exec(input.command());
+			shell.putln("Process returned with code {0}.", ret);
 		}
 	}
 }

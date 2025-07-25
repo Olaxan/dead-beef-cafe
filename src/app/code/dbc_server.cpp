@@ -125,8 +125,10 @@ public:
 	void start()
 	{
 		std::cout << "Client joined from " << socket_.remote_endpoint() << ".\n";
-		OS& local_os_ = local_->get_os();
-		shell_ = local_os_.get_shell(in_stream_, out_stream_);
+		
+		OS& local_os = local_->get_os();
+		shell_ = local_os.get_shell(out_stream_);
+		sock_ = local_os.create_socket<com::CommandQuery>(22);
 
 		room_.join(shared_from_this());
 
@@ -139,9 +141,10 @@ public:
 			detached);
 	}
 
-	void deliver(const std::string& msg)
+	void deliver(com::CommandQuery&& msg)
 	{
-		write_msgs_.push_back(msg);
+		//write_msgs_.push_back(msg);
+		sock_->write_one(std::move(msg));
 		timer_.cancel_one();
 	}
 
@@ -159,21 +162,23 @@ private:
 			while (true)
 			{
 				stream.prepare(header_size);
-				auto header_bytes = co_await asio::async_read(socket, stream, use_awaitable);
-				std::println("Preparing to read {0} bytes ({1} expected).", header_bytes, header_size);
+				auto header_bytes = co_await asio::async_read(socket_, stream, use_awaitable);
+				std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
 				stream.commit(header_size);
 
 				int32_t bytes_to_read = 0;
 				input_stream >> bytes_to_read;
 				stream.prepare(bytes_to_read);
-				auto body_bytes = co_await asio::async_read(socket, stream, use_awaitable);
+				std::println("Preparing to read body: {0} bytes.", bytes_to_read);
+				auto body_bytes = co_await asio::async_read(socket_, stream, use_awaitable);
+				std::println("Read {0} bytes ({1} expected).", body_bytes, bytes_to_read);
 				stream.commit(body_bytes);
 
 				com::CommandQuery query{};
 				if (query.ParseFromIstream(&input_stream))
 				{
 					std::println("Received {0} bytes message body: \n{1}", body_bytes, query.command());
-					deliver(query.command());
+					deliver(std::move(query));
 				}
 				else
 				{
@@ -244,6 +249,7 @@ private:
 	std::deque<std::string> write_msgs_{};
 
 	Proc* shell_;
+	Socket<com::CommandQuery>* sock_{nullptr};
 
 	asio::streambuf in_buf_{};
 	std::istream in_stream_{&in_buf_};

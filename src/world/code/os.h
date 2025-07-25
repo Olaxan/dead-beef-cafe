@@ -3,15 +3,18 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <concepts>
 
 #include "task.h"
 #include "proc.h"
 #include "timer_mgr.h"
+#include "netw.h"
 
 class OS;
 class Host;
 class Process;
 class World;
+class ISocket;
 
 class OS
 {
@@ -35,11 +38,29 @@ public:
 	/* Gets the world from the owning Host. */
 	[[nodiscard]] World& get_world();
 
-	[[nodiscard]] Proc* get_shell(std::istream& in_stream = std::cin, std::ostream& out_stream = std::cout);
-	Proc* create_process(std::istream& is = std::cin, std::ostream& os = std::cout);
-	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::istream& is = std::cin, std::ostream& os = std::cout);
-
+	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
+	Proc* create_process(std::ostream& os = std::cout);
+	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::ostream& os = std::cout);
 	void list_processes() const;
+
+	template<std::derived_from<ISocket> T>
+	T* create_socket(int32_t port)
+	{
+		auto [it, success] = sockets_.emplace(port, std::make_unique<T>(port, this));
+    	return success ? &it->second : nullptr;
+	}
+
+	template<typename T_Tx, typename T_Rx>
+	Socket<T_Tx, T_Rx>* create_socket(int32_t port)
+	{
+		auto [it, success] = sockets_.emplace(port, std::make_unique<Socket<T_Tx, T_Rx>>(port, this));
+    	return success ? &it->second : nullptr;
+	}
+	
+	bool close_socket(int32_t port)
+	{
+		return sockets_.erase(port);
+	}
 
 	void add_program(const std::string& cmd_name, process_args_t command)
 	{
@@ -72,7 +93,8 @@ protected:
 	int32_t pid_counter_{0};
 	std::string hostname_ = {};
 	std::unordered_map<int32_t, Proc> processes_{};
-	std::unordered_map<std::string, process_args_t> commands_{}; //bad, also remove include when remove this
+	std::unordered_map<std::string, process_args_t> commands_{}; // This should probably be shared between all OS instances (static?)
+	std::unordered_map<int32_t, std::unique_ptr<ISocket>> sockets_{};
 
 	friend Proc;
 };
