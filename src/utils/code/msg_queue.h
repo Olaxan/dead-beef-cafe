@@ -7,9 +7,6 @@
 #include <functional>
 
 template<typename T>
-using MessageNotifyFn = std::function<bool(const T&)>;
-
-template<typename T>
 class MessageQueue 
 {
 public:
@@ -18,16 +15,6 @@ public:
 	{
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(std::move(message));
-
-        bool received = false;
-        for (auto& notify : notifies_)
-            received = (received || std::invoke(notify, *queue_.back()));
-
-        if (received)
-        {
-            pop();
-            notifies_.clear();
-        }
     }
 
     std::optional<T> pop() 
@@ -59,14 +46,8 @@ public:
         return queue_.empty();
     }
 
-    void add_notify(MessageNotifyFn&& func)
-    {
-        notifies_.push_back(std::move(func));
-    }
-
 private:
 
-    std::vector<MessageNotifyFn<T>> notifies_{};
     std::queue<T> queue_{};
     std::mutex mutex_{};
 

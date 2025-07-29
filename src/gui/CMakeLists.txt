@@ -47,7 +47,7 @@ FILE(GLOB gui_sources code/*.cpp)
 SET(files_gui ${gui_headers} ${gui_sources})
 SOURCE_GROUP("gui" FILES ${files_gui})
 
-imgui_bundle_add_app(dbc_gui dbc_gui.cpp ${files_gui})
+#imgui_bundle_add_app(dbc_gui dbc_gui.cpp ${files_gui})
 
-TARGET_LINK_LIBRARIES(dbc_gui PRIVATE world)
-TARGET_INCLUDE_DIRECTORIES(dbc_gui INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)
+#TARGET_LINK_LIBRARIES(dbc_gui PRIVATE world)
+#TARGET_INCLUDE_DIRECTORIES(dbc_gui INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)

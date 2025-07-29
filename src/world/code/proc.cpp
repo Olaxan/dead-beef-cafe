@@ -38,23 +38,3 @@ EagerTask<int32_t> Proc::exec(com::CommandQuery query)
 {
 	co_return (co_await exec(query.command()));
 }
-
-EagerTask<std::string> Proc::await_input()
-{
-	co_return (co_await InputAwaiter(this));
-}
-
-bool InputAwaiter::await_ready()
-{
-	
-}
-
-void InputAwaiter::await_suspend(std::coroutine_handle<> h)
-{
-	
-}
-
-std::string InputAwaiter::await_resume() const
-{
-	
-}

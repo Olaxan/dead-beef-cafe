@@ -1,16 +1,16 @@
 #pragma once
 
+#include "device.h"
+#include "os.h"
+
 #include <vector>
 #include <string>
 #include <memory>
-
-#include "device.h"
 
 struct Command;
 
 class World;
 class File;
-class OS;
 
 class Host
 {
@@ -28,22 +28,22 @@ public:
 	Task<bool> shutdown_host();
 	Task<bool> boot_from(const File& boot_file);
 
-	template<typename T = Device, typename ...Args>
+	template<std::derived_from<Device> T, typename ...Args>
 	T& create_device(Args&& ...args)
 	{
 		return static_cast<T&>(*devices_.emplace_back(std::make_unique<T>(std::forward<Args>(args)...)));
 	}
 
-	template<typename T = OS, typename ...Args>
+	template<std::derived_from<OS> T, typename ...Args>
 	T& create_os(Args&& ...args)
 	{
-		return *(os_ = std::make_unique<T>(*this, std::forward<Args>(args)...));
+		os_ = std::move(std::make_unique<T>(*this, std::forward<Args>(args)...));
+		return static_cast<T&>(*os_);
 	}
 
 private:
-
-	World& world_;
-
+	
+	World& world_;	
 	std::string hostname_ = {};
 	std::unique_ptr<OS> os_{nullptr};
 	std::vector<std::unique_ptr<Device>> devices_{};

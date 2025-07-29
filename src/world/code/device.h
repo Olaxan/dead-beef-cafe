@@ -31,8 +31,12 @@ public:
 	DeviceState get_state() { return state_; }
 	void set_state(DeviceState new_state);
 
+	virtual void on_start(Host* owner) {};
+	virtual void on_shutdown(Host* owner) {};
 
 	static std::string get_state_name(DeviceState state);
+
+	virtual ~Device() { }
 
 protected:
 

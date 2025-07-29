@@ -2,6 +2,7 @@
 
 #include <coroutine>
 #include <print>
+#include "ip_mgr.h"
 
 void TimerManager::step(float delta_seconds)
 {

@@ -4,5 +4,5 @@ package com;
 
 message CommandReply
 {
-	repeated string replies = 1;
+	string reply = 1;
 };

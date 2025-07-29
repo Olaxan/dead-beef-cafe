@@ -88,6 +88,8 @@ struct Task
             handle.destroy();
         }
         handle = std::exchange(other.handle, nullptr);
+        
+        return *this;
     }
 
     ~Task() = default;

@@ -128,7 +128,7 @@ public:
 		
 		OS& local_os = local_->get_os();
 		shell_ = local_os.get_shell(out_stream_);
-		sock_ = local_os.create_socket<com::CommandQuery>(22);
+		sock_ = local_os.create_socket<CmdSocketClient>();
 
 		room_.join(shared_from_this());
 
@@ -249,7 +249,7 @@ private:
 	std::deque<std::string> write_msgs_{};
 
 	Proc* shell_;
-	Socket<com::CommandQuery>* sock_{nullptr};
+	std::shared_ptr<CmdSocketClient> sock_{nullptr};
 
 	asio::streambuf in_buf_{};
 	std::istream in_stream_{&in_buf_};

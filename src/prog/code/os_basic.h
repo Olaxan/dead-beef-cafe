@@ -71,8 +71,9 @@ namespace Programs
 
 	ProcessTask CmdShell(Proc& shell, std::vector<std::string> args)
 	{
-		OS* our_os = shell.owning_os;
-		auto* sock = our_os->create_socket<CmdSocketServer>(22);
+		OS& our_os = *shell.owning_os;
+		auto sock = our_os.create_socket<CmdSocketServer>();
+		our_os.bind_socket(sock, 22);
 
 		/* Replace the writer functor in the process so that output
 		is delivered in the form of command objects via the socket. */
@@ -90,11 +91,19 @@ namespace Programs
 			int32_t ret = co_await shell.exec(input.command());
 			shell.putln("Process returned with code {0}.", ret);
 		}
+
+		co_return 0;
 	}
 }
 
 class BasicOS : public OS
 {
+public:
+
+	BasicOS() = delete;
+	
+	BasicOS(Host& owner) : OS(owner) { };
+
 	void register_commands() override
 	{
 		commands_ = {

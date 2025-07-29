@@ -2,6 +2,7 @@
 #include "host.h"
 #include "world.h"
 #include "proc.h"
+#include "ip_mgr.h"
 
 #include <sstream>
 #include <string>
@@ -51,7 +52,7 @@ Proc* OS::create_process(std::ostream& os)
     The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
     std::println("Created idle process (pid = {0}) on {1}.", pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(pid, /*ARGS:*/ pid, this, os);
+    auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, this, os}));
 
     return success ? &(it->second) : nullptr;
 }
