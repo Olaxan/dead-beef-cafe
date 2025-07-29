@@ -81,7 +81,6 @@ namespace Programs
 		is delivered in the form of command objects via the socket. */
 		shell.writer = [sock](const std::string& out_str)
 		{
-			std::println("DEBUG: {0}.", out_str);
 			com::CommandReply reply{};
 			reply.set_reply(out_str);
 			sock->write_one(std::move(reply));
