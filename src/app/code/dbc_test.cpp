@@ -44,6 +44,8 @@ int main(int argc, char* argv[])
 
 	//std::jthread(reader).detach();
 
+	reader(our_sock);
+
 	while (our_sock->is_open())
 	{
 		std::string input{};

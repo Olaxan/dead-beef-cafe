@@ -49,18 +49,16 @@ public:
 	template<std::derived_from<ISocket> T>
 	std::shared_ptr<T> create_socket()
 	{
-		// int32_t fd = ++fd_counter_;
-		// auto [it, success] = sockets_.emplace(fd, std::make_shared<T>());
-    	// return success ? *it : nullptr;
-		return std::make_shared<T>();
+		int32_t fd = ++fd_counter_;
+		std::shared_ptr<T> new_ptr = std::make_shared<T>();
+		sockets_[fd] = new_ptr;
+		return new_ptr;
 	}
 
 	template<typename T_Tx, typename T_Rx>
 	std::shared_ptr<Socket<T_Tx, T_Rx>> create_socket()
 	{
-		int32_t fd = ++fd_counter_;
-		auto [it, success] = sockets_.emplace(fd, std::make_shared<Socket<T_Tx, T_Rx>>());
-    	return success ? *it : nullptr;
+		return create_socket<Socket<T_Tx, T_Rx>>();
 	}
 	
 	bool close_socket(int32_t fd)
@@ -102,7 +100,7 @@ protected:
 		return std::pair{it, it != commands_.end() };
 	}
 
-	[[nodiscard]] process_args_t get_default_shell() const
+	[[nodiscard]] virtual process_args_t get_default_shell() const
 	{
 		return [](Proc& proc, std::vector<std::string> args) -> ProcessTask 
 		{ 

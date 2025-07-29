@@ -45,7 +45,7 @@ Proc* OS::get_shell(std::ostream& out_stream)
 
 Proc* OS::create_process(std::ostream& os)
 {
-	if (owner_.get_state() != DeviceState::PoweredOn)
+	if (owner_.get_state() == DeviceState::PoweredOff)
         owner_.start_host();
 
     /* Here, we create the process object, which will hold data for the running process. 

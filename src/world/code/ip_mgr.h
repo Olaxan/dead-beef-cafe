@@ -8,6 +8,7 @@
 #include <concepts>
 #include <optional>
 #include <memory>
+#include <print>
 
 class IEndpoint;
 
@@ -44,12 +45,14 @@ public:
 		return (it != sockets_.end()) ? it->second.get() : nullptr;
 	}
 
-	bool bind(std::shared_ptr<ISocket> sock, Address6 dest_ip, int32_t dest_port)
+	bool bind(std::shared_ptr<ISocket> sock, Address6 listen_ip, int32_t listen_port)
 	{
-		AddressPair addr = {dest_ip, dest_port};
+		AddressPair addr = {listen_ip, listen_port};
 
 		if (sockets_.contains(addr))
 			return false;
+
+		std::println("Binding socket {0} to {1}:{2}.", (int64_t)sock.get(), listen_ip.internal, listen_port);
 
 		sockets_[addr] = std::move(sock);
 
@@ -57,14 +60,16 @@ public:
 	}
 
 	template<typename TargetT>
-	std::optional<SessionId> connect(std::shared_ptr<ISocket> in, Address6 addr, int32_t port)
+	std::optional<SessionId> connect(std::shared_ptr<ISocket> sock, Address6 dest_addr, int32_t dest_port)
 	{
-		ISocket* out = resolve(addr, port);
+		ISocket* remote = resolve(dest_addr, dest_port);
 
-		if (out == nullptr)
+		if (remote == nullptr)
 			return std::nullopt;
 
-		if (SocketStreamFn stream = in->open_stream(out); stream != nullptr)
+		std::println("Connecting socket {0} to {1}:{2}.", (int64_t)sock.get(), dest_addr.internal, dest_port);
+
+		if (SocketStreamFn stream = sock->open_stream(remote); stream != nullptr)
 		{
 			streams_.push_back(std::move(stream));
 			return SessionId{0};

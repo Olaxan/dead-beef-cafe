@@ -75,10 +75,13 @@ namespace Programs
 		auto sock = our_os.create_socket<CmdSocketServer>();
 		our_os.bind_socket(sock, 22);
 
+		std::println("Redirecting output to writer...");
+
 		/* Replace the writer functor in the process so that output
 		is delivered in the form of command objects via the socket. */
 		shell.writer = [sock](const std::string& out_str)
 		{
+			std::println("DEBUG: {0}.", out_str);
 			com::CommandReply reply{};
 			reply.set_reply(out_str);
 			sock->write_one(std::move(reply));
@@ -101,7 +104,7 @@ class BasicOS : public OS
 public:
 
 	BasicOS() = delete;
-	
+
 	BasicOS(Host& owner) : OS(owner) { };
 
 	void register_commands() override
@@ -116,6 +119,8 @@ public:
 		};
 	}
 
-	process_args_t get_default_shell() const { return Programs::CmdShell; }
+protected:
+
+	[[nodiscard]] process_args_t get_default_shell() const override { return Programs::CmdShell; }
 	
 };

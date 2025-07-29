@@ -22,6 +22,9 @@ Host::Host(World& world, std::string Hostname)
 
 Task<bool> Host::start_host()
 {
+    if (state_ != DeviceState::PoweredOff)
+        co_return false;
+
     std::println("{0} is starting...", hostname_);
 
     state_ = DeviceState::Starting;
