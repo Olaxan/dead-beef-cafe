@@ -13,19 +13,16 @@
 #include "os.h"
 #include "msg_queue.h"
 #include "os_basic.h"
+#include "host_utils.h"
 
 #include "proto/test.pb.h"
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 
-#include <cstdlib>
-#include <deque>
-#include <iostream>
-#include <list>
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
+#include <google/protobuf/util/delimited_message_util.h>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+
 #include <asio.hpp>
 #include <asio/awaitable.hpp>
 #include <asio/detached.hpp>
@@ -38,7 +35,16 @@
 #include <asio/steady_timer.hpp>
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
+
 #include <print>
+#include <cstdlib>
+#include <deque>
+#include <iostream>
+#include <list>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
 
 using asio::ip::tcp;
 using asio::awaitable;
@@ -47,13 +53,17 @@ using asio::detached;
 using asio::redirect_error;
 using asio::use_awaitable;
 
+using namespace google;
+
+namespace protoutils = google::protobuf::util;
+
 //----------------------------------------------------------------------
 
 class ChatParticipant
 {
 public:
 	virtual ~ChatParticipant() {}
-	virtual void deliver(const std::string& msg) = 0;
+	virtual void deliver(com::CommandQuery&& msg) = 0;
 };
 
 typedef std::shared_ptr<ChatParticipant> ChatParticipantPtr;
@@ -66,7 +76,7 @@ public:
 
 	ChatRoom()
 	{
-		server_host_ = world_.create_host<BasicOS>("Server");
+		server_host_ = HostUtils::create_host<BasicOS>(world_, "Server");
 		server_host_->start_host();
 		world_.launch();
 	}
@@ -74,8 +84,6 @@ public:
 	void join(ChatParticipantPtr participant)
 	{
 		participants_.insert(participant);
-		for (auto msg: recent_msgs_)
-			participant->deliver(msg);
 	}
 
 	void leave(ChatParticipantPtr participant)
@@ -89,12 +97,6 @@ public:
 
 		//queue.push([this, msg]{ local_os_.exec(msg); });
 
-		recent_msgs_.push_back(msg);
-		while (recent_msgs_.size() > max_recent_msgs)
-			recent_msgs_.pop_front();
-
-		for (auto participant: participants_)
-			participant->deliver(msg);
 	}
 
 	World& get_world() { return world_; }
@@ -105,7 +107,6 @@ private:
 	Host* server_host_{nullptr};
 	std::set<ChatParticipantPtr> participants_;
 	enum { max_recent_msgs = 100 };
-	std::deque<std::string> recent_msgs_;
 
 };
 
@@ -118,7 +119,7 @@ public:
 	ShellSession(tcp::socket socket, ChatRoom& room)
 	: socket_(std::move(socket)), timer_(socket_.get_executor()), room_(room), world_(room_.get_world())
 	{
-		local_ = world_.create_host<BasicOS>("Participant");
+		local_ = HostUtils::create_host<BasicOS>(world_, "Participant");
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
 	}
 
@@ -159,20 +160,35 @@ private:
 			asio::streambuf stream{};
 			std::istream input_stream(&stream);
 
+			//auto raw_stream_ptr = std::make_unique<protobuf::io::ZeroCopyInputStream>();
+
 			while (true)
 			{
+
 				stream.prepare(header_size);
-				auto header_bytes = co_await asio::async_read(socket_, stream, use_awaitable);
+				std::println("Awaiting to read {0} bytes...", header_size);
+				auto header_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(header_size), use_awaitable);
 				std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
 				stream.commit(header_size);
 
 				int32_t bytes_to_read = 0;
-				input_stream >> bytes_to_read;
-				stream.prepare(bytes_to_read);
+				//input_stream >> bytes_to_read;
+
+    			input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
+    			//bytes_to_read = ntohl(bytes_to_read); // Convert from network byte order
+
+				if (bytes_to_read == 0)
+				{
+					std::println("Warning: body size of 0 bytes -- closing.");	
+					stop();
+					break;
+				}
+				
 				std::println("Preparing to read body: {0} bytes.", bytes_to_read);
-				auto body_bytes = co_await asio::async_read(socket_, stream, use_awaitable);
+				stream.prepare(bytes_to_read);
+				auto body_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(bytes_to_read), use_awaitable);
 				std::println("Read {0} bytes ({1} expected).", body_bytes, bytes_to_read);
-				stream.commit(body_bytes);
+				stream.commit(bytes_to_read);
 
 				com::CommandQuery query{};
 				if (query.ParseFromIstream(&input_stream))
@@ -200,6 +216,8 @@ private:
 
 			asio::streambuf stream{};
 			std::ostream output_stream(&stream);
+
+			//auto stream_ptr_raw = std::make_unique<protobuf::ZeroCopyCodedInputStream>();
 
 			while (socket_.is_open())
 			{

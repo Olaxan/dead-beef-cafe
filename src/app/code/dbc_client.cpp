@@ -2,6 +2,8 @@
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 
+#include "google/protobuf/util/delimited_message_util.h"
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -62,30 +64,6 @@ awaitable<void> reader(tcp::socket& socket)
 	}
 }
 
-awaitable<void> writer(tcp::socket& socket)
-{
-	try
-	{
-		while (socket.is_open())
-		{
-			// if (...)
-			// {
-			// 	asio::error_code ec;
-			// 	//co_await timer_.async_wait(redirect_error(use_awaitable, ec));
-			// }
-			// else
-			// {
-			// 	co_await asio::async_write(socket, asio::buffer(write_msgs_.front()), use_awaitable);
-			// 	write_msgs_.pop_front();
-			// }
-		}
-	}
-	catch (std::exception&)
-	{
-		stop(socket);
-	}
-}
-
 awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 {
 	auto& context = socket.get_executor();
@@ -99,12 +77,16 @@ awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 	co_await asio::async_connect(socket, resolved, asio::redirect_error(asio::use_awaitable, ec));
 
 	co_spawn(context, reader(socket), detached);
-	co_spawn(context, writer(socket), detached);
 
 	if (!ec)
 		std::cout << "Connected to " << socket.remote_endpoint() << ".\n";
 
-	while (true)
+	constexpr std::size_t header_size = sizeof(int32_t);
+
+	asio::streambuf buffer{};
+	std::ostream output_stream(&buffer);
+
+	while (socket.is_open())
 	{
 		std::cout << "Enter message: ";
 		std::string str{};
@@ -116,9 +98,20 @@ awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 			break;
 		}
 
-		str.append("\n");
+		com::CommandQuery query;
+		query.set_command(str);
 
-		co_await asio::async_write(socket, asio::buffer(str), use_awaitable);
+		int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
+		output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
+		query.SerializeToOstream(&output_stream);
+
+		//int32_t num = static_cast<int32_t>(sizeof(query));
+		//const char* buf_test = reinterpret_cast<const char*>(&num);
+
+		//std::size_t n = co_await asio::async_write(socket, buffer, asio::redirect_error(use_awaitable, ec));
+		std::size_t n = co_await asio::async_write(socket, buffer, asio::transfer_exactly(sizeof(query_size) + query_size), asio::redirect_error(use_awaitable, ec));
+		std::println("Wrote {} bytes (buffer {}/{}) - {}", n, sizeof(query_size), query_size, ec.message());
+		buffer.consume(n);
 	}
 }
 
