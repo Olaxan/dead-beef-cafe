@@ -94,12 +94,12 @@ public:
 		}
 	}
 
-	void add_await_rx(NotifySocketFn<T_Rx> callback)
+	void add_await_rx(NotifySocketFn<T_Rx>&& callback)
 	{
 		await_rx_.push(std::move(callback));
 	}
 
-	void add_await_tx(NotifySocketFn<T_Tx> callback)
+	void add_await_tx(NotifySocketFn<T_Tx>&& callback)
 	{
 		await_tx_.push(std::move(callback));
 	}
