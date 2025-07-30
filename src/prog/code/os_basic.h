@@ -104,7 +104,7 @@ public:
 
 	BasicOS() = delete;
 
-	BasicOS(Host& owner) : OS(owner) { };
+	BasicOS(Host& owner) : OS(owner) { register_commands(); };
 
 	void register_commands() override
 	{

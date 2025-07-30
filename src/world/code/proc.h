@@ -49,7 +49,7 @@ public:
 	EagerTask<int32_t> await_dispatch(process_args_t& program, std::vector<std::string> args)
 	{
 		this->args = std::move(args);
-		task = std::move(std::invoke(program, *this, args));
+		task = std::move(std::invoke(program, *this, this->args));
 		task->handle.resume();
 		co_return (co_await *task);
 	}

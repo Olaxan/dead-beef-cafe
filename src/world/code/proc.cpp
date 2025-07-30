@@ -29,7 +29,12 @@ EagerTask<int32_t> Proc::exec(std::string cmd)
 	{
 		auto& prog = it->second;
 		int32_t ret = co_await owning_os->create_process(prog, std::move(args), out_stream);
+		co_return ret;
 	}
+
+	putln("'{0}': No such file or directory.", cmd);
+
+	co_return 1;
 }
 
 /* Await input, awaiters */

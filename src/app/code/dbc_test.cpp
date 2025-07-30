@@ -22,7 +22,7 @@ EagerTask<int32_t> reader(std::shared_ptr<CmdSocketClient> read_socket)
 	while (read_socket->is_open())
 	{
 		com::CommandReply reply = co_await read_socket->read_one();
-		std::println("Reply: {0}", reply.reply());
+		std::print("{0}", reply.reply());
 	}
 	co_return 0;
 }

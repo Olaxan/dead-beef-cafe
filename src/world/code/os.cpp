@@ -68,7 +68,8 @@ EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::s
     /* Now we actually run (and await) the process. */
     int32_t ret = co_await proc->await_dispatch(program, std::move(args));
     
-    std::println("Task {0} finished with code {1}.", pid, ret);
+    //std::println("Task {0} finished with code {1}.", pid, ret);
+    
     processes_.erase(pid); // Use pid instead of iterator in case it's been invalidated after awaiting.
     co_return ret;
 }
