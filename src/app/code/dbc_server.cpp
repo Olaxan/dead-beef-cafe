@@ -112,6 +112,11 @@ private:
 
 //----------------------------------------------------------------------
 
+std::string make_string(asio::streambuf& streambuf)
+{
+	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
+}
+
 class ShellSession : public ChatParticipant, public std::enable_shared_from_this<ShellSession>
 {
 public:
@@ -157,41 +162,47 @@ private:
 		{
 			constexpr std::size_t header_size = sizeof(int32_t);
 
-			asio::streambuf stream{};
-			std::istream input_stream(&stream);
-
-			//auto raw_stream_ptr = std::make_unique<protobuf::io::ZeroCopyInputStream>();
-
 			while (true)
 			{
 
-				stream.prepare(header_size);
-				std::println("Awaiting to read {0} bytes...", header_size);
-				auto header_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(header_size), use_awaitable);
-				std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
-				stream.commit(header_size);
+				int32_t body_size = co_await std::invoke([this] -> awaitable<int32_t>
+				{
+					asio::streambuf stream{};
+					std::istream input_stream(&stream);
+	
+					stream.prepare(header_size);
+					std::println("Awaiting to read {0} bytes...", header_size);
+					auto header_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(header_size), use_awaitable);
+					std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
+					stream.commit(header_size);
+	
+					int32_t bytes_to_read = 0;
+					input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
+					co_return bytes_to_read;
+				});
 
-				int32_t bytes_to_read = 0;
-				//input_stream >> bytes_to_read;
-
-    			input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
-    			//bytes_to_read = ntohl(bytes_to_read); // Convert from network byte order
-
-				if (bytes_to_read == 0)
+				if (body_size == 0)
 				{
 					std::println("Warning: body size of 0 bytes -- closing.");	
 					stop();
 					break;
 				}
-				
-				std::println("Preparing to read body: {0} bytes.", bytes_to_read);
-				stream.prepare(bytes_to_read);
-				auto body_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(bytes_to_read), use_awaitable);
-				std::println("Read {0} bytes ({1} expected).", body_bytes, bytes_to_read);
-				stream.commit(bytes_to_read);
 
-				com::CommandQuery query{};
-				if (query.ParseFromIstream(&input_stream))
+				asio::streambuf stream{};
+				std::istream input_stream(&stream);
+
+				std::println("Preparing to read body: {0} bytes.", body_size);
+				stream.prepare(body_size);
+				auto body_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(body_size), use_awaitable);
+				std::println("Read {0} bytes ({1} expected).", body_bytes, body_size);
+				stream.commit(body_size);
+
+				std::string received_str = make_string(stream);
+				std::println("Received: {0}.", received_str);
+
+				com::CommandQuery query;
+				//if (query.ParseFromIstream(&input_stream))
+				if (query.ParseFromString(received_str))
 				{
 					std::println("Received {0} bytes message body: \n{1}", body_bytes, query.command());
 					deliver(std::move(query));

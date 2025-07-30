@@ -100,15 +100,16 @@ awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 
 		com::CommandQuery query;
 		query.set_command(str);
+		std::string coded_str;
+		bool success = query.SerializeToString(&coded_str);
+		std::println("Serialised to '{}'; success = {}.", coded_str, success);
 
-		int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
+		//int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
+		int32_t query_size = static_cast<int32_t>(coded_str.size());
 		output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
-		query.SerializeToOstream(&output_stream);
+		output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
+		//query.SerializeToOstream(&output_stream);
 
-		//int32_t num = static_cast<int32_t>(sizeof(query));
-		//const char* buf_test = reinterpret_cast<const char*>(&num);
-
-		//std::size_t n = co_await asio::async_write(socket, buffer, asio::redirect_error(use_awaitable, ec));
 		std::size_t n = co_await asio::async_write(socket, buffer, asio::transfer_exactly(sizeof(query_size) + query_size), asio::redirect_error(use_awaitable, ec));
 		std::println("Wrote {} bytes (buffer {}/{}) - {}", n, sizeof(query_size), query_size, ec.message());
 		buffer.consume(n);
