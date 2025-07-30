@@ -141,6 +141,20 @@ auto read_sock(const std::shared_ptr<CmdSocketClient>& ptr)
     );
 }
 
+auto read_sock2(const std::shared_ptr<CmdSocketClient>& ptr)
+{
+  	return asio::async_compose<decltype(asio::use_awaitable), void(com::CommandReply)>(
+    	[ptr](auto&& self) -> EagerTask<int32_t>
+      	{
+			auto self_ptr = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
+			com::CommandReply rep = co_await ptr->read_one();
+			self_ptr->complete(rep);
+			co_return 0;
+      	},
+      	asio::use_awaitable
+    );
+}
+
 class ShellSession : public ChatParticipant, public std::enable_shared_from_this<ShellSession>
 {
 public:
@@ -257,7 +271,7 @@ private:
 			while (socket_.is_open())
 			{
 				//com::CommandReply reply = co_await sock_->read_one();
-				com::CommandReply reply = co_await read_sock(sock_);
+				com::CommandReply reply = co_await read_sock2(sock_);
 
 				std::println("Reply: {0}", reply.reply());
 
