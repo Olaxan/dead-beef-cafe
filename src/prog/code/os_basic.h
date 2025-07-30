@@ -18,7 +18,6 @@ namespace Programs
 {
 	ProcessTask CmdEcho(Proc& shell, std::vector<std::string> args)
 	{
-		//std::println("echo: {0}.", args);
 		shell.putln("echo: {0}", args);
 		co_return 0;
 	}

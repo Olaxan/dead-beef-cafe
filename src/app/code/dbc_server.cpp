@@ -117,6 +117,30 @@ std::string make_string(asio::streambuf& streambuf)
 	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
 }
 
+auto read_sock(const std::shared_ptr<CmdSocketClient>& ptr)
+{
+  	return asio::async_compose<decltype(asio::use_awaitable), void(com::CommandReply)>(
+    	[ptr](auto&& self)
+      	{
+			auto self_ptr = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
+
+			MessageQueue<com::CommandReply>& rxq = ptr->rxq;
+			if (auto opt = rxq.pop(); opt.has_value())
+			{
+				self_ptr->complete(opt.value());
+			}
+			else
+			{
+				ptr->add_await_rx([self_ptr](const com::CommandReply& msg) mutable
+				{
+					self_ptr->complete(msg);	
+				});
+			}
+      	},
+      	asio::use_awaitable
+    );
+}
+
 class ShellSession : public ChatParticipant, public std::enable_shared_from_this<ShellSession>
 {
 public:
@@ -135,6 +159,7 @@ public:
 		OS& local_os = local_->get_os();
 		shell_ = local_os.get_shell(out_stream_);
 		sock_ = local_os.create_socket<CmdSocketClient>();
+		local_os.connect_socket<CmdSocketServer>(sock_, Address6(1), 22);
 
 		room_.join(shared_from_this());
 
@@ -169,10 +194,10 @@ private:
 				{
 					asio::streambuf stream{};
 					std::istream input_stream(&stream);
-	
-					stream.prepare(header_size);
+					asio::streambuf::mutable_buffers_type buffer = stream.prepare(header_size);
+
 					std::println("Awaiting to read {0} bytes...", header_size);
-					auto header_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(header_size), use_awaitable);
+					auto header_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(header_size), use_awaitable);
 					std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
 					stream.commit(header_size);
 	
@@ -190,15 +215,14 @@ private:
 
 				asio::streambuf stream{};
 				std::istream input_stream(&stream);
+				asio::streambuf::mutable_buffers_type buffer = stream.prepare(body_size);
 
-				std::println("Preparing to read body: {0} bytes.", body_size);
-				stream.prepare(body_size);
-				auto body_bytes = co_await asio::async_read(socket_, stream, asio::transfer_exactly(body_size), use_awaitable);
+				std::println("Awaiting to read body ({0} bytes)...", body_size);
+				auto body_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(body_size), use_awaitable);
 				std::println("Read {0} bytes ({1} expected).", body_bytes, body_size);
 				stream.commit(body_size);
 
 				std::string received_str = make_string(stream);
-				std::println("Received: {0}.", received_str);
 
 				com::CommandQuery query;
 				//if (query.ParseFromIstream(&input_stream))
@@ -210,6 +234,8 @@ private:
 				else
 				{
 					std::println("Failed to parse {0} byte message body!", body_bytes);
+					std::size_t hash = std::hash<std::string>{}(received_str);
+					std::println("Received: '{}' ({}).", received_str, hash);
 				}
 			}
 		}
@@ -228,31 +254,25 @@ private:
 			asio::streambuf stream{};
 			std::ostream output_stream(&stream);
 
-			//auto stream_ptr_raw = std::make_unique<protobuf::ZeroCopyCodedInputStream>();
-
 			while (socket_.is_open())
 			{
-				if (write_msgs_.empty())
-				{
-					asio::error_code ec;
-					co_await timer_.async_wait(redirect_error(use_awaitable, ec));
-				}
-				else
-				{
+				//com::CommandReply reply = co_await sock_->read_one();
+				com::CommandReply reply = co_await read_sock(sock_);
 
-					com::CommandReply reply{};
-					reply.ParseFromIstream(&in_stream_);
-					reply.set_reply(write_msgs_.front());
-					write_msgs_.pop_front();
+				std::println("Reply: {0}", reply.reply());
 
-					output_stream << static_cast<int32_t>(sizeof(reply));
-					auto header_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
-					reply.SerializeToOstream(&output_stream);
-					auto body_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
+				// com::CommandReply reply{};
+				// reply.ParseFromIstream(&in_stream_);
+				// reply.set_reply(write_msgs_.front());
+				// write_msgs_.pop_front();
 
-					std::println("Sent {0} bytes ({1} header, {2} body).", 
-						(header_bytes_sent + body_bytes_sent), header_bytes_sent, body_bytes_sent);
-				}
+				// output_stream << static_cast<int32_t>(sizeof(reply));
+				// auto header_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
+				// reply.SerializeToOstream(&output_stream);
+				// auto body_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
+
+				// std::println("Sent {0} bytes ({1} header, {2} body).", 
+				// (header_bytes_sent + body_bytes_sent), header_bytes_sent, body_bytes_sent);
 			}
 		}
 		catch (std::exception&)
@@ -275,7 +295,7 @@ private:
 	World& world_;
 	Host* local_{nullptr};
 
-	std::deque<std::string> write_msgs_{};
+	std::deque<com::CommandReply> replies_{};
 
 	Proc* shell_;
 	std::shared_ptr<CmdSocketClient> sock_{nullptr};

@@ -102,7 +102,8 @@ awaitable<void> connect(tcp::socket socket, char* addr, char* service)
 		query.set_command(str);
 		std::string coded_str;
 		bool success = query.SerializeToString(&coded_str);
-		std::println("Serialised to '{}'; success = {}.", coded_str, success);
+		//std::size_t hash = std::hash<std::string>{}(coded_str);
+		//std::println("Serialised input '{}' to '{}' ({}); success = {}.", str, coded_str, hash, success);
 
 		//int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
 		int32_t query_size = static_cast<int32_t>(coded_str.size());
