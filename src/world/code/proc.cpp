@@ -8,6 +8,21 @@
 #include <sstream>
 #include <string>
 
+void Proc::dispatch(process_args_t &program, std::vector<std::string> args, bool resume)
+{
+	this->args = std::move(args);
+	task = std::move(std::invoke(program, *this, args));
+	if (resume) task->handle.resume();
+}
+
+EagerTask<int32_t> Proc::await_dispatch(process_args_t &program, std::vector<std::string> args)
+{
+	this->args = std::move(args);
+	task = std::move(std::invoke(program, *this, this->args));
+	task->handle.resume();
+	co_return (co_await *task);
+}
+
 EagerTask<int32_t> Proc::exec(std::string cmd)
 {
 	std::string temp{};
@@ -28,7 +43,7 @@ EagerTask<int32_t> Proc::exec(std::string cmd)
 	if (auto [it, success] = owning_os->get_program(word); success)
 	{
 		auto& prog = it->second;
-		int32_t ret = co_await owning_os->create_process(prog, std::move(args), out_stream);
+		int32_t ret = co_await owning_os->create_process(prog, std::move(args), this);
 		co_return ret;
 	}
 

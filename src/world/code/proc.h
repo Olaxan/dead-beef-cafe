@@ -28,6 +28,9 @@ public:
 	Proc(int32_t pid, OS* owner, std::ostream& out_stream)
 		: pid(pid), owning_os(owner), out_stream(out_stream) { }
 
+	Proc(int32_t pid, Proc* host)
+		: pid(pid), host(host), owning_os(host->owning_os), out_stream(host->out_stream) { }
+
 	Proc(int32_t pid, OS* owner)
 		: Proc(pid, owner, std::cout) { }
 
@@ -38,21 +41,10 @@ public:
 
 	/* Set this process running with a function and function arguments. 
 	Optionally resume the provided coroutine immediately, if it is lazy. */
-	void dispatch(process_args_t& program, std::vector<std::string> args, bool resume = true)
-	{
-		this->args = std::move(args);
-		task = std::move(std::invoke(program, *this, args));
-		if (resume) task->handle.resume();
-	}
+	void dispatch(process_args_t& program, std::vector<std::string> args, bool resume = true);
 
 	/* Variant of 'dispatch' which awaits its own hosted process task. */
-	EagerTask<int32_t> await_dispatch(process_args_t& program, std::vector<std::string> args)
-	{
-		this->args = std::move(args);
-		task = std::move(std::invoke(program, *this, this->args));
-		task->handle.resume();
-		co_return (co_await *task);
-	}
+	EagerTask<int32_t> await_dispatch(process_args_t& program, std::vector<std::string> args);
 
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
@@ -61,11 +53,16 @@ public:
 		if (writer)
 		{
 			std::invoke(writer, std::format(fmt, std::forward<Args>(args)...));
+			return;
 		}
-		else
+
+		if (host)
 		{
-			std::print(out_stream, fmt, std::forward<Args>(args)...);
+			host->put(fmt, std::forward<Args>(args)...);
+			return;
 		}
+
+		std::print(out_stream, fmt, std::forward<Args>(args)...);
 	}
 
 	/* Write to the process 'standard output', with  a \n at the end. */
@@ -75,11 +72,16 @@ public:
 		if (writer)
 		{
 			std::invoke(writer, std::format(fmt, std::forward<Args>(args)...).append("\n"));
+			return;
 		}
-		else
+
+		if (host)
 		{
-			std::println(out_stream, fmt, std::forward<Args>(args)...);
+			host->putln(fmt, std::forward<Args>(args)...);
+			return;
 		}
+
+		std::println(out_stream, fmt, std::forward<Args>(args)...);
 	}
 
 	/* Execute a sub-process on this process. */
@@ -91,6 +93,7 @@ public:
 	int32_t pid{0};
 	std::ostream& out_stream;
 	OS* owning_os{nullptr};
+	Proc* host{nullptr};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 

@@ -51,8 +51,20 @@ Proc* OS::create_process(std::ostream& os)
     /* Here, we create the process object, which will hold data for the running process. 
     The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
-    std::println("Created idle process (pid = {0}) on {1}.", pid, (int64_t)this);
+    std::println("Created process (pid = {0}) on {1}.", pid, (int64_t)this);
     auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, this, os}));
+
+    return success ? &(it->second) : nullptr;
+}
+
+Proc* OS::create_process(Proc* host)
+{
+	if (owner_.get_state() == DeviceState::PoweredOff)
+        owner_.start_host();
+
+    int32_t pid = pid_counter_++;
+    std::println("Created child process (pid = {0}) under {1} on {2}.", pid, host->pid, (int64_t)this);
+    auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, host}));
 
     return success ? &(it->second) : nullptr;
 }
@@ -71,6 +83,20 @@ EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::s
     //std::println("Task {0} finished with code {1}.", pid, ret);
     
     processes_.erase(pid); // Use pid instead of iterator in case it's been invalidated after awaiting.
+    co_return ret;
+}
+
+EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, Proc* host)
+{
+	Proc* proc = create_process(host);
+    int32_t pid = proc->get_pid();
+
+    if (proc == nullptr)
+        co_return 1;
+
+    int32_t ret = co_await proc->await_dispatch(program, std::move(args));
+    
+    processes_.erase(pid);
     co_return ret;
 }
 

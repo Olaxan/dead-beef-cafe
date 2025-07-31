@@ -41,7 +41,9 @@ public:
 
 	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
 	Proc* create_process(std::ostream& os = std::cout);
+	Proc* create_process(Proc* host);
 	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::ostream& os = std::cout);
+	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, Proc* proc);
 	void list_processes() const;
 
 
