@@ -8,14 +8,14 @@
 #include <sstream>
 #include <string>
 
-void Proc::dispatch(process_args_t &program, std::vector<std::string> args, bool resume)
+void Proc::dispatch(ProcessFn &program, std::vector<std::string> args, bool resume)
 {
 	this->args = std::move(args);
 	task = std::move(std::invoke(program, *this, args));
 	if (resume) task->handle.resume();
 }
 
-EagerTask<int32_t> Proc::await_dispatch(process_args_t &program, std::vector<std::string> args)
+EagerTask<int32_t> Proc::await_dispatch(ProcessFn &program, std::vector<std::string> args)
 {
 	this->args = std::move(args);
 	task = std::move(std::invoke(program, *this, this->args));

@@ -14,7 +14,9 @@ public:
 
 	virtual void config_device(std::string_view cmd) override {};
 	virtual std::string get_device_id() const override { return "Network Interface Card"; }
+	virtual std::string get_driver_id() const override { return "net"; }
 
+	float get_physical_bandwidth() const { return bandwidth_; }
 	void set_physical_bandwidth(float gbps) { bandwidth_ = gbps; }
 
 	/* Endpoint IF */

@@ -11,6 +11,15 @@
 #include <iostream>
 #include <print>
 
+std::size_t OS::register_devices()
+{
+    int32_t uuid = 0;
+    devices_.clear();
+    for (auto& dev : owner_.get_devices())
+        devices_.emplace(++uuid, dev.get());
+    
+    return devices_.size();
+}
 
 void OS::shutdown_os()
 {
@@ -45,9 +54,6 @@ Proc* OS::get_shell(std::ostream& out_stream)
 
 Proc* OS::create_process(std::ostream& os)
 {
-	if (owner_.get_state() == DeviceState::PoweredOff)
-        owner_.start_host();
-
     /* Here, we create the process object, which will hold data for the running process. 
     The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
@@ -59,9 +65,6 @@ Proc* OS::create_process(std::ostream& os)
 
 Proc* OS::create_process(Proc* host)
 {
-	if (owner_.get_state() == DeviceState::PoweredOff)
-        owner_.start_host();
-
     int32_t pid = pid_counter_++;
     std::println("Created child process (pid = {0}) under {1} on {2}.", pid, host->pid, (int64_t)this);
     auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, host}));
@@ -69,7 +72,7 @@ Proc* OS::create_process(Proc* host)
     return success ? &(it->second) : nullptr;
 }
 
-EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, std::ostream &os)
+EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string> args, std::ostream &os)
 {
     Proc* proc = create_process(os);
     int32_t pid = proc->get_pid();
@@ -86,7 +89,7 @@ EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::s
     co_return ret;
 }
 
-EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::string> args, Proc* host)
+EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string> args, Proc* host)
 {
 	Proc* proc = create_process(host);
     int32_t pid = proc->get_pid();

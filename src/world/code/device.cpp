@@ -28,28 +28,7 @@ Task<bool> Device::shutdown_device(Host* owner)
 void Device::set_state(DeviceState new_state)
 {
 	std::println("'{0}' changing state from {1} to {2}.", 
-		get_device_id(), Device::get_state_name(state_), Device::get_state_name(new_state));
+		get_device_id(), DeviceUtils::get_state_name(state_), DeviceUtils::get_state_name(new_state));
 		
 	state_ = new_state;
-}
-
-std::string Device::get_state_name(DeviceState state)
-{
-	switch (state)
-	{
-		case DeviceState::Starting:
-			return "STARTING";
-		case DeviceState::Stopping:
-			return "STOPPING";
-		case DeviceState::Disabled:
-			return "DISABLED";
-		case DeviceState::PoweredOff:
-			return "POWER_OFF";
-		case DeviceState::PoweredOn:
-			return "POWER_ON";
-		case DeviceState::Error:
-			return "ERROR";
-		default:
-			return "UNKNOWN";
-	}
 }

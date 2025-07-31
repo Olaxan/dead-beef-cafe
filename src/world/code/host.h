@@ -28,6 +28,8 @@ public:
 	Task<bool> shutdown_host();
 	Task<bool> boot_from(const File& boot_file);
 
+	auto& get_devices() const { return devices_; }
+
 	template<std::derived_from<Device> T, typename ...Args>
 	T& create_device(Args&& ...args)
 	{

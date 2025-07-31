@@ -3,6 +3,8 @@
 #include <memory>
 
 #include "device.h"
+#include "filesystem.h"
+
 #include <print>
 
 class File;
@@ -17,9 +19,11 @@ public:
 
 	virtual void config_device(std::string_view cmd) override {};
 	virtual std::string get_device_id() const override { return "Drive A"; }
+	virtual std::string get_driver_id() const override { return "disk"; }
 
 	FileSystem& create_fs();
 
+	int32_t get_physical_size() const { return size_; }
 	void set_physical_size(int32_t new_size) { size_ = new_size; }
 
 private:

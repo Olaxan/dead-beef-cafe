@@ -6,6 +6,8 @@
 #include "netw.h"
 #include "ip_mgr.h"
 #include "world.h"
+#include "device.h"
+#include "device_state.h"
 
 #include <memory>
 #include <vector>
@@ -30,11 +32,20 @@ public:
 	/* Placeholder -- just statically add all known commands to command list. */
 	virtual void register_commands() {};
 
+	virtual std::size_t register_devices();
+
 	/* Shut down the host environment (and then the host). */
 	void shutdown_os();
 
 	/* Get the hostname from the owning Host. */
 	[[nodiscard]] const std::string& get_hostname() const;
+
+	/* Get the os device state. */
+	[[nodiscard]] DeviceState get_state() const { return state_; }
+	void set_state(DeviceState new_state) { state_ = new_state; }
+
+	/* Get the uuid->device reference map. */
+	[[nodiscard]] auto& get_devices() { return devices_; }
 
 	/* Gets the world from the owning Host. */
 	[[nodiscard]] World& get_world();
@@ -42,9 +53,23 @@ public:
 	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
 	Proc* create_process(std::ostream& os = std::cout);
 	Proc* create_process(Proc* host);
-	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::ostream& os = std::cout);
-	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, Proc* proc);
+	EagerTask<int32_t> create_process(ProcessFn program, std::vector<std::string> args, std::ostream& os = std::cout);
+	EagerTask<int32_t> create_process(ProcessFn program, std::vector<std::string> args, Proc* proc);
 	void get_processes(std::function<void(const Proc&)> reader) const;
+
+
+	/* Device management */
+	template <std::derived_from<Device> T>
+	T* get_device()
+	{
+		for (auto& [uuid, dev] : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev))
+				return cast;
+		}
+
+		return nullptr;
+	}
 
 
 	/* Sockets */
@@ -86,12 +111,12 @@ public:
 	}
 
 
-	void add_program(const std::string& cmd_name, process_args_t command)
+	void add_program(const std::string& cmd_name, ProcessFn command)
 	{
 		commands_[cmd_name] = std::move(command);
 	}
 
-	TimerAwaiter wait(float seconds);
+	[[nodiscard]] TimerAwaiter wait(float seconds);
 	void schedule(float seconds, schedule_fn callback);
 
 protected:
@@ -102,7 +127,7 @@ protected:
 		return std::pair{it, it != commands_.end() };
 	}
 
-	[[nodiscard]] virtual process_args_t get_default_shell() const
+	[[nodiscard]] virtual ProcessFn get_default_shell() const
 	{
 		return [](Proc& proc, std::vector<std::string> args) -> ProcessTask 
 		{ 
@@ -117,9 +142,11 @@ protected:
 	int32_t pid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
+	DeviceState state_{DeviceState::PoweredOff};
+	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, Proc> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
-	std::unordered_map<std::string, process_args_t> commands_{}; // This should probably be shared between all OS instances (static?)
+	std::unordered_map<std::string, ProcessFn> commands_{}; // This should probably be shared between all OS instances (static?)
 
 	friend Proc;
 };

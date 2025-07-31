@@ -18,8 +18,7 @@ class Proc;
 class OS;
 
 using ProcessTask = Task<int32_t, std::suspend_always>;
-using process_args_t = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
-using input_await_t = std::function<void(const com::CommandQuery&)>;
+using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
 
 class Proc
 {
@@ -41,10 +40,10 @@ public:
 
 	/* Set this process running with a function and function arguments. 
 	Optionally resume the provided coroutine immediately, if it is lazy. */
-	void dispatch(process_args_t& program, std::vector<std::string> args, bool resume = true);
+	void dispatch(ProcessFn& program, std::vector<std::string> args, bool resume = true);
 
 	/* Variant of 'dispatch' which awaits its own hosted process task. */
-	EagerTask<int32_t> await_dispatch(process_args_t& program, std::vector<std::string> args);
+	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
 
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
