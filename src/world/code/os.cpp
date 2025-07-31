@@ -100,12 +100,10 @@ EagerTask<int32_t> OS::create_process(process_args_t program, std::vector<std::s
     co_return ret;
 }
 
-void OS::list_processes() const
+void OS::get_processes(std::function<void(const Proc&)> reader) const
 {
-    std::println("Processes on {0}:", get_hostname());
-
-    for (auto& [pid, proc] : processes_)
-        std::println("pid {0} '{1}'", pid, proc.get_name());
+    for (const auto& [pid, proc] : processes_)
+        std::invoke(reader, proc);
 }
 
 TimerAwaiter OS::wait(float seconds)

@@ -49,7 +49,11 @@ namespace Programs
 
 	ProcessTask CmdProc(Proc& shell, std::vector<std::string> args)
 	{
-		shell.owning_os->list_processes();
+		shell.putln("Processes on {0}:", shell.owning_os->get_hostname());
+		shell.owning_os->get_processes([&shell](const Proc& proc)
+		{
+			shell.putln("{0}: '{1}'", proc.get_pid(), proc.get_name());
+		});
 		co_return 0;
 	}
 

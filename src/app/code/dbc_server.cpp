@@ -117,30 +117,6 @@ std::string make_string(asio::streambuf& streambuf)
 	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
 }
 
-auto read_sock(const std::shared_ptr<CmdSocketClient>& ptr)
-{
-  	return asio::async_compose<decltype(asio::use_awaitable), void(com::CommandReply)>(
-    	[ptr](auto&& self)
-      	{
-			auto self_ptr = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
-
-			MessageQueue<com::CommandReply>& rxq = ptr->rxq;
-			if (auto opt = rxq.pop(); opt.has_value())
-			{
-				self_ptr->complete(opt.value());
-			}
-			else
-			{
-				ptr->add_await_rx([self_ptr](const com::CommandReply& msg) mutable
-				{
-					self_ptr->complete(msg);	
-				});
-			}
-      	},
-      	asio::use_awaitable
-    );
-}
-
 auto read_sock2(const std::shared_ptr<CmdSocketClient>& ptr)
 {
   	return asio::async_compose<decltype(asio::use_awaitable), void(com::CommandReply)>(

@@ -44,7 +44,7 @@ public:
 	Proc* create_process(Proc* host);
 	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, std::ostream& os = std::cout);
 	EagerTask<int32_t> create_process(process_args_t program, std::vector<std::string> args, Proc* proc);
-	void list_processes() const;
+	void get_processes(std::function<void(const Proc&)> reader) const;
 
 
 	/* Sockets */
