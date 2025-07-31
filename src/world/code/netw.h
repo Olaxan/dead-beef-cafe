@@ -1,6 +1,7 @@
 #pragma once
 
 #include "msg_queue.h"
+#include "addr.h"
 
 #include <memory>
 #include <coroutine>
@@ -10,36 +11,6 @@ using SocketStreamFn = std::function<void(void)>;
 
 template<typename T_Rx, typename T_Tx>
 struct MessageAwaiter;
-
-struct Address6
-{
-	Address6(int64_t bytes)
-		: internal(bytes) {}
-
-	Address6(std::string addr)
-		: internal(0) {}
-
-	int64_t internal{0};
-
-	auto operator <=> (const Address6&) const = default;
-};
-
-struct AddressPair
-{
-	Address6 addr{0};
-	int32_t port{0};
-	
-	auto operator <=> (const AddressPair&) const = default;
-};
-
-template <>
-struct std::hash<AddressPair>
-{
-  	std::size_t operator()(const AddressPair& k) const
-	{
-    	return ((std::hash<int64_t>()(k.addr.internal) ^ (std::hash<int32_t>()(k.port) << 1)) >> 1);
-	}
-};
 
 
 class ISocket 

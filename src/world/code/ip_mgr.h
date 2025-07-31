@@ -1,6 +1,7 @@
 #pragma once
 
 #include "netw.h"
+#include "addr.h"
 
 #include <vector>
 #include <string>
@@ -52,7 +53,7 @@ public:
 		if (sockets_.contains(addr))
 			return false;
 
-		std::println("Binding socket {0} to {1}:{2}.", (int64_t)sock.get(), listen_ip.internal, listen_port);
+		std::println("Binding socket {0} to [{1}]:{2}.", (int64_t)sock.get(), listen_ip, listen_port);
 
 		sockets_[addr] = std::move(sock);
 
@@ -67,7 +68,7 @@ public:
 		if (remote == nullptr)
 			return std::nullopt;
 
-		std::println("Connecting socket {0} to {1}:{2}.", (int64_t)sock.get(), dest_addr.internal, dest_port);
+		std::println("Connecting socket {0} to {1}:{2}.", (int64_t)sock.get(), dest_addr, dest_port);
 
 		if (SocketStreamFn stream = sock->open_stream(remote); stream != nullptr)
 		{

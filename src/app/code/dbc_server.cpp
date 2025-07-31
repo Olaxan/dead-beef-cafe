@@ -149,7 +149,7 @@ public:
 		OS& local_os = local_->get_os();
 		shell_ = local_os.get_shell(out_stream_);
 		sock_ = local_os.create_socket<CmdSocketClient>();
-		local_os.connect_socket<CmdSocketServer>(sock_, Address6(1), 22);
+		local_os.connect_socket<CmdSocketServer>(sock_, local_os.get_global_ip(), 22);
 
 		room_.join(shared_from_this());
 

@@ -3,6 +3,7 @@
 #include "world.h"
 #include "proc.h"
 #include "ip_mgr.h"
+#include "nic.h"
 
 #include <sstream>
 #include <string>
@@ -107,6 +108,14 @@ void OS::get_processes(std::function<void(const Proc&)> reader) const
 {
     for (const auto& [pid, proc] : processes_)
         std::invoke(reader, proc);
+}
+
+Address6 OS::get_global_ip()
+{
+	if (NIC* nic = get_device<NIC>())
+        return nic->get_ip();
+
+    return Address6();
 }
 
 TimerAwaiter OS::wait(float seconds)

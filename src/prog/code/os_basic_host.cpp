@@ -74,8 +74,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	while (true)
 	{
 		DeviceState state = our_os.get_state();
-		std::string state_str = std::format(" ({})", DeviceUtils::get_state_name(state));
-		proc.put("{0}{1}> ", our_os.get_hostname(), (state != DeviceState::PoweredOn ? state_str : ""));
+		proc.put("{0}{1}> ", our_os.get_hostname(), (state != DeviceState::PoweredOn ? " (NetBIOS)" : ""));
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
 		proc.putln("Process returned with code {0}.", ret);

@@ -94,7 +94,7 @@ public:
 	}
 
 	/* Placeholder */
-	Address6 get_global_ip() { return {1}; }
+	Address6 get_global_ip();
 
 	bool bind_socket(const std::shared_ptr<ISocket>& sock, int32_t listen_port)
 	{

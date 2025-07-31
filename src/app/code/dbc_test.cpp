@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 
 	Proc* our_shell = our_os.get_shell(); // shell proc starts a acceptor socket at 22
 	auto our_sock = our_os.create_socket<CmdSocketClient>(); 
-	our_os.connect_socket<CmdSocketServer>(our_sock, Address6(1), 22);
+	our_os.connect_socket<CmdSocketServer>(our_sock, our_os.get_global_ip(), 22);
 
 	//WorldUpdateQueue& queue = our_world.get_update_queue();
 

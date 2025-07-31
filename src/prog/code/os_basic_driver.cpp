@@ -30,6 +30,12 @@ ProcessTask Programs::InitCpu(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	CPU* cpu = os.get_device<CPU>();
 
+	if (cpu == nullptr)
+	{
+		proc.putln("fatal: no device");
+		co_return 1;
+	}
+
 	proc.putln("Integrated Microtrends© NT1.3");
 	proc.putln("Initialising CPU microcode... (loading registers)");
 	co_await os.wait(0.1f);
@@ -39,12 +45,6 @@ ProcessTask Programs::InitCpu(Proc& proc, std::vector<std::string> args)
 	co_await os.wait(0.2f);
 	proc.putln("Initialising CPU microcode... (compiling microcode)");
 	co_await os.wait(0.3f);
-
-	if (cpu == nullptr)
-	{
-		proc.putln("fatal: ");
-		co_return 1;
-	}
 
 	co_await os.wait(1.f);
 	cpu->set_state(DeviceState::PoweredOn);
@@ -60,13 +60,14 @@ ProcessTask Programs::InitNet(Proc& proc, std::vector<std::string> args)
 
 	if (nic == nullptr)
 	{
-		proc.putln("[ERROR] No such device (NIC)");
+		proc.putln("Failed to initialise network interface: no device.");
 		co_return 1;
 	}
 
 	co_await os.wait(1.f);
 	nic->set_state(DeviceState::PoweredOn);
 	proc.putln("[INIT] Initialised network interface ({} gbps)", nic->get_physical_bandwidth());
+	proc.putln("Global addr: {0}", nic->get_ip());
 
 	co_return 0;
 }
@@ -76,6 +77,12 @@ ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	Disk* disk = os.get_device<Disk>();
 
+	if (disk == nullptr)
+	{
+		proc.putln("No disk mounted!");
+		co_return 1;
+	}
+
 	proc.putln("SuperDisk Integrated Shell");
 	proc.put(" - SCAN ");
 	co_await loading_bar(proc, 20, "OK");
@@ -84,21 +91,15 @@ ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 	co_await os.wait(0.1f);
 	co_await loading_bar(proc, 20, "OK");
 
-	proc.put("Initialising file system... ");
+	proc.put("Initializing file system... ");
 	co_await os.wait(0.1f);
 	proc.put("[DONE]\nPrewarming file system access... ");
 	co_await os.wait(0.2f);
 	proc.putln("[DONE]");
 
-	if (disk == nullptr)
-	{
-		proc.putln("[ERROR] No such device");
-		co_return 1;
-	}
-
 	co_await os.wait(1.f);
 	disk->set_state(DeviceState::PoweredOn);
-	proc.putln("[INIT] Initialised disk ({} GB)", disk->get_physical_size());
+	proc.putln("[INIT] Initialized disk ({} GB)", disk->get_physical_size());
 
 	co_return 0;
 }
