@@ -32,7 +32,7 @@ namespace Programs
 	{
 		if (args.size() < 2)
 		{
-			std::println("Usage: count [num]");
+			shell.putln("Usage: count [num]");
 			co_return 1;
 		}
 
@@ -41,7 +41,7 @@ namespace Programs
 		for (int32_t i = 0; i < max; ++i)
 		{
 			co_await shell.owning_os->wait(1.f);
-			std::println("{0}...", i + 1);
+			shell.putln("{0}...", i + 1);
 		}
 
 		co_return 0;
@@ -57,14 +57,14 @@ namespace Programs
 	{
 		if (args.size() < 2)
 		{
-			std::println(shell.out_stream, "Usage: wait [time (s)]");
+			shell.putln("Usage: wait [time (s)]");
 			co_return 1;
 		}
 
 		float delay = static_cast<float>(std::atof(args[1].c_str()));
 		co_await shell.owning_os->wait(delay);
 
-		std::println("Waited {0} seconds.", delay);
+		shell.putln("Waited {0} seconds.", delay);
 		co_return 0;
 	}
 
@@ -74,7 +74,7 @@ namespace Programs
 		auto sock = our_os.create_socket<CmdSocketServer>();
 		our_os.bind_socket(sock, 22);
 
-		std::println("Redirecting output to writer...");
+		shell.putln("Redirecting output to writer...");
 
 		/* Replace the writer functor in the process so that output
 		is delivered in the form of command objects via the socket. */

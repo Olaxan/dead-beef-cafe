@@ -1,3 +1,5 @@
+#include "msg_queue.h"
+
 #include "proto/test.pb.h"
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
@@ -25,97 +27,174 @@ void stop(tcp::socket& socket)
 	socket.close();
 }
 
-awaitable<void> reader(tcp::socket& socket)
+std::string make_string(asio::streambuf& streambuf)
 {
-	try
+	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
+}
+
+void deliver(com::CommandReply reply)
+{
+	std::print("{}", reply.reply());
+}
+
+class ShellClient : public std::enable_shared_from_this<ShellClient>
+{
+public:
+
+	ShellClient(asio::io_context& context)
+	: context_(context), timer_(context), socket_(tcp::socket(context))
+	{
+		timer_.expires_at(std::chrono::steady_clock::time_point::max());
+	}
+
+	void connect(char* addr, char* service)
+	{
+		co_spawn(context_, 
+			[self = shared_from_this(), addr, service] { return self->resolve(addr, service); }, detached);
+	}
+
+	void write(com::CommandQuery&& query)
+	{
+		asio::post(context_, [this, query] mutable
+		{
+			write_queue_.push(std::move(query));
+			timer_.cancel_one();
+		});
+	}
+
+	awaitable<void> resolve(char* addr, char* service)
+	{
+		std::error_code ec;
+		tcp::resolver res(context_);
+
+		std::println("Connecting to {0}:{1}...", addr, service);
+		
+		auto resolved = co_await res.async_resolve(addr, service, asio::redirect_error(asio::use_awaitable, ec));
+		co_await asio::async_connect(socket_, resolved, asio::redirect_error(asio::use_awaitable, ec));
+
+		if (!ec)
+			std::cout << "Connected to " << socket_.remote_endpoint() << ".\n";
+
+		co_spawn(context_, 
+			[self = shared_from_this()] { return self->reader(); }, detached);
+		co_spawn(context_, 
+			[self = shared_from_this()] { return self->writer(); }, detached);
+	}
+
+	awaitable<void> reader()
 	{
 		constexpr std::size_t header_size = sizeof(int32_t);
 
-		asio::streambuf stream{};
-		std::istream input_stream(&stream);
-
-		while (true)
+		try
 		{
-			stream.prepare(header_size);
-			auto header_bytes = co_await asio::async_read(socket, stream, use_awaitable);
-			std::println("Preparing to read {0} bytes ({1} expected).", header_bytes, header_size);
-			stream.commit(header_size);
-
-			int32_t bytes_to_read = 0;
-			input_stream >> bytes_to_read;
-			stream.prepare(bytes_to_read);
-			auto body_bytes = co_await asio::async_read(socket, stream, use_awaitable);
-			stream.commit(body_bytes);
-
-			com::CommandReply reply{};
-			if (reply.ParseFromIstream(&input_stream))
+			while (socket_.is_open())
 			{
-				std::println("Received {0} bytes message body: \n{1}", body_bytes, reply.reply());
-			}
-			else
-			{
-				std::println("Failed to parse {0} byte message body!", body_bytes);
+				int32_t body_size = co_await std::invoke([this] -> awaitable<int32_t>
+				{
+					asio::streambuf stream{};
+					std::istream input_stream(&stream);
+					asio::streambuf::mutable_buffers_type buffer = stream.prepare(header_size);
+
+					auto header_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(header_size), use_awaitable);
+					stream.commit(header_size);
+
+					int32_t bytes_to_read = 0;
+					input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
+					co_return bytes_to_read;
+				});
+
+				if (body_size == 0)
+				{
+					std::println("Warning: body size of 0 bytes -- closing.");	
+					stop();
+					break;
+				}
+
+				asio::streambuf stream{};
+				std::istream input_stream(&stream);
+				asio::streambuf::mutable_buffers_type buffer = stream.prepare(body_size);
+
+				auto body_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(body_size), use_awaitable);
+				stream.commit(body_size);
+
+				std::string received_str = make_string(stream);
+
+				com::CommandReply reply;
+				//if (query.ParseFromIstream(&input_stream))
+				if (reply.ParseFromString(received_str))
+				{
+					deliver(std::move(reply));
+				}
+				else
+				{
+					std::println("Failed to parse {0} byte message body!", body_bytes);
+					std::size_t hash = std::hash<std::string>{}(received_str);
+					std::println("Received: '{}' ({}).", received_str, hash);
+				}
 			}
 		}
+		catch (std::exception& e)
+		{
+			std::cerr << "Exception: " << e.what() << "\n";
+			stop();
+		}
 	}
-	catch (std::exception&)
+
+	awaitable<void> writer()
 	{
-		stop(socket);
-	}
-}
-
-awaitable<void> connect(tcp::socket socket, char* addr, char* service)
-{
-	auto& context = socket.get_executor();
-	std::error_code ec;
-	tcp::resolver res(context);
-	std::deque<std::string> commands;
-
-	std::println("Connecting to {0}:{1}...", addr, service);
+		try
+		{
+			while (socket_.is_open())
+			{
+				asio::error_code ec;
+				asio::streambuf buffer{};
+				std::ostream output_stream(&buffer);
 	
-	auto resolved = co_await res.async_resolve(addr, service, asio::redirect_error(asio::use_awaitable, ec));
-	co_await asio::async_connect(socket, resolved, asio::redirect_error(asio::use_awaitable, ec));
-
-	co_spawn(context, reader(socket), detached);
-
-	if (!ec)
-		std::cout << "Connected to " << socket.remote_endpoint() << ".\n";
-
-	constexpr std::size_t header_size = sizeof(int32_t);
-
-	asio::streambuf buffer{};
-	std::ostream output_stream(&buffer);
-
-	while (socket.is_open())
-	{
-		std::cout << "Enter message: ";
-		std::string str{};
-		std::getline(std::cin, str);
-
-		if (strcmp(str.c_str(), "exit") == 0)
-		{
-			socket.close();
-			break;
+				if (std::optional<com::CommandQuery> opt_query = write_queue_.pop(); opt_query.has_value())
+				{
+					com::CommandQuery query = opt_query.value();
+	
+					std::string coded_str;
+					bool success = query.SerializeToString(&coded_str);
+					//std::println("Serialised input '{}' to '{}' ({}); success = {}.", str, coded_str, hash, success);
+	
+					//int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
+					int32_t query_size = static_cast<int32_t>(coded_str.size());
+					int32_t header_size = static_cast<int32_t>(sizeof(query_size));
+					int32_t total_msg_size = query_size + header_size;
+					output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
+					output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
+					//query.SerializeToOstream(&output_stream);
+	
+					std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
+					buffer.consume(n);
+				}
+				else
+				{
+					co_await timer_.async_wait(redirect_error(use_awaitable, ec));
+				}
+			}
 		}
-
-		com::CommandQuery query;
-		query.set_command(str);
-		std::string coded_str;
-		bool success = query.SerializeToString(&coded_str);
-		//std::size_t hash = std::hash<std::string>{}(coded_str);
-		//std::println("Serialised input '{}' to '{}' ({}); success = {}.", str, coded_str, hash, success);
-
-		//int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
-		int32_t query_size = static_cast<int32_t>(coded_str.size());
-		output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
-		output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
-		//query.SerializeToOstream(&output_stream);
-
-		std::size_t n = co_await asio::async_write(socket, buffer, asio::transfer_exactly(sizeof(query_size) + query_size), asio::redirect_error(use_awaitable, ec));
-		std::println("Wrote {} bytes (buffer {}/{}) - {}", n, sizeof(query_size), query_size, ec.message());
-		buffer.consume(n);
+		catch(const std::exception& e)
+		{
+			std::cerr << "Exception: " << e.what() << "\n";
+			stop();
+		}
 	}
-}
+
+	void stop()
+	{
+		google::protobuf::ShutdownProtobufLibrary();
+		socket_.close();
+		timer_.cancel();
+	}
+
+	asio::io_context& context_;
+	asio::steady_timer timer_;
+	tcp::socket socket_;
+	MessageQueue<com::CommandQuery> write_queue_{};
+
+};
 
 int main(int argc, char* argv[])
 {
@@ -129,12 +208,31 @@ int main(int argc, char* argv[])
 		}
 
 		asio::io_context io_context(1);
-		co_spawn(io_context, connect(tcp::socket(io_context), argv[1], argv[2]), detached);
+
+		auto client = std::make_shared<ShellClient>(io_context);
+		client->connect(argv[1], argv[2]);
 
 		asio::signal_set signals(io_context, SIGINT, SIGTERM);
 		signals.async_wait([&](auto, auto) { io_context.stop(); });
 		
-		io_context.run();
+		std::jthread runner([&io_context] { io_context.run(); });
+
+		while (true)
+		{
+			std::string str{};
+			std::getline(std::cin, str);
+
+			if (strcmp(str.c_str(), "exit") == 0)
+			{
+				break;
+			}
+
+			com::CommandQuery query;
+			query.set_command(str);
+			client->write(std::move(query));
+		}
+
+		client->stop();
 	}
 	catch (std::exception& e)
 	{

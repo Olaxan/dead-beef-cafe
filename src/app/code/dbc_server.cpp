@@ -265,28 +265,27 @@ private:
 		{
 			constexpr std::size_t header_size = sizeof(int32_t);
 
-			asio::streambuf stream{};
-			std::ostream output_stream(&stream);
+			std::error_code ec;
+			asio::streambuf buffer{};
+			std::ostream output_stream(&buffer);
 
-			while (socket_.is_open())
+			while (socket_.is_open() && sock_->is_open())
 			{
 				//com::CommandReply reply = co_await sock_->read_one();
 				com::CommandReply reply = co_await read_sock2(sock_);
+				//std::print("Reply: {}", reply.reply());
 
-				std::println("Reply: {0}", reply.reply());
+				std::string coded_str;
+				bool success = reply.SerializeToString(&coded_str);
+				int32_t reply_size = static_cast<int32_t>(coded_str.size());
+				int32_t header_size = static_cast<int32_t>(sizeof(reply_size));
+				int32_t total_msg_size = reply_size + header_size;
+				output_stream.write(reinterpret_cast<char*>(&reply_size), sizeof(reply_size));
+				output_stream.write(reinterpret_cast<char*>(coded_str.data()), reply_size);
 
-				// com::CommandReply reply{};
-				// reply.ParseFromIstream(&in_stream_);
-				// reply.set_reply(write_msgs_.front());
-				// write_msgs_.pop_front();
-
-				// output_stream << static_cast<int32_t>(sizeof(reply));
-				// auto header_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
-				// reply.SerializeToOstream(&output_stream);
-				// auto body_bytes_sent = co_await asio::async_write(socket_, stream.data(), use_awaitable);
-
-				// std::println("Sent {0} bytes ({1} header, {2} body).", 
-				// (header_bytes_sent + body_bytes_sent), header_bytes_sent, body_bytes_sent);
+				std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
+				std::println("Wrote {} bytes ({}+{}) - {}", n, header_size, reply_size, ec.message());
+				buffer.consume(n);
 			}
 		}
 		catch (std::exception&)
