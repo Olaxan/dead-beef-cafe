@@ -2,6 +2,7 @@
 
 #include "device.h"
 #include "netw.h"
+#include "term_utils.h"
 
 #include "cpu.h"
 #include "disk.h"
@@ -32,7 +33,7 @@ ProcessTask Programs::InitCpu(Proc& proc, std::vector<std::string> args)
 
 	if (cpu == nullptr)
 	{
-		proc.putln("fatal: no device");
+		proc.errln("fatal: no device");
 		co_return 1;
 	}
 
@@ -60,7 +61,7 @@ ProcessTask Programs::InitNet(Proc& proc, std::vector<std::string> args)
 
 	if (nic == nullptr)
 	{
-		proc.putln("Failed to initialise network interface: no device.");
+		proc.errln("Failed to initialise network interface: no device.");
 		co_return 1;
 	}
 
@@ -79,7 +80,7 @@ ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 
 	if (disk == nullptr)
 	{
-		proc.putln("No disk mounted!");
+		proc.errln("No disk mounted!");
 		co_return 1;
 	}
 
@@ -90,7 +91,6 @@ ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 	proc.put(" - SEEK ");
 	co_await os.wait(0.1f);
 	co_await loading_bar(proc, 20, "OK");
-
 	proc.put("Initializing file system... ");
 	co_await os.wait(0.1f);
 	proc.put("[DONE]\nPrewarming file system access... ");

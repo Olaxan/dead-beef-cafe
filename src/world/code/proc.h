@@ -2,6 +2,7 @@
 
 #include "task.h"
 #include "msg_queue.h"
+#include "term_utils.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
@@ -81,6 +82,34 @@ public:
 		}
 
 		std::println(out_stream, fmt, std::forward<Args>(args)...);
+	}
+
+	/* Write to the process 'standard output', only with red ANSI colours. */
+	template<typename ...Args>
+	void err(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		put("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
+	}
+
+	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
+	template<typename ...Args>
+	void errln(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
+	}
+
+	/* Write to the process 'standard output', only with red ANSI colours. */
+	template<typename ...Args>
+	void warn(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		put("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Yellow));
+	}
+
+	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
+	template<typename ...Args>
+	void warnln(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Yellow));
 	}
 
 	/* Execute a sub-process on this process. */

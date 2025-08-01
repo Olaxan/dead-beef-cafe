@@ -15,7 +15,7 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 
 	if (DeviceState state = os.get_state(); state != DeviceState::PoweredOff)
 	{
-		proc.putln("[ERROR] boot failure: state='{}'.", DeviceUtils::get_state_name(state));
+		proc.errln("[ERROR] boot failure: state='{}'.", DeviceUtils::get_state_name(state));
 		co_return 1;
 	}
 
@@ -37,7 +37,7 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 
 		if (int32_t ret = co_await proc.exec(driver); ret != 0)
 		{
-			proc.putln("[ERROR] boot failure: driver init failure (code {})", ret);
+			proc.errln("[ERROR] boot failure: driver init failure (code {})", ret);
 			os.set_state(DeviceState::Error);
 			co_return 1;
 		}
@@ -74,10 +74,10 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	while (true)
 	{
 		DeviceState state = our_os.get_state();
-		proc.put("{0}{1}> ", our_os.get_hostname(), (state != DeviceState::PoweredOn ? " (NetBIOS)" : ""));
+		proc.put("{0}{1}> ", our_os.get_hostname(), (state != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
-		proc.putln("Process returned with code {0}.", ret);
+		proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);
 	}
 
 	co_return 0;
