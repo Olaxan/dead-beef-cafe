@@ -4,6 +4,7 @@
 #include "proc.h"
 #include "ip_mgr.h"
 #include "nic.h"
+#include "disk.h"
 
 #include <sstream>
 #include <string>
@@ -108,6 +109,16 @@ void OS::get_processes(std::function<void(const Proc&)> reader) const
 {
     for (const auto& [pid, proc] : processes_)
         std::invoke(reader, proc);
+}
+
+FileSystem* OS::get_filesystem() const
+{
+	if (Disk* disk = get_device<Disk>())
+        return disk->get_fs();
+
+    std::println("Did not find disk!");
+
+    return nullptr;
 }
 
 Address6 OS::get_global_ip()

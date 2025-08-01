@@ -25,8 +25,8 @@ namespace HostUtils
         NIC& my_nic = skel.create_device<NIC>(100.f);
         FileSystem& fs = my_disk.create_fs();
 
-        fs.add_file("welcome.txt");
-        fs.add_file("boot.os", "...", FileModeFlags::Execute);
+        //fs.add_file("welcome.txt");
+        //fs.add_file("boot.os", "...", FileModeFlags::Execute);
 
         skel.create_os<T_OS>();
 

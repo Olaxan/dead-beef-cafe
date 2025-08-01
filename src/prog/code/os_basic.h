@@ -26,6 +26,14 @@ namespace Programs
 	ProcessTask InitCpu(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitNet(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitDisk(Proc& proc, std::vector<std::string> args);
+
+	/* File management */
+	ProcessTask CmdList(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdChangeDir(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdMakeDir(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdMakeFile(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdOpenFile(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdRemoveFile(Proc& proc, std::vector<std::string> args);
 }
 
 class BasicOS : public OS
@@ -34,7 +42,11 @@ public:
 
 	BasicOS() = delete;
 
-	BasicOS(Host& owner) : OS(owner) { register_commands(); };
+	BasicOS(Host& owner) : OS(owner) 
+	{ 
+		register_commands(); 
+		register_devices();
+	};
 
 	void register_commands() override
 	{
@@ -48,7 +60,13 @@ public:
 			{"boot", Programs::CmdBoot },
 			{"cpu", Programs::InitCpu},
 			{"net", Programs::InitNet},
-			{"disk", Programs::InitDisk}
+			{"disk", Programs::InitDisk},
+			{"ls", Programs::CmdList},
+			{"cd", Programs::CmdChangeDir},
+			{"mkdir", Programs::CmdMakeDir},
+			{"touch", Programs::CmdMakeFile},
+			{"open", Programs::CmdOpenFile},
+			{"rm", Programs::CmdRemoveFile}
 		};
 	}
 

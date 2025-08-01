@@ -16,39 +16,34 @@
 #include <array>
 #include <string>
 
-class Address6 {
+class UUID 
+{
 public:
 
 	union
 	{
-		std::array<uint8_t, 16> bytes{};
-		struct
-		{
-			uint64_t head;
-			uint64_t tail;
-		};
+		std::array<uint8_t, 8> bytes{};
+		uint64_t num;
 	};
 
-	Address6() = default;
+	UUID() = default;
 
-	Address6(uint64_t pre, uint64_t post) 
-		: head(pre), tail(post)	{ }
+	UUID(uint64_t num) 
+		: num(num) { }
 
-    explicit Address6(const std::string& address) 
+    explicit UUID(const std::string& address) 
 	{
         parse(address);
     }
 
-	auto operator<=>(const Address6& other) const 
+	auto operator<=>(const UUID& other) const 
 	{
-        if (auto cmp = head <=> other.head; cmp != 0)
-            return cmp;
-        return tail <=> other.tail;
+        return num <=> other.num;
     }
 
-    bool operator==(const Address6& other) const 
+    bool operator==(const UUID& other) const 
 	{
-        return this->head == other.head && this->tail == other.tail;
+        return this->num == other.num;
     }
 
 private:
@@ -103,9 +98,9 @@ private:
 };
 
 template<>
-struct std::formatter<Address6> : std::formatter<std::string> 
+struct std::formatter<UUID> : std::formatter<std::string> 
 {
-    auto format(const Address6& addr, auto& ctx) const
+    auto format(const UUID& addr, auto& ctx) const
 	{
         std::ostringstream oss;
         for (size_t i = 0; i < 16; i += 2) 
@@ -119,31 +114,24 @@ struct std::formatter<Address6> : std::formatter<std::string>
     }
 };
 
-struct AddressPair
-{
-	Address6 addr{};
-	int32_t port{0};
-	
-	auto operator <=> (const AddressPair&) const = default;
-};
 
 template <>
-struct std::hash<AddressPair>
+struct std::hash<UUID>
 {
-  	std::size_t operator()(const AddressPair& k) const
+  	std::size_t operator()(const UUID& k) const
 	{
-    	return ((std::hash<uint64_t>()(k.addr.tail) ^ (std::hash<int32_t>()(k.port) << 1)) >> 1);
+    	return std::hash<uint64_t>()(k.num);
 	}
 };
 
-class IPv6Generator 
+class UUIDGenerator 
 {
 public:
 
-    static Address6 generate() 
+    static UUID generate() 
 	{
-		Address6 out;
-        std::array<uint8_t, 16>& bytes = out.bytes;
+		UUID out;
+        std::array<uint8_t, 8>& bytes = out.bytes;
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<> dis(0, 255);

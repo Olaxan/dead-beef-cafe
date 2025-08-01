@@ -2,6 +2,8 @@
 
 #include "device.h"
 #include "netw.h"
+#include "filesystem.h"
+#include "navigator.h"
 
 #include <string>
 #include <vector>
@@ -71,10 +73,20 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		sock->write_one(std::move(reply));
 	};
 
+	FileSystem* fs = our_os.get_filesystem();
+
+	if (fs == nullptr)
+	{
+		proc.warnln("No file system!");
+		co_return 1;
+	}
+
+	Navigator nav(*fs);
+
 	while (true)
 	{
 		DeviceState state = our_os.get_state();
-		proc.put("{0}{1}> ", our_os.get_hostname(), (state != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
+		proc.put("'{}'~{}{}> ", our_os.get_hostname(), nav.get_path(), (state != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
 		proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);

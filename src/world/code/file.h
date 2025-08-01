@@ -8,7 +8,8 @@ enum class FileModeFlags : uint8_t
 	None = 0,
 	Read = 1,
 	Write = 2,
-	Execute = 4
+	Execute = 4,
+	Directory = 8
 };
 
 class File
@@ -17,18 +18,15 @@ public:
 
 	File() = default;
 	
-	File(std::string path, FileModeFlags flags) 
-		: path_(path), flags_(flags) {};
-
-	File(std::string path, std::string content, FileModeFlags flags) 
-		: path_(path), content_(content), flags_(flags) {};
+	File(uint64_t fid, FileModeFlags flags) 
+		: fid_(fid), flags_(flags) {};
 
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
 
 private:
 
-	std::string path_{};
+	uint64_t fid_{};
 	std::string content_{};
 	FileModeFlags flags_{FileModeFlags::None};
 

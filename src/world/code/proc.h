@@ -14,6 +14,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 class Proc;
 class OS;
@@ -45,6 +46,21 @@ public:
 
 	/* Variant of 'dispatch' which awaits its own hosted process task. */
 	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
+
+	/* Sets an environment variable in the process. */
+	void set_env_var(std::string key, std::string val)
+	{
+		envvars_[key] = val;
+	}
+
+	/* Reads the value of an environment variable in the process, or empty if not found. */
+	std::string get_env_var(std::string key) const
+	{
+		if (auto it = envvars_.find(key); it != envvars_.end())
+			return it->second;
+		
+		return {};
+	}
 
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
@@ -95,7 +111,7 @@ public:
 	template<typename ...Args>
 	void errln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
+		//putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
 	}
 
 	/* Write to the process 'standard output', only with red ANSI colours. */
@@ -118,11 +134,17 @@ public:
 	/* Execute a sub-process on this process. */
 	EagerTask<int32_t> exec(com::CommandQuery query);
 
+public:
+
 	int32_t pid{0};
 	std::ostream& out_stream;
 	OS* owning_os{nullptr};
 	Proc* host{nullptr};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
+
+private:
+
+	std::unordered_map<std::string, std::string> envvars_;
 
 };

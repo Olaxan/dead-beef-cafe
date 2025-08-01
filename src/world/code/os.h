@@ -15,6 +15,7 @@
 #include <concepts>
 
 class Host;
+class FileSystem;
 
 class OS
 {
@@ -25,7 +26,11 @@ public:
 	OS() = delete;
 
 	OS(Host& owner)
-		: owner_(owner) { register_commands(); }
+		: owner_(owner) 
+	{ 
+		register_commands(); 
+		register_devices(); 
+	}
 
 	virtual ~OS() { }
 
@@ -60,7 +65,7 @@ public:
 
 	/* Device management */
 	template <std::derived_from<Device> T>
-	T* get_device()
+	T* get_device() const
 	{
 		for (auto& [uuid, dev] : devices_)
 		{
@@ -71,6 +76,7 @@ public:
 		return nullptr;
 	}
 
+	FileSystem* get_filesystem() const;
 
 	/* Sockets */
 	template<std::derived_from<ISocket> T>

@@ -2,7 +2,6 @@
 
 #include "device.h"
 #include "netw.h"
-#include "term_utils.h"
 
 #include "cpu.h"
 #include "disk.h"
@@ -36,6 +35,8 @@ ProcessTask Programs::InitCpu(Proc& proc, std::vector<std::string> args)
 		proc.errln("fatal: no device");
 		co_return 1;
 	}
+
+	proc.warnln("Found 551 orphan nodes, cleaning.");
 
 	proc.putln("Integrated Microtrends© NT1.3");
 	proc.putln("Initialising CPU microcode... (loading registers)");
