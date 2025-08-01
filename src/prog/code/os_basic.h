@@ -35,6 +35,7 @@ namespace Programs
 	ProcessTask CmdMakeFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdOpenFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdRemoveFile(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdGoUp(Proc& proc, std::vector<std::string> args);
 }
 
 class BasicOS : public OS
@@ -67,7 +68,8 @@ public:
 			{"mkdir", Programs::CmdMakeDir},
 			{"touch", Programs::CmdMakeFile},
 			{"open", Programs::CmdOpenFile},
-			{"rm", Programs::CmdRemoveFile}
+			{"rm", Programs::CmdRemoveFile},
+			{"..", Programs::CmdGoUp}
 		};
 	}
 

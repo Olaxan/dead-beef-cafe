@@ -17,7 +17,7 @@ public:
 	bool is_file(uint64_t fid) const { return files_.contains(fid); }
 
 	/* Returns whether the specified file is valid, and whether or not it's a directory. */
-	bool is_dir(uint64_t fid) const { return is_file(fid) && mappings_.contains(fid); }
+	bool is_dir(uint64_t fid) const { return is_file(fid); }
 
 	bool is_directory_root(uint64_t fid) const;
 

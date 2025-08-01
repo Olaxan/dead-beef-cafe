@@ -3,10 +3,13 @@
 #include <sstream>
 #include <algorithm>
 #include <ranges>
+#include <print>
 
-void Navigator::go_up()
+bool Navigator::go_up()
 {
+	int64_t old = current_;
 	current_ = fs_.get_parent_folder(current_);
+	return old != current_;
 }
 
 std::vector<std::string> Navigator::get_files() const
@@ -26,6 +29,8 @@ std::vector<std::string> Navigator::get_files() const
 std::string Navigator::get_path() const
 {
 	std::vector<uint64_t> chain = fs_.get_root_chain(current_);
+	std::reverse(chain.begin(), chain.end());
+	
 	std::stringstream ss;
 	ss << fs_.get_drive_letter() << ":";
 
@@ -33,6 +38,11 @@ std::string Navigator::get_path() const
 		ss << "/" << fs_.get_filename(file);
 
 	return ss.str();
+}
+
+std::string Navigator::get_dir() const
+{
+	return fs_.get_filename(current_);
 }
 
 uint64_t Navigator::create_file(std::string name) const
@@ -49,9 +59,10 @@ bool Navigator::go_to(uint64_t dir)
 {
 	if (!fs_.is_dir(dir))
 		return false;
-
+	
 	current_ = dir;
-	return false;
+
+	return true;
 }
 
 bool Navigator::enter(std::string dir)
@@ -60,6 +71,7 @@ bool Navigator::enter(std::string dir)
 	uint64_t proxy = fs_.get_fid(dir);
 	if (auto it = std::find(near.begin(), near.end(), proxy); it != near.end())
 	{
+		std::println("Going from {} to {}.", current_, *it);
 		go_to(*it);
 		return true;
 	}

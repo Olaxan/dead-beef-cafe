@@ -15,6 +15,7 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <any>
 
 class Proc;
 class OS;
@@ -70,6 +71,26 @@ public:
 			return host->get_var(key, mode);
 		
 		return {};
+	}
+
+	/* Sets the inter-process data pointer. */
+	template<typename T>
+	void set_data(T* data)
+	{
+		data_ = data;
+	}
+
+	/* Retrieves the single-process data pointer. */
+	template<typename T>
+	T* get_data(EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
+	{
+		if (data_.has_value())
+			return std::any_cast<T*>(data_);
+
+		if (host && mode == EnvVarAccessMode::Inherit)
+			return host->get_data<T>(mode);
+
+		return nullptr;
 	}
 
 	/* Write to the process 'standard output'. */
@@ -152,6 +173,7 @@ public:
 	Proc* host{nullptr};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
+	std::any data_{};
 
 private:
 

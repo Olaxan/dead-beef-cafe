@@ -35,7 +35,6 @@
 #include <asio/steady_timer.hpp>
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
-#include <clocale>
 
 #include <print>
 #include <cstdlib>
@@ -315,8 +314,6 @@ awaitable<void> listener(tcp::acceptor acceptor)
 
 int main(int argc, char* argv[])
 {
-	std::setlocale(LC_ALL, "");
-	
 	try
 	{
 		if (argc < 2)

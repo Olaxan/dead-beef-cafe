@@ -86,6 +86,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	}
 
 	Navigator nav(*fs);
+	proc.set_data(&nav);
 
 	while (true)
 	{
@@ -100,7 +101,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		int32_t ret = co_await proc.exec(input.command());
 
 		//proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);
-		proc.put("\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), ret);
+		proc.put("\n\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), (ret == 0 ? ":)" : ":("));
 		proc.set_var("RET_VAL", ret);
 	}
 
