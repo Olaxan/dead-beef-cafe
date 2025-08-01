@@ -68,7 +68,7 @@ public:
 		if (remote == nullptr)
 			return std::nullopt;
 
-		std::println("Connecting socket {0} to {1}:{2}.", (int64_t)sock.get(), dest_addr, dest_port);
+		std::println("Connecting socket {0} to [{1}]:{2}.", (int64_t)sock.get(), dest_addr, dest_port);
 
 		if (SocketStreamFn stream = sock->open_stream(remote); stream != nullptr)
 		{

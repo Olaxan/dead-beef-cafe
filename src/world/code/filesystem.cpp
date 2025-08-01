@@ -7,7 +7,17 @@
 
 FileSystem::FileSystem()
 {
-	root_ = create_directory("root", 0);
+	root_ = add_root_file<File>("root");
+}
+
+bool FileSystem::is_dir(uint64_t fid) const
+{
+	return true;
+	
+	if (auto it = files_.find(fid); it != files_.end())
+		return it->second->has_flag(FileModeFlags::Directory);
+
+	return false;
 }
 
 bool FileSystem::is_directory_root(uint64_t fid) const

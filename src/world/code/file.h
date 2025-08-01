@@ -21,6 +21,10 @@ public:
 	File(uint64_t fid, FileModeFlags flags) 
 		: fid_(fid), flags_(flags) {};
 
+	void set_flag(FileModeFlags flags);
+	void clear_flag(FileModeFlags flags);
+	bool has_flag(FileModeFlags flags);
+
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
 

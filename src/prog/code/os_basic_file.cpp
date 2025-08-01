@@ -48,7 +48,9 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 
 	if (Navigator* nav = proc.get_data<Navigator>())
 	{
-		co_return (nav->create_directory(args[1]) != 0) ? 0 : 1;
+		uint64_t fid = nav->create_directory(args[1]);
+		proc.putln("Created directory '{}':{} under {}.", args[1], fid, nav->get_current());
+		co_return (fid != 0) ? 0 : 1;
 	}
 
 	proc.errln("No file navigator.");

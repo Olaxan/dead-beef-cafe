@@ -32,7 +32,7 @@ std::string Navigator::get_path() const
 	std::reverse(chain.begin(), chain.end());
 	
 	std::stringstream ss;
-	ss << fs_.get_drive_letter() << ":";
+	//ss << fs_.get_drive_letter() << ":";
 
 	for (uint64_t file : chain)
 		ss << "/" << fs_.get_filename(file);

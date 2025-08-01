@@ -17,7 +17,7 @@ public:
 	bool is_file(uint64_t fid) const { return files_.contains(fid); }
 
 	/* Returns whether the specified file is valid, and whether or not it's a directory. */
-	bool is_dir(uint64_t fid) const { return is_file(fid); }
+	bool is_dir(uint64_t fid) const;
 
 	bool is_directory_root(uint64_t fid) const;
 
@@ -50,6 +50,21 @@ protected:
 			name_to_fid_[name] = fid;
 			roots_[fid] = root;
 			mappings_.insert(std::make_pair(root, fid));
+		}
+
+		return fid;
+	}
+
+	template<std::derived_from<File> T>
+	uint64_t add_root_file(std::string name, FileModeFlags flags = FileModeFlags::Directory)
+	{
+		uint64_t fid = ++fid_counter_;
+		auto [it, success] = files_.emplace(fid, std::make_unique<T>(fid, flags));
+
+		if (success)
+		{
+			fid_to_name_[fid] = name;
+			name_to_fid_[name] = fid;
 		}
 
 		return fid;

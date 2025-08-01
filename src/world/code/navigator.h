@@ -18,6 +18,7 @@ public:
 	std::vector<std::string> get_files() const;
 	std::string get_path() const;
 	std::string get_dir() const;
+	uint64_t get_current() const { return current_; }
 	uint64_t create_file(std::string name) const;
 	uint64_t create_directory(std::string name) const;
 		

@@ -1,5 +1,20 @@
 #include "file.h"
 
+void File::set_flag(FileModeFlags flag)
+{
+	flags_ = static_cast<FileModeFlags>(static_cast<uint8_t>(flags_) | static_cast<uint8_t>(flag));
+}
+
+void File::clear_flag(FileModeFlags flag)
+{
+	flags_ = static_cast<FileModeFlags>(static_cast<uint8_t>(flags_) & ~static_cast<uint8_t>(flag));
+}
+
+bool File::has_flag(FileModeFlags flag)
+{
+	return (static_cast<uint8_t>(flags_) & static_cast<uint8_t>(flag)) == static_cast<uint8_t>(flag);
+}
+
 std::string_view File::get_view() const
 {
 	return std::string_view(content_);

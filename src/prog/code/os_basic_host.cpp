@@ -21,7 +21,7 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 
 	if (DeviceState state = os.get_state(); state != DeviceState::PoweredOff)
 	{
-		proc.errln("[ERROR] boot failure: state='{}'.", DeviceUtils::get_state_name(state));
+		proc.warnln("Invalid boot state '{}'.", DeviceUtils::get_state_name(state));
 		co_return 1;
 	}
 
@@ -92,16 +92,16 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	{
 		proc.set_var("SHELL_PATH", nav.get_path());
 
-		proc.put("'{}'~{}{}> ", 
-			our_os.get_hostname(), 
-			nav.get_path(), 
-			(our_os.get_state() != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
+		std::string usr_str = TermUtils::color(std::format("usr@{}", our_os.get_hostname()), TermColor::BrightMagenta);
+		std::string path_str = TermUtils::color(nav.get_path(), TermColor::BrightBlue);
+		std::string net_str = (our_os.get_state() != DeviceState::PoweredOn) ? "(\x1B[33mNetBIOS\x1B[0m) " : "";
+
+		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str); 
 
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
 
-		//proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);
-		proc.put("\n\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), (ret == 0 ? ":)" : ":("));
+		proc.put("\n\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), (ret == 0 ? "✓" : "✕"));
 		proc.set_var("RET_VAL", ret);
 	}
 
