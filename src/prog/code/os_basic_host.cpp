@@ -7,9 +7,13 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
-#include <cstdlib>
 #include <print>
+
+ProcessTask Programs::InitProg(Proc& proc, std::vector<std::string> args)
+{
+	OS& os = *proc.owning_os;
+	co_return 0;
+}
 
 ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 {
@@ -85,11 +89,19 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		DeviceState state = our_os.get_state();
-		proc.put("'{}'~{}{}> ", our_os.get_hostname(), nav.get_path(), (state != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
+		proc.set_var("SHELL_PATH", nav.get_path());
+
+		proc.put("'{}'~{}{}> ", 
+			our_os.get_hostname(), 
+			nav.get_path(), 
+			(our_os.get_state() != DeviceState::PoweredOn ? " (\x1B[33mNetBIOS\x1B[0m)" : ""));
+
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
-		proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);
+
+		//proc.putln("Process returned with code \x1B[{}m{}\x1B[0m.", (ret == 0 ? 32 : 31), ret);
+		proc.put("\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), ret);
+		proc.set_var("RET_VAL", ret);
 	}
 
 	co_return 0;

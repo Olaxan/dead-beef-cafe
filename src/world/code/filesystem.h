@@ -29,7 +29,7 @@ public:
 
 	std::vector<uint64_t> get_files(uint64_t fid) const;
 	uint64_t get_parent_folder(uint64_t fid) const;
-	uint64_t get_root() const { return 0; } //TODO: PLACEHOLDER!!!!!
+	uint64_t get_root() const { return root_; }
 	std::vector<uint64_t> get_root_chain(uint64_t fid) const;
 	char get_drive_letter() const { return 'A'; }
 
@@ -57,6 +57,7 @@ protected:
 
 private:
 
+	uint64_t root_{0};
 	uint64_t fid_counter_{0};
 	std::unordered_map<uint64_t, std::unique_ptr<File>> files_ = {};
 	std::unordered_map<uint64_t, std::string> fid_to_name_{};

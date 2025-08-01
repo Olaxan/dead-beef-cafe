@@ -47,3 +47,8 @@ int32_t TermUtils::get_ansi_bg_color(TermColor color)
 		default: return 40;
 	}
 }
+
+std::string TermUtils::color(const std::string & str, TermColor fg, TermColor bg)
+{
+	return std::format("\x1B[{};{}m{}\x1B[0m", TermUtils::get_ansi_fg_color(fg), TermUtils::get_ansi_bg_color(bg), str);
+}

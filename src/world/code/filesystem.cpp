@@ -7,7 +7,7 @@
 
 FileSystem::FileSystem()
 {
-	create_directory("root", 0);
+	root_ = create_directory("root", 0);
 }
 
 bool FileSystem::is_directory_root(uint64_t fid) const

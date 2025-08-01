@@ -22,6 +22,12 @@ class OS;
 using ProcessTask = Task<int32_t, std::suspend_always>;
 using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
 
+enum class EnvVarAccessMode
+{
+	Local,
+	Inherit
+};
+
 class Proc
 {
 public:
@@ -48,16 +54,20 @@ public:
 	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
 
 	/* Sets an environment variable in the process. */
-	void set_env_var(std::string key, std::string val)
+	template<typename T>
+	void set_var(std::string key, T val)
 	{
-		envvars_[key] = val;
+		envvars_[key] = std::format("{}", val);
 	}
 
 	/* Reads the value of an environment variable in the process, or empty if not found. */
-	std::string get_env_var(std::string key) const
+	std::string get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
 	{
 		if (auto it = envvars_.find(key); it != envvars_.end())
 			return it->second;
+
+		if (host && mode == EnvVarAccessMode::Inherit)
+			return host->get_var(key, mode);
 		
 		return {};
 	}
@@ -100,32 +110,32 @@ public:
 		std::println(out_stream, fmt, std::forward<Args>(args)...);
 	}
 
+	/* Write to the process 'standard output', only with yellow ANSI colours. */
+	template<typename ...Args>
+	void warn(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		put("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Yellow));
+	}
+
+	/* Write to the process 'standard output', with yellow ANSI colours, with  a \n at the end. */
+	template<typename ...Args>
+	void warnln(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		putln("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Yellow));
+	}
+
 	/* Write to the process 'standard output', only with red ANSI colours. */
 	template<typename ...Args>
 	void err(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		put("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
+		put("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Red));
 	}
 
 	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
 	template<typename ...Args>
 	void errln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		//putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Red));
-	}
-
-	/* Write to the process 'standard output', only with red ANSI colours. */
-	template<typename ...Args>
-	void warn(std::format_string<Args...> fmt, Args&& ...args)
-	{
-		put("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Yellow));
-	}
-
-	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
-	template<typename ...Args>
-	void warnln(std::format_string<Args...> fmt, Args&& ...args)
-	{
-		putln("{0}", TermUtils::color(fmt, std::forward<Args>(args)..., TermColor::Yellow));
+		putln("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Red));
 	}
 
 	/* Execute a sub-process on this process. */

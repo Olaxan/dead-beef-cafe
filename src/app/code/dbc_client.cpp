@@ -12,6 +12,7 @@
 #include <thread>
 #include <string>
 #include <print>
+#include <clocale>
 
 #include <asio.hpp>
 
@@ -198,6 +199,8 @@ public:
 
 int main(int argc, char* argv[])
 {
+	std::setlocale(LC_ALL, "");
+
 	try
 	{
 

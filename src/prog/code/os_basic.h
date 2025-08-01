@@ -26,6 +26,7 @@ namespace Programs
 	ProcessTask InitCpu(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitNet(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitDisk(Proc& proc, std::vector<std::string> args);
+	ProcessTask InitProg(Proc& proc, std::vector<std::string> args);
 
 	/* File management */
 	ProcessTask CmdList(Proc& proc, std::vector<std::string> args);
@@ -51,10 +52,10 @@ public:
 	void register_commands() override
 	{
 		commands_ = {
+			{"wait", Programs::CmdWait},
 			{"echo", Programs::CmdEcho},
 			{"count", Programs::CmdCount},
 			{"shutdown", Programs::CmdShutdown},
-			{"wait", Programs::CmdWait},
 			{"proc", Programs::CmdProc},
 			{"shell", Programs::CmdShell},
 			{"boot", Programs::CmdBoot },

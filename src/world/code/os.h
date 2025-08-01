@@ -64,6 +64,8 @@ public:
 
 
 	/* Device management */
+
+	/* Gets the first registered device that matches the specified type. */
 	template <std::derived_from<Device> T>
 	T* get_device() const
 	{
@@ -74,6 +76,20 @@ public:
 		}
 
 		return nullptr;
+	}
+
+	/* Gets a list of devices matching the specified type. */
+	template <std::derived_from<Device> T>
+	std::vector<T*> get_devices_of_type() const
+	{
+		std::vector<T*> out;
+		for (auto& [uuid, dev] : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev))
+				out.push_back(cast);
+		}
+
+		return out;
 	}
 
 	FileSystem* get_filesystem() const;

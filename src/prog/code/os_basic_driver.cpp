@@ -9,8 +9,6 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
-#include <cstdlib>
 #include <print>
 
 EagerTask<int32_t> loading_bar(Proc& proc, std::size_t length, std::string result)
@@ -19,7 +17,7 @@ EagerTask<int32_t> loading_bar(Proc& proc, std::size_t length, std::string resul
 	for (std::size_t i = 0; i < length; ++i)
 	{
 		proc.put("I");
-		co_await proc.owning_os->wait(0.05f);
+		co_await proc.owning_os->wait(0.02f);
 	}
 	proc.putln("] [{}]", result);
 	co_return 0;
@@ -77,30 +75,39 @@ ProcessTask Programs::InitNet(Proc& proc, std::vector<std::string> args)
 ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
-	Disk* disk = os.get_device<Disk>();
 
-	if (disk == nullptr)
+	std::vector<Disk*> disks = os.get_devices_of_type<Disk>();
+
+	proc.putln("Found {} disk(s):", disks.size());
+
+	if (disks.empty())
 	{
-		proc.errln("No disk mounted!");
+		proc.errln("No disks connected!");
 		co_return 1;
 	}
 
-	proc.putln("SuperDisk Integrated Shell");
-	proc.put(" - SCAN ");
-	co_await loading_bar(proc, 20, "OK");
+	for (Disk* disk : os.get_devices_of_type<Disk>())
+	{
+		proc.putln("SuperDisk Integrated Shell");
+		proc.put(" - SCAN ");
+		co_await loading_bar(proc, 20, "OK");
+	
+		proc.put(" - SEEK ");
+		co_await os.wait(0.1f);
+		co_await loading_bar(proc, 20, "OK");
+		proc.put("Initializing file system... ");
+		co_await os.wait(0.1f);
 
-	proc.put(" - SEEK ");
-	co_await os.wait(0.1f);
-	co_await loading_bar(proc, 20, "OK");
-	proc.put("Initializing file system... ");
-	co_await os.wait(0.1f);
-	proc.put("[DONE]\nPrewarming file system access... ");
-	co_await os.wait(0.2f);
-	proc.putln("[DONE]");
+		if (FileSystem* fs = disk->get_fs(); fs == nullptr)
 
-	co_await os.wait(1.f);
-	disk->set_state(DeviceState::PoweredOn);
-	proc.putln("[INIT] Initialized disk ({} GB)", disk->get_physical_size());
+		proc.put("[DONE]\nPrewarming file system access... ");
+		co_await os.wait(0.2f);
+		proc.putln("[DONE]");
+	
+		co_await os.wait(1.f);
+		disk->set_state(DeviceState::PoweredOn);
+		proc.putln("[INIT] Initialized disk ({} GB)", disk->get_physical_size());
+	}
 
 	co_return 0;
 }
