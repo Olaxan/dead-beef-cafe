@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <print>
+#include <chrono>
+#include <format>
 
 ProcessTask Programs::InitProg(Proc& proc, std::vector<std::string> args)
 {
@@ -101,7 +103,19 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		com::CommandQuery input = co_await sock->read_one();
 		int32_t ret = co_await proc.exec(input.command());
 
-		proc.put("\n\x1B[{}m{}\x1B[0m ", (ret == 0 ? 32 : 31), (ret == 0 ? "✓" : "✕"));
+		if (input.has_screen_data())
+		{
+			com::ScreenData screen = input.screen_data();
+			auto const current_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+			std::string ret_sym = std::format(CSI_PLACEHOLDER "{}" CSI_RESET, (ret == 0 ? 32 : 31), (ret == 0 ? "✓" : "✕"));
+			std::string time_str = std::format("{:%Y-%m-%d %X}", current_time);
+			std::string line_str = std::format("{} {}", ret_sym, time_str);
+			int32_t length = 2 + time_str.length();
+
+			proc.putln("\n{}", TermUtils::msg_line(line_str, screen.size_x() - length));
+		}
+
+		//proc.put("\x1B[{}m{}\x1B[0m ", , );
 		proc.set_var("RET_VAL", ret);
 	}
 

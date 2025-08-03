@@ -15,6 +15,8 @@
 
 #include <asio.hpp>
 
+#include <windows.h>
+
 using asio::ip::tcp;
 using asio::awaitable;
 using asio::co_spawn;
@@ -196,6 +198,45 @@ public:
 
 };
 
+bool EnableVTMode()
+{
+    // Set output mode to handle virtual terminal sequences
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode))
+    {
+        return false;
+    }
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    if (!SetConsoleMode(hOut, dwMode))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+com::ScreenData* get_screen_data()
+{
+	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO screen_info;
+	GetConsoleScreenBufferInfo(h_out, &screen_info);
+	COORD screen_size;
+	screen_size.X = screen_info.srWindow.Right - screen_info.srWindow.Left + 1;
+	screen_size.Y = screen_info.srWindow.Bottom - screen_info.srWindow.Top + 1;
+	com::ScreenData* screen = new com::ScreenData();
+	screen->set_size_x(screen_size.X);
+	screen->set_size_y(screen_size.Y);
+	
+	return screen;
+}
+
 int main(int argc, char* argv[])
 {
 	try
@@ -229,6 +270,10 @@ int main(int argc, char* argv[])
 
 			com::CommandQuery query;
 			query.set_command(str);
+
+			com::ScreenData* screen = get_screen_data();
+
+			query.set_allocated_screen_data(screen);
 			client->write(std::move(query));
 		}
 

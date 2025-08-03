@@ -48,7 +48,17 @@ int32_t TermUtils::get_ansi_bg_color(TermColor color)
 	}
 }
 
-std::string TermUtils::color(const std::string & str, TermColor fg, TermColor bg)
+std::string TermUtils::color(const std::string& str, TermColor fg, TermColor bg)
 {
-	return std::format("\x1B[{};{}m{}\x1B[0m", TermUtils::get_ansi_fg_color(fg), TermUtils::get_ansi_bg_color(bg), str);
+	return std::format(CSI "{};{}m{}" CSI_CODE(0), TermUtils::get_ansi_fg_color(fg), TermUtils::get_ansi_bg_color(bg), str);
+}
+
+std::string TermUtils::line(int32_t length)
+{
+	return std::format(LINE_BEGIN "{}" LINE_END, std::string(length, 'q'));
+}
+
+std::string TermUtils::msg_line(std::string str, int32_t length)
+{
+	return std::format("{} " LINE_BEGIN "{}" LINE_END, str, std::string(length - 1, 'q'));
 }

@@ -2,7 +2,14 @@ syntax = "proto3";
 
 package com;
 
+message ScreenData
+{
+	int32 size_x = 1;
+	int32 size_y = 2;
+};
+
 message CommandQuery 
 {
 	string command = 1;
+	ScreenData screen_data = 2;
 };
