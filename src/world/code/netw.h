@@ -29,12 +29,17 @@ public:
 
 	Socket() = default;
 
-	auto read_one()
+	auto async_read()
 	{
 		return MessageAwaiter<T_Rx, T_Tx>(this);
 	}
+
+	auto read()
+	{
+		return rxq.pop();
+	}
 	
-	void write_one(T_Tx&& msg)
+	void write(T_Tx&& msg)
 	{
 		txq.push(std::move(msg));
 	}
@@ -55,6 +60,9 @@ public:
 
 	void notify_receive()
 	{
+		if (await_rx_.empty())
+			return;
+			
 		if (std::optional<T_Rx> msg = rxq.pop(); msg.has_value())
 		{
 			auto awaiters = await_rx_.copy_clear();

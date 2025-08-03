@@ -233,7 +233,7 @@ com::ScreenData* get_screen_data()
 	com::ScreenData* screen = new com::ScreenData();
 	screen->set_size_x(screen_size.X);
 	screen->set_size_y(screen_size.Y);
-	
+
 	return screen;
 }
 
@@ -272,8 +272,8 @@ int main(int argc, char* argv[])
 			query.set_command(str);
 
 			com::ScreenData* screen = get_screen_data();
-
 			query.set_allocated_screen_data(screen);
+			
 			client->write(std::move(query));
 		}
 

@@ -21,7 +21,7 @@ EagerTask<int32_t> reader(std::shared_ptr<CmdSocketClient> read_socket)
 {
 	while (read_socket->is_open())
 	{
-		com::CommandReply reply = co_await read_socket->read_one();
+		com::CommandReply reply = co_await read_socket->async_read();
 		std::print("{0}", reply.reply());
 	}
 	co_return 0;
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 		com::CommandQuery query{};
 		query.set_command(input);
 
-		our_sock->write_one(std::move(query));
+		our_sock->write(std::move(query));
 	}
 
 	return 0;

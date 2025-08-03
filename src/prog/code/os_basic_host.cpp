@@ -76,14 +76,25 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	{
 		com::CommandReply reply{};
 		reply.set_reply(out_str);
-		sock->write_one(std::move(reply));
+		sock->write(std::move(reply));
+	};
+
+	proc.reader = [sock]() -> std::any
+	{
+		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
+		{
+			std::println("Got read!");
+			return *opt;
+		}
+		
+		return {};
 	};
 
 	FileSystem* fs = our_os.get_filesystem();
 
 	if (fs == nullptr)
 	{
-		proc.warnln("No file system!");
+		proc.errln("fatal: No file system!");
 		co_return 1;
 	}
 
@@ -96,11 +107,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		std::string usr_str = TermUtils::color(std::format("usr@{}", our_os.get_hostname()), TermColor::BrightMagenta);
 		std::string path_str = TermUtils::color(nav.get_path(), TermColor::BrightBlue);
-		std::string net_str = (our_os.get_state() != DeviceState::PoweredOn) ? "(\x1B[33mNetBIOS\x1B[0m) " : "";
+		std::string net_str = (our_os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str); 
 
-		com::CommandQuery input = co_await sock->read_one();
+		com::CommandQuery input = co_await sock->async_read();
 		int32_t ret = co_await proc.exec(input.command());
 
 		if (input.has_screen_data())
@@ -114,8 +125,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 			proc.putln("\n{}", TermUtils::msg_line(line_str, screen.size_x() - length));
 		}
+		else
+		{
+			proc.put("\n" CSI_PLACEHOLDER "{}" CSI_RESET, (ret == 0 ? 32 : 31), (ret == 0 ? "✓" : "✕"));
+		}
 
-		//proc.put("\x1B[{}m{}\x1B[0m ", , );
 		proc.set_var("RET_VAL", ret);
 	}
 

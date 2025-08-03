@@ -7,6 +7,7 @@
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 
+#include <print>
 #include <coroutine>
 #include <optional>
 #include <functional>
@@ -22,6 +23,8 @@ class OS;
 
 using ProcessTask = Task<int32_t, std::suspend_always>;
 using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
+using WriterFn = std::function<void(const std::string&)>;
+using ReaderFn = std::function<std::any(void)>;
 
 enum class EnvVarAccessMode
 {
@@ -45,14 +48,8 @@ public:
 	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
 	int32_t get_pid() const { return pid; }
 
-	std::function<void(const std::string&)> writer = nullptr;
 
-	/* Set this process running with a function and function arguments. 
-	Optionally resume the provided coroutine immediately, if it is lazy. */
-	void dispatch(ProcessFn& program, std::vector<std::string> args, bool resume = true);
-
-	/* Variant of 'dispatch' which awaits its own hosted process task. */
-	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
+	/* --- FUNCTIONS THAT RELATE TO ENVIRONMENT VARIABLES ---- */
 
 	/* Sets an environment variable in the process. */
 	template<typename T>
@@ -73,6 +70,9 @@ public:
 		return {};
 	}
 
+
+	/* --- FUNCTIONS THAT RELATE TO PROCESS DATA ---- */
+
 	/* Sets the inter-process data pointer. */
 	template<typename T>
 	void set_data(T* data)
@@ -92,6 +92,37 @@ public:
 
 		return nullptr;
 	}
+
+
+	/* ---- FUNCTIONS THAT RELATE TO GETTING INPUT FROM THE USER --- */
+
+	/* Try to read something from the reader function, if it has been provided. 
+	The data type must be specified and match, or an exception will be raised. */
+	template<typename T> 
+	std::optional<T> try_get(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
+	{
+		if (reader)
+		{
+			try
+			{
+				if (std::any&& get = std::invoke(reader); get.has_value())
+				{
+					return std::any_cast<T>(get);
+				}
+			}
+			catch (const std::bad_any_cast& e)
+			{
+				std::cerr << e.what() << std::endl;
+			}
+		}
+
+		if (host && mode == EnvVarAccessMode::Inherit)
+			return host->try_get<T>(mode);
+
+		return std::nullopt;
+	}
+
+	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
@@ -159,6 +190,16 @@ public:
 		putln("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Red));
 	}
 
+
+	/* --- FUNCTIONS THAT RELATE TO EXECUTING SUB-PROCESSES --- */
+
+	/* Set this process running with a function and function arguments. 
+	Optionally resume the provided coroutine immediately, if it is lazy. */
+	void dispatch(ProcessFn& program, std::vector<std::string> args, bool resume = true);
+
+	/* Variant of 'dispatch' which awaits its own hosted process task. */
+	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
+
 	/* Execute a sub-process on this process. */
 	EagerTask<int32_t> exec(std::string cmd);
 
@@ -174,6 +215,9 @@ public:
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	std::any data_{};
+
+	WriterFn writer = nullptr;
+	ReaderFn reader = nullptr;
 
 private:
 

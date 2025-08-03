@@ -123,7 +123,7 @@ auto read_sock2(const std::shared_ptr<CmdSocketClient>& ptr)
     	[ptr](auto&& self) -> EagerTask<int32_t>
       	{
 			auto self_ptr = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
-			com::CommandReply rep = co_await ptr->read_one();
+			com::CommandReply rep = co_await ptr->async_read();
 			self_ptr->complete(rep);
 			co_return 0;
       	},
@@ -165,7 +165,7 @@ public:
 	void deliver(com::CommandQuery&& msg)
 	{
 		//write_msgs_.push_back(msg);
-		sock_->write_one(std::move(msg));
+		sock_->write(std::move(msg));
 		timer_.cancel_one();
 	}
 
@@ -193,6 +193,7 @@ private:
 	
 					int32_t bytes_to_read = 0;
 					input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
+					
 					co_return bytes_to_read;
 				});
 

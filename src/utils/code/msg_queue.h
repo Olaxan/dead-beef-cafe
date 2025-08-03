@@ -41,7 +41,7 @@ public:
         return queue_.front();
     }
 
-    bool empty() const
+    bool empty()
     {
         std::unique_lock<std::mutex> lock(mutex_);
         return queue_.empty();

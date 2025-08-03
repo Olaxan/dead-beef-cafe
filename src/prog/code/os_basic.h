@@ -36,6 +36,9 @@ namespace Programs
 	ProcessTask CmdOpenFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdRemoveFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdGoUp(Proc& proc, std::vector<std::string> args);
+
+	/* Test programs */
+	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 }
 
 class BasicOS : public OS
@@ -63,6 +66,7 @@ public:
 			{"cpu", Programs::InitCpu},
 			{"net", Programs::InitNet},
 			{"disk", Programs::InitDisk},
+			{"snake", Programs::CmdSnake},
 			{"ls", Programs::CmdList},
 			{"cd", Programs::CmdChangeDir},
 			{"mkdir", Programs::CmdMakeDir},
