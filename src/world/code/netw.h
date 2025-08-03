@@ -44,6 +44,11 @@ public:
 		txq.push(std::move(msg));
 	}
 
+	void write(const T_Tx& msg)
+	{
+		txq.push(msg);
+	}
+
 	bool is_open() const { return true; }
 	
 	void notify_send()
@@ -62,7 +67,7 @@ public:
 	{
 		if (await_rx_.empty())
 			return;
-			
+
 		if (std::optional<T_Rx> msg = rxq.pop(); msg.has_value())
 		{
 			auto awaiters = await_rx_.copy_clear();

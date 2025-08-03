@@ -67,29 +67,6 @@ ProcessTask Programs::CmdShutdown(Proc& proc, std::vector<std::string> args)
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
 	OS& our_os = *proc.owning_os;
-	auto sock = our_os.create_socket<CmdSocketServer>();
-	our_os.bind_socket(sock, 22);
-
-	/* Replace the writer functor in the process so that output
-	is delivered in the form of command objects via the socket. */
-	proc.writer = [sock](const std::string& out_str)
-	{
-		com::CommandReply reply{};
-		reply.set_reply(out_str);
-		sock->write(std::move(reply));
-	};
-
-	proc.reader = [sock]() -> std::any
-	{
-		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
-		{
-			std::println("Got read!");
-			return *opt;
-		}
-		
-		return {};
-	};
-
 	FileSystem* fs = our_os.get_filesystem();
 
 	if (fs == nullptr)
@@ -97,6 +74,40 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		proc.errln("fatal: No file system!");
 		co_return 1;
 	}
+
+	auto sock = our_os.create_socket<CmdSocketServer>();
+	our_os.bind_socket(sock, 22);
+
+	/* Register writer functors in the process so that output
+	is delivered in the form of command objects via the socket. */
+	proc.add_writer<std::string>([sock](const std::string& out_str)
+	{
+		com::CommandReply reply{};
+		reply.set_reply(out_str);
+		sock->write(std::move(reply));
+	});
+
+	proc.add_writer<com::CommandReply>([sock](const com::CommandReply& out_reply)
+	{
+		sock->write(out_reply);
+	});
+
+	/* Add reader functors so that child processes can listen to our traffic. */
+	proc.add_reader<std::string>([sock]() -> std::any
+	{
+		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
+			return opt->command();
+		
+		return {};
+	});
+
+	proc.add_reader<com::CommandQuery>([sock]() -> std::any
+	{
+		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
+			return *opt;
+		
+		return {};
+	});
 
 	Navigator nav(*fs);
 	proc.set_data(&nav);

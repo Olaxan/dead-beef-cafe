@@ -17,6 +17,7 @@
 #include <memory>
 #include <unordered_map>
 #include <any>
+#include <typeindex>
 
 class Proc;
 class OS;
@@ -96,16 +97,26 @@ public:
 
 	/* ---- FUNCTIONS THAT RELATE TO GETTING INPUT FROM THE USER --- */
 
+	/* Add a reader of a certain type, which can be used in read function calls. */
+	template <typename T>
+    void add_reader(std::function<std::any()> reader) 
+	{
+        readers_[std::type_index(typeid(T))] = [reader]() 
+		{
+            return reader();
+        };
+    }
+
 	/* Try to read something from the reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
 	template<typename T> 
-	std::optional<T> try_get(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
+	std::optional<T> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
 	{
-		if (reader)
+		if (auto it = readers_.find(std::type_index(typeid(T))); it != readers_.end())
 		{
 			try
 			{
-				if (std::any&& get = std::invoke(reader); get.has_value())
+				if (std::any&& get = it->second(); get.has_value())
 				{
 					return std::any_cast<T>(get);
 				}
@@ -117,28 +128,45 @@ public:
 		}
 
 		if (host && mode == EnvVarAccessMode::Inherit)
-			return host->try_get<T>(mode);
+			return host->read<T>(mode);
 
 		return std::nullopt;
 	}
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 
+	/* Register a writer of a certain type, to be used in put/write function calls instead of standard out. */
+	template <typename T>
+    void add_writer(std::function<void(const T&)> writer) 
+	{
+        writers_[std::type_index(typeid(T))] = [writer](const void* msg) 
+		{
+            writer(*static_cast<const T*>(msg));
+        };
+    }
+
+	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
+	template <typename T>
+    bool write(const T& msg) 
+	{
+        if (auto it = writers_.find(std::type_index(typeid(T))); it != writers_.end())
+		{
+            it->second(&msg);
+			return true;
+		}
+
+		if (host)
+			return host->write<T>(msg);
+
+		return false;
+    }
+
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
 	void put(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		if (writer)
-		{
-			std::invoke(writer, std::format(fmt, std::forward<Args>(args)...));
+		if (write(std::format(fmt, std::forward<Args>(args)...)))
 			return;
-		}
-
-		if (host)
-		{
-			host->put(fmt, std::forward<Args>(args)...);
-			return;
-		}
 
 		std::print(out_stream, fmt, std::forward<Args>(args)...);
 	}
@@ -147,17 +175,8 @@ public:
 	template<typename ...Args>
 	void putln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		if (writer)
-		{
-			std::invoke(writer, std::format(fmt, std::forward<Args>(args)...).append("\n"));
+		if (write(std::format(fmt, std::forward<Args>(args)...).append("\n")))
 			return;
-		}
-
-		if (host)
-		{
-			host->putln(fmt, std::forward<Args>(args)...);
-			return;
-		}
 
 		std::println(out_stream, fmt, std::forward<Args>(args)...);
 	}
@@ -215,9 +234,8 @@ public:
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	std::any data_{};
-
-	WriterFn writer = nullptr;
-	ReaderFn reader = nullptr;
+	std::unordered_map<std::type_index, std::function<void(const void*)>> writers_;
+	std::unordered_map<std::type_index, std::function<std::any()>> readers_;
 
 private:
 

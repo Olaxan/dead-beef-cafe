@@ -7,13 +7,13 @@
 #include <cstdlib>
 #include <print>
 
-ProcessTask Programs::CmdEcho(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdEcho(Proc& proc, std::vector<std::string> args)
 {
 	proc.putln("echo: {0}", args);
 	co_return 0;
 }
 
-ProcessTask Programs::CmdCount(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 {
 	if (args.size() < 2)
 	{
@@ -32,7 +32,7 @@ ProcessTask Programs::CmdCount(Proc &proc, std::vector<std::string> args)
 	co_return 0;
 }
 
-ProcessTask Programs::CmdProc(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdProc(Proc& proc, std::vector<std::string> args)
 {
 	proc.putln("Processes on {0}:", proc.owning_os->get_hostname());
 	proc.owning_os->get_processes([&proc](const Proc& process)
@@ -42,7 +42,7 @@ ProcessTask Programs::CmdProc(Proc &proc, std::vector<std::string> args)
 	co_return 0;
 }
 
-ProcessTask Programs::CmdWait(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdWait(Proc& proc, std::vector<std::string> args)
 {
 	if (args.size() < 2)
 	{

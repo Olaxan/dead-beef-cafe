@@ -18,6 +18,12 @@ public:
         queue_.push_back(std::move(message));
     }
 
+    void push(const T& message) 
+	{
+        std::lock_guard<std::mutex> lock(mutex_);
+        queue_.push_back(message);
+    }
+
     std::optional<T> pop() 
 	{
         std::unique_lock<std::mutex> lock(mutex_);
