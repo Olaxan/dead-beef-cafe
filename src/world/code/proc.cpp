@@ -47,8 +47,7 @@ EagerTask<int32_t> Proc::exec(std::string cmd)
 		co_return ret;
 	}
 
-	putln("'{0}': No such file or directory.", cmd);
-
+	putln("'{0}': No such file or directory.", word);
 	co_return 1;
 }
 

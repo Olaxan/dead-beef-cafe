@@ -96,7 +96,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 
 	if (Navigator* nav = proc.get_data<Navigator>())
 	{
-		co_return 1;
+		co_return nav->remove_file(args[1]) ? 0 : 1;
 	}
 
 	proc.errln("No file navigator.");

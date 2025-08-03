@@ -32,7 +32,6 @@ std::string Navigator::get_path() const
 	std::reverse(chain.begin(), chain.end());
 	
 	std::stringstream ss;
-	//ss << fs_.get_drive_letter() << ":";
 
 	for (uint64_t file : chain)
 		ss << "/" << fs_.get_filename(file);
@@ -55,6 +54,15 @@ uint64_t Navigator::create_directory(std::string name) const
 	return fs_.create_directory(name, current_);
 }
 
+bool Navigator::remove_file(std::string name, bool recurse) const
+{
+	if (uint64_t fid = fs_.get_fid(name))
+	{
+		return fs_.remove_file(fid, recurse);
+	}
+	return false;
+}
+
 bool Navigator::go_to(uint64_t dir)
 {
 	if (!fs_.is_dir(dir))
@@ -71,9 +79,7 @@ bool Navigator::enter(std::string dir)
 	uint64_t proxy = fs_.get_fid(dir);
 	if (auto it = std::find(near.begin(), near.end(), proxy); it != near.end())
 	{
-		std::println("Going from {} to {}.", current_, *it);
-		go_to(*it);
-		return true;
+		return go_to(*it);
 	}
 
 	return false;

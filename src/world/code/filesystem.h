@@ -19,7 +19,11 @@ public:
 	/* Returns whether the specified file is valid, and whether or not it's a directory. */
 	bool is_dir(uint64_t fid) const;
 
+	/* Returns whether the specified file has a parent, or if it is a tree root. */
 	bool is_directory_root(uint64_t fid) const;
+
+	/* Returns whether the specified file has children, or if it is empty/a non-directory file. */
+	bool is_empty(uint64_t fid) const;
 
 	/* Returns the filename of a valid file handle, otherwise an empty string. */
 	std::string get_filename(uint64_t fid) const;
@@ -35,6 +39,8 @@ public:
 
 	uint64_t create_file(std::string filename, uint64_t root);
 	uint64_t create_directory(std::string filename, uint64_t root);
+
+	bool remove_file(uint64_t fid, bool recurse = false);
 
 protected:
 

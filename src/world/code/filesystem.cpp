@@ -12,8 +12,6 @@ FileSystem::FileSystem()
 
 bool FileSystem::is_dir(uint64_t fid) const
 {
-	return true;
-	
 	if (auto it = files_.find(fid); it != files_.end())
 		return it->second->has_flag(FileModeFlags::Directory);
 
@@ -26,6 +24,15 @@ bool FileSystem::is_directory_root(uint64_t fid) const
 		return it->second == fid; // If the root is itself, it counts as a root.
 	
 	return true;
+}
+
+bool FileSystem::is_empty(uint64_t fid) const
+{
+	if (!is_dir(fid))
+		return true;
+
+	std::vector<uint64_t> files = get_files(fid);
+	return files.empty();
 }
 
 std::string FileSystem::get_filename(uint64_t fid) const
@@ -41,7 +48,7 @@ uint64_t FileSystem::get_fid(std::string filename) const
 	if (auto it = name_to_fid_.find(filename); it != name_to_fid_.end())
 		return it->second;
 
-	return get_root();
+	return 0;
 }
 
 std::vector<uint64_t> FileSystem::get_files(uint64_t dir) const
@@ -97,4 +104,30 @@ uint64_t FileSystem::create_file(std::string filename, uint64_t root)
 uint64_t FileSystem::create_directory(std::string filename, uint64_t root)
 {
 	return add_file<File>(filename, root, FileModeFlags::Directory);
+}
+
+bool FileSystem::remove_file(uint64_t fid, bool recurse)
+{
+	if (is_empty(fid))
+	{
+		mappings_.erase(fid);
+		roots_.erase(fid);
+		if (auto it = fid_to_name_.find(fid); it != fid_to_name_.end())
+		{
+			name_to_fid_.erase(it->second);
+			fid_to_name_.erase(it);
+		}
+		return true;
+	}
+	else if (recurse)
+	{
+		for (uint64_t child : get_files(fid))
+		{
+			if (!remove_file(child, true))
+				return false;
+		}
+		return remove_file(fid, false);
+	}
+
+	return false;
 }
