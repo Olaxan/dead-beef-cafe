@@ -24,18 +24,127 @@ using asio::detached;
 using asio::redirect_error;
 using asio::use_awaitable;
 
-void stop(tcp::socket& socket)
-{
-	socket.close();
-}
+bool cook_input = true;
+
 
 std::string make_string(asio::streambuf& streambuf)
 {
 	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
 }
 
+com::ScreenData* get_screen_data()
+{
+	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO screen_info;
+	GetConsoleScreenBufferInfo(h_out, &screen_info);
+	COORD screen_size;
+	screen_size.X = screen_info.srWindow.Right - screen_info.srWindow.Left + 1;
+	screen_size.Y = screen_info.srWindow.Bottom - screen_info.srWindow.Top + 1;
+	com::ScreenData* screen = new com::ScreenData();
+	screen->set_size_x(screen_size.X);
+	screen->set_size_y(screen_size.Y);
+
+	return screen;
+}
+
+void set_flags(DWORD& flags, DWORD flag)
+{
+	flags |= flag;
+}
+
+void unset_flags(DWORD& flags, DWORD flag)
+{
+	flags &= (~flag);
+}
+
+bool try_set_flags(DWORD handle, DWORD flags)
+{
+    HANDLE h = GetStdHandle(handle);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(h, &dwMode))
+    {
+        return false;
+    }
+
+	set_flags(dwMode, flags);
+
+	if (!SetConsoleMode(h, dwMode))
+    {
+        return false;
+    }
+
+	return true;
+}
+
+bool try_unset_flags(DWORD handle, DWORD flags)
+{
+    HANDLE h = GetStdHandle(handle);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(h, &dwMode))
+    {
+        return false;
+    }
+
+	unset_flags(dwMode, flags);
+
+	if (!SetConsoleMode(h, dwMode))
+    {
+        return false;
+    }
+
+	return true;
+}
+
+bool enable_vtt_mode()
+{
+	bool i = try_set_flags(STD_INPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_INPUT);
+	bool o = try_set_flags(STD_OUTPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	return i && o;
+}
+
+bool disable_vtt_mode()
+{
+	bool i = try_unset_flags(STD_INPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_INPUT);
+	bool o = try_unset_flags(STD_OUTPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	return i && o;
+}
+
+bool enable_raw_mode()
+{
+	cook_input = false;
+	return try_unset_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+}
+
+bool disable_raw_mode()
+{
+	cook_input = true;
+	return try_set_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+}
+
 void deliver(com::CommandReply reply)
 {
+	if (reply.configure())
+	{
+		if (reply.con_mode() == com::ConsoleMode::Raw)
+		{
+			enable_raw_mode();
+		}
+		else
+		{
+			disable_raw_mode();
+		}
+	}
+
 	std::print("{}", reply.reply());
 }
 
@@ -107,9 +216,7 @@ public:
 
 				if (body_size == 0)
 				{
-					std::println("Warning: body size of 0 bytes -- closing.");	
-					stop();
-					break;
+					continue;
 				}
 
 				asio::streambuf stream{};
@@ -122,7 +229,6 @@ public:
 				std::string received_str = make_string(stream);
 
 				com::CommandReply reply;
-				//if (query.ParseFromIstream(&input_stream))
 				if (reply.ParseFromString(received_str))
 				{
 					deliver(std::move(reply));
@@ -158,15 +264,12 @@ public:
 	
 					std::string coded_str;
 					bool success = query.SerializeToString(&coded_str);
-					//std::println("Serialised input '{}' to '{}' ({}); success = {}.", str, coded_str, hash, success);
 	
-					//int32_t query_size = static_cast<int32_t>(query.ByteSizeLong());
 					int32_t query_size = static_cast<int32_t>(coded_str.size());
 					int32_t header_size = static_cast<int32_t>(sizeof(query_size));
 					int32_t total_msg_size = query_size + header_size;
 					output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
 					output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
-					//query.SerializeToOstream(&output_stream);
 	
 					std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
 					buffer.consume(n);
@@ -198,45 +301,6 @@ public:
 
 };
 
-bool EnableVTMode()
-{
-    // Set output mode to handle virtual terminal sequences
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut == INVALID_HANDLE_VALUE)
-    {
-        return false;
-    }
-
-    DWORD dwMode = 0;
-    if (!GetConsoleMode(hOut, &dwMode))
-    {
-        return false;
-    }
-
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(hOut, dwMode))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-com::ScreenData* get_screen_data()
-{
-	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_SCREEN_BUFFER_INFO screen_info;
-	GetConsoleScreenBufferInfo(h_out, &screen_info);
-	COORD screen_size;
-	screen_size.X = screen_info.srWindow.Right - screen_info.srWindow.Left + 1;
-	screen_size.Y = screen_info.srWindow.Bottom - screen_info.srWindow.Top + 1;
-	com::ScreenData* screen = new com::ScreenData();
-	screen->set_size_x(screen_size.X);
-	screen->set_size_y(screen_size.Y);
-
-	return screen;
-}
-
 int main(int argc, char* argv[])
 {
 	try
@@ -258,15 +322,37 @@ int main(int argc, char* argv[])
 		
 		std::jthread runner([&io_context] { io_context.run(); });
 
+		bool vtt = enable_vtt_mode();
+		std::println("VTTY enabled: {}", vtt);
+
 		while (true)
 		{
 			std::string str{};
-			std::getline(std::cin, str);
+			char ch;
+			DWORD bytesRead;
+
+			do
+			{
+				HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+				if (hStdin == INVALID_HANDLE_VALUE) 
+				{
+					std::cerr << "Error getting input handle.\n";
+					return 1;
+				}
+
+				ReadConsole(hStdin, &ch, 1, &bytesRead, nullptr);
+				if (ch == '\r' || ch == '\n')
+					break;
+				str += ch;
+			} while (cook_input);
 
 			if (strcmp(str.c_str(), "exit") == 0)
 			{
 				break;
 			}
+
+			if (str.empty())
+				continue;
 
 			com::CommandQuery query;
 			query.set_command(str);
