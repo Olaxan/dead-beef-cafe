@@ -5,12 +5,18 @@
 
 #define ESC "\x1b"
 #define CSI "\x1b["
+#define OSC_BEGIN(code) "\x1b]" #code ";"
+#define OSC_END "\x1b\x5c"
 #define CSI_CODE(code) "\x1b[" #code "m"
 #define CSI_PLACEHOLDER "\x1b[{}m"
 #define CSI_RESET CSI_CODE(0)
 #define LINE_BEGIN ESC "(0"
 #define LINE_END ESC "(B"
-#define CSI_RET(code) (code == 0 ? CSI_CODE(32) : CSI_CODE(31))
+#define BEGIN_ALT_SCREEN_BUFFER CSI "?1049h"
+#define END_ALT_SCREEN_BUFFER CSI "?1049l"
+#define CLEAR_SCREEN CSI "2J"
+#define CLEAR_CURSOR CSI "H"
+#define MOVE_CURSOR(x, y) CSI #x ";" #y "H"
 
 enum class TermColor
 {

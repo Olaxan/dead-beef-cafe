@@ -161,6 +161,12 @@ public:
 		return false;
     }
 
+	/* Overload to ensure string literals work. */
+    bool write(const char* msg) 
+	{
+        return write(std::string(msg));
+    }
+
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
 	void put(std::format_string<Args...> fmt, Args&& ...args)

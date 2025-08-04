@@ -11,5 +11,6 @@ enum ConsoleMode
 message CommandReply
 {
 	string reply = 1;
-	optional ConsoleMode con_mode = 2;
+	bool configure = 2;
+	optional ConsoleMode con_mode = 3;
 };

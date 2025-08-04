@@ -117,7 +117,7 @@ std::string make_string(asio::streambuf& streambuf)
 	return { asio::buffers_begin(streambuf.data()), asio::buffers_end(streambuf.data()) };
 }
 
-auto read_sock2(const std::shared_ptr<CmdSocketClient>& ptr)
+auto read_sock(const std::shared_ptr<CmdSocketClient>& ptr)
 {
   	return asio::async_compose<decltype(asio::use_awaitable), void(com::CommandReply)>(
     	[ptr](auto&& self) -> EagerTask<int32_t>
@@ -186,9 +186,7 @@ private:
 					std::istream input_stream(&stream);
 					asio::streambuf::mutable_buffers_type buffer = stream.prepare(header_size);
 
-					std::println("Awaiting to read {0} bytes...", header_size);
 					auto header_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(header_size), use_awaitable);
-					std::println("Got header: {0} bytes ({1} expected).", header_bytes, header_size);
 					stream.commit(header_size);
 	
 					int32_t bytes_to_read = 0;
@@ -199,27 +197,22 @@ private:
 
 				if (body_size == 0)
 				{
-					std::println("Warning: body size of 0 bytes -- closing.");	
-					stop();
-					break;
+					std::println("Warning: body size of 0 bytes.");	
+					continue;
 				}
 
 				asio::streambuf stream{};
 				std::istream input_stream(&stream);
 				asio::streambuf::mutable_buffers_type buffer = stream.prepare(body_size);
 
-				std::println("Awaiting to read body ({0} bytes)...", body_size);
 				auto body_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(body_size), use_awaitable);
-				std::println("Read {0} bytes ({1} expected).", body_bytes, body_size);
 				stream.commit(body_size);
 
 				std::string received_str = make_string(stream);
 
 				com::CommandQuery query;
-				//if (query.ParseFromIstream(&input_stream))
 				if (query.ParseFromString(received_str))
 				{
-					std::println("Received {0} bytes message body: \n{1}", body_bytes, query.command());
 					deliver(std::move(query));
 				}
 				else
@@ -248,9 +241,7 @@ private:
 
 			while (socket_.is_open() && sock_->is_open())
 			{
-				//com::CommandReply reply = co_await sock_->read_one();
-				com::CommandReply reply = co_await read_sock2(sock_);
-				//std::print("Reply: {}", reply.reply());
+				com::CommandReply reply = co_await read_sock(sock_);
 
 				std::string coded_str;
 				bool success = reply.SerializeToString(&coded_str);
@@ -261,8 +252,10 @@ private:
 				output_stream.write(reinterpret_cast<char*>(coded_str.data()), reply_size);
 
 				std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
-				std::println("Wrote {} bytes ({}+{}) - {}", n, header_size, reply_size, ec.message());
 				buffer.consume(n);
+
+				if (static_cast<int32_t>(n) != total_msg_size)
+					std::println("Write mismatch: wrote {0} bytes but expected {1}.", n, total_msg_size);
 			}
 		}
 		catch (std::exception&)
