@@ -223,7 +223,7 @@ private:
 				}
 			}
 		}
-		catch (std::exception&)
+		catch (const std::exception&)
 		{
 			stop();
 		}

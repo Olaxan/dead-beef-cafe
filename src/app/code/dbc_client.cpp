@@ -12,6 +12,7 @@
 #include <thread>
 #include <string>
 #include <print>
+#include <algorithm>
 
 #include <asio.hpp>
 
@@ -131,6 +132,53 @@ bool disable_raw_mode()
 	return try_set_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 }
 
+std::string getch()
+{
+	HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+	if (h == NULL) 
+	{
+		std::println("No console!");
+		return {}; // console not found
+	}
+	DWORD count;
+	TCHAR c[1024];
+	ReadConsole(h, c, 1024, &count, NULL);
+	std::string out;
+	out.assign(c, count);
+	return out;
+}
+
+/* Read Unicode (UTF-16) input from console */
+std::wstring read_console_input_w() 
+{
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    std::wstring result;
+    wchar_t buffer[256];
+    DWORD charsRead;
+
+    if (ReadConsoleW(hInput, buffer, 255, &charsRead, nullptr))
+	{
+        buffer[charsRead] = L'\0';  // Null-terminate
+        result = buffer;
+    }
+    return result;
+}
+
+std::string utf16_to_utf8(const std::wstring& wstr) 
+{
+    if (wstr.empty()) return std::string();
+
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1,
+                                         nullptr, 0, nullptr, nullptr);
+
+    std::string strTo(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1,
+                        &strTo[0], sizeNeeded, nullptr, nullptr);
+
+    return strTo;
+}
+
+
 void deliver(com::CommandReply reply)
 {
 	if (reply.configure())
@@ -241,7 +289,7 @@ public:
 				}
 			}
 		}
-		catch (std::exception& e)
+		catch (const std::exception& e)
 		{
 			std::cerr << "Exception: " << e.what() << "\n";
 			stop();
@@ -305,7 +353,6 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-
 		if (argc != 3)
 		{
 			std::cerr << "Usage: dbc_client <host> <port>\n";
@@ -323,36 +370,30 @@ int main(int argc, char* argv[])
 		std::jthread runner([&io_context] { io_context.run(); });
 
 		bool vtt = enable_vtt_mode();
-		std::println("VTTY enabled: {}", vtt);
+		bool raw = enable_raw_mode();
+		SetConsoleOutputCP(CP_UTF8);
+		std::println("VTTY={}, RAW={}", vtt, raw);
 
 		while (true)
 		{
 			std::string str{};
-			char ch;
-			DWORD bytesRead;
 
-			do
+			while (true) 
 			{
-				HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-				if (hStdin == INVALID_HANDLE_VALUE) 
-				{
-					std::cerr << "Error getting input handle.\n";
-					return 1;
-				}
+				std::wstring wide_in = read_console_input_w();
+				std::string utf8_in = utf16_to_utf8(wide_in);
+				std::stringstream ss;
 
-				ReadConsole(hStdin, &ch, 1, &bytesRead, nullptr);
-				if (ch == '\r' || ch == '\n')
+				for (char c : utf8_in)
+					ss << "\\" << std::hex << static_cast<int>(c) << std::dec;
+
+				std::println("key = {} ({})", utf8_in, ss.str());
+
+				if (!utf8_in.empty() && utf8_in[0] == 'Q')
 					break;
-				str += ch;
-			} while (cook_input);
-
-			if (strcmp(str.c_str(), "exit") == 0)
-			{
-				break;
 			}
 
-			if (str.empty())
-				continue;
+			break;
 
 			com::CommandQuery query;
 			query.set_command(str);
@@ -365,7 +406,7 @@ int main(int argc, char* argv[])
 
 		client->stop();
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	{
 		std::cerr << "Exception: " << e.what() << "\n";
 	}
