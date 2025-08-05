@@ -376,27 +376,14 @@ int main(int argc, char* argv[])
 
 		while (true)
 		{
-			std::string str{};
+			std::wstring wide_in = read_console_input_w();
+			std::string utf8_in = utf16_to_utf8(wide_in);
 
-			while (true) 
-			{
-				std::wstring wide_in = read_console_input_w();
-				std::string utf8_in = utf16_to_utf8(wide_in);
-				std::stringstream ss;
-
-				for (char c : utf8_in)
-					ss << "\\" << std::hex << static_cast<int>(c) << std::dec;
-
-				std::println("key = {} ({})", utf8_in, ss.str());
-
-				if (!utf8_in.empty() && utf8_in[0] == 'Q')
-					break;
-			}
-
-			break;
+			if (!utf8_in.empty() && utf8_in[0] == 'Q')
+				break;
 
 			com::CommandQuery query;
-			query.set_command(str);
+			query.set_command(utf8_in);
 
 			com::ScreenData* screen = get_screen_data();
 			query.set_allocated_screen_data(screen);
