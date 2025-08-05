@@ -1,6 +1,13 @@
 #include "os_basic.h"
 #include "term_utils.h"
 
+#include <unicode/utypes.h>
+#include <unicode/ucol.h>
+#include <unicode/usearch.h>
+#include <unicode/ustring.h>
+#include <unicode/ustream.h>
+#include <unicode/brkiter.h>
+
 ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;

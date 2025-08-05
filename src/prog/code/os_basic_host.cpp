@@ -198,16 +198,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			proc.put("{}", writeback);
 		}
 
+		/* Trim any whitespace from the buffer string, convert the result back to utf8,
+		 and clear the buffer before sending it for processing. */
 		std::string out_cmd;
 		buffer.trim();
 		buffer.toUTF8String(out_cmd);
 		buffer.remove();
-
-		for (char c : out_cmd)
-		{
-			std::print("{}({}), ", c, (int)c);
-		}
-		std::println("and nothing else!");
 
 		int32_t ret = co_await proc.exec(out_cmd);
 
