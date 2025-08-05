@@ -2,7 +2,7 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "MSVC x86_x64",
+            "name": "MSVC_x86_x64",
             "displayName": "Visual Studio Build Tools 2022 Release - x86_amd64",
             "description": "Using compilers for Visual Studio 17 2022 (x86_x64 architecture)",
             "generator": "Visual Studio 17 2022",
@@ -17,7 +17,7 @@
             }
         },
         {
-            "name": "MSVC x86_x64 + Ninja",
+            "name": "MSVC_x86_x64_Ninja",
             "displayName": "Ninja build tool with MSVC - x86_amd64",
             "description": "Ninja using compilers for Visual Studio 17 2022 (x86_x64 architecture)",
             "generator": "Ninja",
@@ -32,15 +32,15 @@
     ],
     "buildPresets": [
         {
-            "name": "MSVC x86_x64-debug",
+            "name": "MSVC_x86_x64-debug",
             "displayName": "Visual Studio Build Tools 2022 Release - x86_amd64 - Debug",
-            "configurePreset": "MSVC x86_x64",
+            "configurePreset": "MSVC_x86_x64",
             "configuration": "Debug"
         },
         {
-            "name": "Ninja + MSVC x86_x64-debug",
+            "name": "Ninja_MSVC_x86_x64-debug",
             "displayName": "Ninja build tool with MSVC 2022 Release - x86_amd64 - Debug",
-            "configurePreset": "MSVC x86_x64 + Ninja",
+            "configurePreset": "MSVC_x86_x64_Ninja",
             "configuration": "Debug"
         }
     ]

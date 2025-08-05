@@ -10,6 +10,8 @@ FILE(GLOB prog_sources code/*.cpp)
 SET(files_prog ${prog_headers} ${prog_sources})
 SOURCE_GROUP("prog" FILES ${files_prog})
 
+FIND_PACKAGE(ICU COMPONENTS uc io i18n REQUIRED)
+
 ADD_LIBRARY(prog STATIC ${files_prog})
-TARGET_LINK_LIBRARIES(prog PRIVATE world)
+TARGET_LINK_LIBRARIES(prog PRIVATE world ICU::uc ICU::io ICU::i18n)
 TARGET_INCLUDE_DIRECTORIES(prog INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)

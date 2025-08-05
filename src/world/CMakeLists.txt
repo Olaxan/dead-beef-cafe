@@ -15,7 +15,8 @@ ADD_LIBRARY(world STATIC ${files_world})
 
 #TARGET_LINK_LIBRARIES(world PRIVATE x)
 FIND_PACKAGE(Protobuf REQUIRED)
+FIND_PACKAGE(ICU COMPONENTS uc io i18n REQUIRED)
 
-TARGET_LINK_LIBRARIES(world PUBLIC utils proto protobuf::libprotobuf)
+TARGET_LINK_LIBRARIES(world PUBLIC utils proto protobuf::libprotobuf ICU::uc ICU::io ICU::i18n)
 
 TARGET_INCLUDE_DIRECTORIES(world INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)
