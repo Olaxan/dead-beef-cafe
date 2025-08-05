@@ -5,6 +5,7 @@
     "freetype",
     "glfw3",
     "lunasvg",
-    "stb"
+    "stb",
+    "icu"
   ]
 }
