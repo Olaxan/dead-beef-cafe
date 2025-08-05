@@ -17,6 +17,11 @@
 #define CLEAR_SCREEN CSI "2J"
 #define CLEAR_CURSOR CSI "H"
 #define MOVE_CURSOR(x, y) CSI #x ";" #y "H"
+#define MOVE_CURSOR_PLACEHOLDER CSI "{1};{0}H"
+#define SHOW_CURSOR CSI "?25h"
+#define HIDE_CURSOR CSI "?25l"
+#define ENABLE_CURSOR_BLINK CSI "?12h"
+#define DISABLE_CURSOR_BLINK CSI "?12l"
 
 enum class TermColor
 {
@@ -49,4 +54,7 @@ namespace TermUtils
 
 	std::string line(int32_t length);
 	std::string msg_line(std::string str, int32_t length);
+	std::string line_vertical_border();
+	std::string line_horizontal_border(int32_t width, bool is_top);
+	std::string frame(int32_t width, int32_t height);
 };

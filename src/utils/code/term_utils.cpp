@@ -1,5 +1,7 @@
 #include "term_utils.h"
 
+#include <sstream>
+
 int32_t TermUtils::get_ansi_fg_color(TermColor color)
 {
 	switch (color)
@@ -61,4 +63,41 @@ std::string TermUtils::line(int32_t length)
 std::string TermUtils::msg_line(std::string str, int32_t length)
 {
 	return std::format("{} " LINE_BEGIN "{}" LINE_END, str, std::string(length - 1, 'q'));
+}
+
+std::string TermUtils::line_vertical_border()
+{
+	std::stringstream ss;
+    ss << ESC "(0"; 		// Enter Line drawing mode
+    ss << CSI "104;93m"; 	// bright yellow on bright blue
+    ss << "x"; 				// in line drawing mode, \x78 -> \u2502 "Vertical Bar"
+    ss << CSI "0m";			// restore color
+    ss << ESC "(B"; 		// exit line drawing mode
+	return ss.str();
+}
+
+std::string TermUtils::line_horizontal_border(int32_t width, bool fIsTop)
+{
+	std::stringstream ss;
+    ss << ESC "(0"; 			// Enter Line drawing mode
+    ss << CSI "104;93m"; 		// Make the border bright yellow on bright blue
+    ss << fIsTop ? "l" : "m"; 	// print left corner 
+
+    for (int32_t i = 1; i < width - 1; i++)
+        ss << "q"; 				// in line drawing mode, \x71 -> \u2500 "HORIZONTAL SCAN LINE-5"
+
+    ss << fIsTop ? "k" : "j"; 	// print right corner
+    ss << CSI "0m";
+    ss << ESC "(B"; 			// exit line drawing mode
+	return ss.str();
+}
+
+std::string TermUtils::frame(int32_t width, int32_t height)
+{
+	std::stringstream ss;
+	ss << CSI << "2;1H";
+	ss << line_horizontal_border(width, true);
+	ss << CSI << std::format("{};1H", height - 1);
+	ss << line_horizontal_border(width, true);
+	return ss.str();
 }

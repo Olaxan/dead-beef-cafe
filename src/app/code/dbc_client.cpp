@@ -25,8 +25,6 @@ using asio::detached;
 using asio::redirect_error;
 using asio::use_awaitable;
 
-bool cook_input = true;
-
 
 std::string make_string(asio::streambuf& streambuf)
 {
@@ -122,13 +120,11 @@ bool disable_vtt_mode()
 
 bool enable_raw_mode()
 {
-	cook_input = false;
 	return try_unset_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 }
 
 bool disable_raw_mode()
 {
-	cook_input = true;
 	return try_set_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 }
 
@@ -181,18 +177,6 @@ std::string utf16_to_utf8(const std::wstring& wstr)
 
 void deliver(com::CommandReply reply)
 {
-	if (reply.configure())
-	{
-		if (reply.con_mode() == com::ConsoleMode::Raw)
-		{
-			enable_raw_mode();
-		}
-		else
-		{
-			disable_raw_mode();
-		}
-	}
-
 	std::print("{}", reply.reply());
 }
 

@@ -60,6 +60,25 @@ public:
 	}
 
 	/* Reads the value of an environment variable in the process, or empty if not found. */
+	template<typename T>
+	T get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
+	{
+		if (auto it = envvars_.find(key); it != envvars_.end())
+		{
+			std::stringstream ss;
+			ss << it->second;
+			T ret;
+			ss >> ret;
+			return ret;
+		}
+
+		if (host && mode == EnvVarAccessMode::Inherit)
+			return host->get_var<T>(key, mode);
+		
+		return {};
+	}
+
+	/* Default version of get_var, returning a string (no converstion). */
 	std::string get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
 	{
 		if (auto it = envvars_.find(key); it != envvars_.end())
