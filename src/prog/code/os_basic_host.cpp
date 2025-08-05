@@ -10,6 +10,7 @@
 #include <unicode/usearch.h>
 #include <unicode/ustring.h>
 #include <unicode/ustream.h>
+#include <unicode/brkiter.h>
 
 #include <string>
 #include <vector>
@@ -134,8 +135,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
 
-		
-
 		while (true)
 		{
 			com::CommandQuery input = co_await sock->async_read();
@@ -151,19 +150,44 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 
 			/* Next, read the actual command and consider it based on first-byte. */
-			const std::string& str_in = input.command();
+			std::string str_in = input.command();
 	
 			if (str_in.length() == 0)
 				continue;
-	
+
+			if (str_in[0] == '\x1b')
+				continue;
+
+			if (str_in[0] == '\x08' || str_in[0] == '\x7f')
+			{
+				UErrorCode status = U_ZERO_ERROR;
+				std::unique_ptr<icu::BreakIterator> bi(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status));
+				if (U_FAILURE(status) || !bi)
+				{
+					proc.warnln("Warning: Failed to create break iterator!");
+					continue;
+				}
+
+				bi->setText(buffer);
+				int32_t end = buffer.length();
+				int32_t last_char_start = bi->preceding(end);
+				if (last_char_start != icu::BreakIterator::DONE)
+				{
+					buffer.remove(last_char_start);
+					proc.put(CSI "D" CSI "X");
+				}
+
+				continue;
+			}
+
 			if (str_in[0] == '\r')
 			{
 				proc.put("\r\n");
 				break;
 			}
 
-			if (str_in[0] == '\x1b')
-				continue;
+			if (str_in.back() == '\0')
+				str_in.pop_back();
 
 			icu::UnicodeString chunk = icu::UnicodeString::fromUTF8(str_in);
 			buffer.append(chunk);
@@ -175,8 +199,15 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		std::string out_cmd;
+		buffer.trim();
 		buffer.toUTF8String(out_cmd);
-		buffer = icu::UnicodeString(); // for now, dunno how to clear string
+		buffer.remove();
+
+		for (char c : out_cmd)
+		{
+			std::print("{}({}), ", c, (int)c);
+		}
+		std::println("and nothing else!");
 
 		int32_t ret = co_await proc.exec(out_cmd);
 
