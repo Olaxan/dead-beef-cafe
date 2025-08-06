@@ -8,6 +8,8 @@
 #include <unicode/ustream.h>
 #include <unicode/brkiter.h>
 
+#include <algorithm>
+
 ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
@@ -35,13 +37,33 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	
 	proc.put("{}", TermUtils::frame(1, 1, width , height, " Snake Mode 0.25 ('q' to exit) "));
 
-	int32_t x_ = 5;
-	int32_t y_ = 5;
-	int32_t x_speed_ = 1;
-	int32_t y_speed_ = 0;
+	struct SnakeCoord
+	{
+		int32_t x = 0;
+		int32_t y = 0;
+
+		SnakeCoord operator + (const SnakeCoord& other) const
+		{
+			return { x + other.x, y + other.y };
+		}
+
+		auto operator <=> (const SnakeCoord& other) const = default;
+	};
+
+	int32_t frame = 0;
+	SnakeCoord speed{1, 0};
+	std::size_t snake_len = 1;
+	std::deque<SnakeCoord> snake_body{ { width / 2, height / 2 } };
+
+	SnakeCoord apple = snake_body.front() + SnakeCoord{10, 0};
+
+	const std::string snake_str = "SNAKE";
+	const std::string snake_str2 = "SNAKES-ARE-ELONGATED-LIMBLESS-REPTILES-OF-THE-SUBORDER-SERPENTES-CLADISTICALLY-SQUAMATES-SNAKES-ARE-ECTOTHERMIC-AMNIOTE-VERTEBRATES-COVERED-IN-OVERLAPPING-SCALES-MUCH-LIKE-OTHER-MEMBERS-OF-THE-GROUP-MANY-SPECIES-OF-SNAKES-HAVE-SKULLS-WITH-SEVERAL-MORE-JOINTS-THAN-THEIR-LIZARD-ANCESTORS-AND-RELATIVES-ENABLING-THEM-TO-SWALLOW-PREY-MUCH-LARGER-THAN-THEIR-HEADS-CRANIAL-KINESIS-TO-ACCOMMODATE-THEIR-NARROW-BODIES-SNAKES-PAIRED-ORGANS-SUCH-AS-KIDNEYS-APPEAR-ONE-IN-FRONT-OF-THE-OTHER-INSTEAD-OF-SIDE-BY-SIDE-AND-MOST-ONLY-HAVE-ONE-FUNCTIONAL-LUNG-SOME-SPECIES-RETAIN-A-PELVIC-GIRDLE-WITH-A-PAIR-OF-VESTIGIAL-CLAWS-ON-EITHER-SIDE-OF-THE-CLOACA-LIZARDS-HAVE-INDEPENDENTLY-EVOLVED-ELONGATE-BODIES-WITHOUT-LIMBS-OR-WITH-GREATLY-REDUCED-LIMBS-AT-LEAST-TWENTY-FIVE-TIMES-VIA-CONVERGENT-EVOLUTION-LEADING-TO-MANY-LINEAGES-OF-LEGLESS-LIZARDS-THESE-RESEMBLE-SNAKES-BUT-SEVERAL-COMMON-GROUPS-OF-LEGLESS-LIZARDS-HAVE-EYELIDS-AND-EXTERNAL-EARS-WHICH-SNAKES-LACK-ALTHOUGH-THIS-RULE-IS-NOT-UNIVERSAL-SEE-AMPHISBAENIA-DIBAMIDAE-AND-PYGOPODIDAE.";
 
 	while (true)
 	{
+		++frame;
+
 		co_await os.wait(0.16f);
 
 		if (std::optional<com::CommandQuery> opt_query = proc.read<com::CommandQuery>(); opt_query.has_value())
@@ -58,33 +80,71 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 			bool down_pressed = (query.compare(0, 3, CURSOR_DOWN) == 0);
 			bool left_pressed = (query.compare(0, 3, CURSOR_LEFT) == 0);
 			bool right_pressed = (query.compare(0, 3, CURSOR_RIGHT) == 0);
+			bool going_horizontal = speed.x != 0;
+			bool going_vertical = speed.y != 0;
 
-			if (up_pressed)
+			if (up_pressed && going_horizontal)
 			{
-				y_speed_ = -1;
-				x_speed_ = 0;
+				speed.y = -1;
+				speed.x = 0;
 			}
-			if (down_pressed)
+			if (down_pressed && going_horizontal)
 			{
-				y_speed_ = 1;
-				x_speed_ = 0;
+				speed.y = 1;
+				speed.x = 0;
 			}
-			if (left_pressed)
+			if (left_pressed && going_vertical)
 			{
-				x_speed_ = -1;
-				y_speed_ = 0;
+				speed.x = -1;
+				speed.y = 0;
 			}
-			if (right_pressed)
+			if (right_pressed && going_vertical)
 			{
-				x_speed_ = 1;
-				y_speed_ = 0;
+				speed.x = 1;
+				speed.y = 0;
 			}
 		}
 
-		//proc.put(CSI "X");
-		proc.put(MOVE_CURSOR_PLACEHOLDER "😈", y_, x_);
-		x_ = (x_ + x_speed_) % width;
-		y_ = (y_ + y_speed_) % height;
+		std::stringstream ss;
+
+		const SnakeCoord& head = snake_body.front();
+		SnakeCoord new_head = head + speed;
+
+		/* We collect an apple! */
+		if (new_head == apple)
+		{
+			apple.x = 1 + std::rand() % (width - 2);
+			apple.y = 1 + std::rand() % (height - 2);
+			++snake_len;
+		}
+
+		bool crash_self = (std::find(snake_body.begin(), snake_body.end(), new_head) != snake_body.end());
+		bool crash_wall = (new_head.x <= 1 || new_head.x >= width - 1 || new_head.y <= 1 || new_head.y >= height - 1);
+
+		/* Self-crash! */
+		if (crash_self || crash_wall)
+		{
+			proc.put(MOVE_CURSOR(5,5) "You are SNAKE JAM!" MOVE_CURSOR(6, 6) "{} points.", snake_len);
+			co_await os.wait(5);
+			break;
+		}
+
+		snake_body.push_front(new_head);
+		while (snake_body.size() > snake_len)
+		{
+			SnakeCoord& back = snake_body.back();
+			ss << TermUtils::pixel(back.x, back.y, " ");
+			snake_body.pop_back();
+		}
+
+		/* Add the head afterwards so that a stationary snake is still drawn. */
+		std::size_t snake_idx = frame % std::min(snake_str.length(), snake_len);
+		std::string new_snake = std::format("{}", snake_str[snake_idx]);
+		ss << TermUtils::pixel(new_head.x ,new_head.y, new_snake);
+		ss << TermUtils::pixel(apple.x, apple.y, "O");
+
+		proc.put("{}", ss.str());
+
 	}
 	
 	com::CommandReply end_msg;

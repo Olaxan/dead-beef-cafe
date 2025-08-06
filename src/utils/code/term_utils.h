@@ -5,6 +5,7 @@
 
 #define ESC "\x1b"
 #define CSI "\x1b["
+#define DEL "\x7f"
 #define OSC_BEGIN(code) "\x1b]" #code ";"
 #define OSC_END "\x1b\x5c"
 #define CSI_CODE(code) "\x1b[" #code "m"
@@ -29,6 +30,7 @@
 #define CURSOR_LEFT CSI "D"
 #define DELETE_CHAR CSI "P"
 #define ERASE_CHAR CSI "X"
+
 
 enum class TermColor
 {
