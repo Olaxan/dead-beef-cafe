@@ -110,6 +110,14 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 		const SnakeCoord& head = snake_body.front();
 		SnakeCoord new_head = head + speed;
 
+		/* Retract tail before moving (it's unfair to collide with it). */
+		while (snake_body.size() >= snake_len)
+		{
+			SnakeCoord& back = snake_body.back();
+			ss << TermUtils::pixel(back.x, back.y, " ");
+			snake_body.pop_back();
+		}
+
 		/* We collect an apple! */
 		if (new_head == apple)
 		{
@@ -130,12 +138,6 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 		}
 
 		snake_body.push_front(new_head);
-		while (snake_body.size() > snake_len)
-		{
-			SnakeCoord& back = snake_body.back();
-			ss << TermUtils::pixel(back.x, back.y, " ");
-			snake_body.pop_back();
-		}
 
 		/* Add the head afterwards so that a stationary snake is still drawn. */
 		std::size_t snake_idx = frame % std::min(snake_str.length(), snake_len);
