@@ -1,0 +1,156 @@
+#include "os_basic.h"
+#include "term_utils.h"
+
+#include <unicode/ustring.h>
+
+#include <algorithm>
+
+ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
+{
+	OS& os = *proc.owning_os;
+
+	int32_t width = proc.get_var<int32_t>("TERM_W");
+	int32_t height = proc.get_var<int32_t>("TERM_H");
+
+	if (width < 20 || height < 10)
+	{
+		proc.warnln("The terminal window is too small, or 'TERM_W'/'TERM_H' wasn't set.");
+		co_return 1;
+	}
+
+	com::CommandReply begin_msg;
+	begin_msg.set_con_mode(com::ConsoleMode::Raw);
+	begin_msg.set_configure(true);
+	begin_msg.set_reply(
+		BEGIN_ALT_SCREEN_BUFFER 
+		CLEAR_CURSOR 
+		CLEAR_SCREEN
+		HIDE_CURSOR
+		MOVE_CURSOR(5, 5));
+
+	proc.write(begin_msg);
+	
+	proc.put("{}", TermUtils::frame(1, 1, width , height, " Snake Mode 0.25 ('q' to exit) "));
+
+	struct SnakeCoord
+	{
+		int32_t x = 0;
+		int32_t y = 0;
+
+		SnakeCoord operator + (const SnakeCoord& other) const
+		{
+			return { x + other.x, y + other.y };
+		}
+
+		auto operator <=> (const SnakeCoord& other) const = default;
+	};
+
+	int32_t frame = 0;
+	SnakeCoord speed{1, 0};
+	std::size_t snake_len = 1;
+	std::deque<SnakeCoord> snake_body{ { width / 2, height / 2 } };
+	SnakeCoord apple = snake_body.front() + SnakeCoord{10, 0};
+
+	const std::string snake_str = "SNAKE";
+
+	while (true)
+	{
+		++frame;
+
+		co_await os.wait(0.16f);
+
+		if (std::optional<com::CommandQuery> opt_query = proc.read<com::CommandQuery>(); opt_query.has_value())
+		{
+			const std::string& query = opt_query->command();
+			
+			if (query.size() == 0)
+				continue;
+
+			if (query[0] == 'q')
+				break;
+
+			bool up_pressed = (query.compare(0, 3, CURSOR_UP) == 0);
+			bool down_pressed = (query.compare(0, 3, CURSOR_DOWN) == 0);
+			bool left_pressed = (query.compare(0, 3, CURSOR_LEFT) == 0);
+			bool right_pressed = (query.compare(0, 3, CURSOR_RIGHT) == 0);
+			bool going_horizontal = speed.x != 0;
+			bool going_vertical = speed.y != 0;
+
+			if (up_pressed && going_horizontal)
+			{
+				speed.y = -1;
+				speed.x = 0;
+			}
+			if (down_pressed && going_horizontal)
+			{
+				speed.y = 1;
+				speed.x = 0;
+			}
+			if (left_pressed && going_vertical)
+			{
+				speed.x = -1;
+				speed.y = 0;
+			}
+			if (right_pressed && going_vertical)
+			{
+				speed.x = 1;
+				speed.y = 0;
+			}
+		}
+
+		std::stringstream ss;
+
+		const SnakeCoord& head = snake_body.front();
+		SnakeCoord new_head = head + speed;
+
+		/* Retract tail before moving (it's unfair to collide with it). */
+		while (snake_body.size() >= snake_len)
+		{
+			SnakeCoord& back = snake_body.back();
+			ss << TermUtils::pixel(back.x, back.y, " ");
+			snake_body.pop_back();
+		}
+
+		/* We collect an apple! */
+		if (new_head == apple)
+		{
+			apple.x = 2 + std::rand() % (width - 2);
+			apple.y = 2 + std::rand() % (height - 2);
+			++snake_len;
+		}
+
+		bool crash_self = (std::find(snake_body.begin(), snake_body.end(), new_head) != snake_body.end());
+		bool crash_wall = (new_head.x <= 1 || new_head.x >= width || new_head.y <= 1 || new_head.y >= height);
+
+		/* Self-crash! */
+		if (crash_self || crash_wall)
+		{
+			proc.put(MOVE_CURSOR(5,5) "You are SNAKE JAM!" MOVE_CURSOR(6, 6) "{} points.", snake_len);
+			co_await os.wait(5);
+			break;
+		}
+
+		snake_body.push_front(new_head);
+
+		/* Add the head afterwards so that a stationary snake is still drawn. */
+		std::size_t snake_idx = frame % std::min(snake_str.length(), snake_len);
+		std::string new_snake = std::format("{}", snake_str[snake_idx]);
+		ss << TermUtils::pixel(new_head.x ,new_head.y, new_snake);
+		ss << TermUtils::pixel(apple.x, apple.y, "O");
+
+		proc.put("{}", ss.str());
+
+	}
+	
+	com::CommandReply end_msg;
+	end_msg.set_con_mode(com::ConsoleMode::Cooked);
+	end_msg.set_configure(true);
+	end_msg.set_reply(
+		END_ALT_SCREEN_BUFFER
+		SHOW_CURSOR 
+		"Exiting...\n");
+
+	proc.write(end_msg);
+
+	co_return 0;
+}
