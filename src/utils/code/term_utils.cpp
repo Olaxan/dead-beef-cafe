@@ -70,6 +70,20 @@ std::string TermUtils::msg_line(std::string str, int32_t length)
 	return std::format("{} " LINE_BEGIN "{}" LINE_END, str, std::string(length - 1, 'q'));
 }
 
+std::string TermUtils::status_line(int32_t line, int32_t width, std::string left, std::string right)
+{
+	std::stringstream ss;
+	ss << REVERSE_VIDEO;
+	ss << MOVE_CURSOR_FORMAT(1, line);
+	ss << " ";
+	ss << left;
+	ss << std::string(width - (left.length() + right.length() + 2), ' ');
+	ss << right;
+	ss << " ";
+	ss << CSI_RESET;
+	return ss.str();
+}
+
 std::string bhm_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string c)
 {
 	std::stringstream ss;

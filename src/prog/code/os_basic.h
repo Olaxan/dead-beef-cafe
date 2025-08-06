@@ -40,6 +40,7 @@ namespace Programs
 	/* Test programs */
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdDogs(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdEdit(Proc& proc, std::vector<std::string> args);
 }
 
 class BasicOS : public OS
@@ -75,7 +76,8 @@ public:
 			{"open", Programs::CmdOpenFile},
 			{"rm", Programs::CmdRemoveFile},
 			{"..", Programs::CmdGoUp},
-			{"dogs", Programs::CmdDogs}
+			{"dogs", Programs::CmdDogs},
+			{"edit", Programs::CmdEdit}
 		};
 	}
 

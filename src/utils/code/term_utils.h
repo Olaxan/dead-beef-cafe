@@ -30,6 +30,7 @@
 #define CURSOR_LEFT CSI "D"
 #define DELETE_CHAR CSI "P"
 #define ERASE_CHAR CSI "X"
+#define REVERSE_VIDEO CSI_CODE(7)
 
 
 enum class TermColor
@@ -64,9 +65,8 @@ namespace TermUtils
 	std::string pixel(int32_t x, int32_t y, std::string c);
 	std::string line(int32_t length);
 	std::string msg_line(std::string str, int32_t length);
+	std::string status_line(int32_t line, int32_t width, std::string left, std::string right);
 	std::string line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out_char);
-	std::string line_vertical_border(int32_t height);
-	std::string line_horizontal_border(int32_t width, bool is_top);
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg);
 };

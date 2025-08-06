@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
 		bool vtt = enable_vtt_mode();
 		bool raw = enable_raw_mode();
 		SetConsoleOutputCP(CP_UTF8);
-		std::println("VTTY={}, RAW={}", vtt, raw);
+		std::println("Set terminal mode: VTTY = {}, RAW = {}.", vtt, raw);
 
 		while (true)
 		{
