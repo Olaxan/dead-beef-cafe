@@ -69,7 +69,7 @@ public:
 		{
 			col_ = col_it_->last();
 		}
-
+		row_ = static_cast<int32_t>(std::distance(rows_.begin(), row_it_));
 		curr_row_len_ = text.countChar32();
 		return true;
 	}
@@ -82,9 +82,14 @@ public:
 			return;
 		}
 
-		auto it = rows_.begin();
-		std::advance(it, row_);
-		row_it_ = rows_.emplace(it);
+		icu::UnicodeString rest;
+		int32_t curr = col_it_->current();
+		int32_t len_rest = curr_row_len_ - curr;
+		row_it_->extract(curr, len_rest, rest);
+		row_it_->remove(curr, len_rest);
+		row_it_ = rows_.emplace(++row_it_, std::move(rest));
+		col_ = 0;
+		refresh_row();
 	}
 
 	void write_utf8(const std::string& input)
@@ -164,7 +169,7 @@ public:
 
 	bool move_right()
 	{
-		if (col_ == (curr_row_len_ - 1))
+		if (col_ == (curr_row_len_))
 			return false;
 
 		if (col_ = col_it_->next(); col_ == icu::BreakIterator::DONE)
@@ -214,7 +219,7 @@ public:
 			(num_rows != 1 ? "s" : ""), 
 			(is_dirty() ? " (modified)" : ""));
 
-		std::string right_msg = std::format("{}/{}", row_, col_);
+		std::string right_msg = std::format("{}/{}", row_ + 1, col_);
 
 		/* Print program chars. */
 		std::stringstream ss;
