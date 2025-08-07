@@ -56,7 +56,7 @@ struct TimerAwaiter
 	explicit TimerAwaiter(TimerManager* mgr, float seconds)
 		: mgr_(mgr), time_(seconds) { }
 
-	bool await_ready() const { return time_ == 0.f; }
+	bool await_ready() const { return false; }
 	void await_suspend(std::coroutine_handle<> h) const;
 	void await_resume() const {}
 

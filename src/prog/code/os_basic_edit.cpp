@@ -16,49 +16,301 @@
 #include <chrono>
 #include <format>
 
+class EditorState
+{
+public:
+
+	EditorState() = delete;
+
+	EditorState(int32_t width, int32_t height)
+	: width_(width), height_(height), status_(U_ZERO_ERROR), col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status_))
+	{
+		rows_.emplace_back("May all the beautiful horses,");
+		rows_.emplace_back("who gallop so valiantly,");
+		rows_.emplace_back("be turned into glue!");
+		init_state();
+	}
+
+	bool open(std::string filename)
+	{
+		file_ = filename;
+		return true;
+	}
+
+	std::size_t get_num_rows() const { return rows_.size(); }
+	int32_t get_col() const { return col_; }
+	int32_t get_row() const { return row_; }
+	std::string_view get_filename() const { return file_; }
+	bool is_dirty() const { return dirty_ > 0; }
+
+	void init_state()
+	{
+		if (rows_.empty())
+			rows_.emplace_back(); // Guaranteed one row to write in.
+
+		row_it_ = rows_.end();
+		--row_it_; // Move iterator to last line (not end).
+		row_ = static_cast<int32_t>((rows_.size() - 1));
+		refresh_row();
+	}
+
+	void set_size(int32_t width, int32_t height)
+	{
+		width_ = width;
+		height_ = height;
+	}
+
+	bool refresh_row()
+	{
+		const icu::UnicodeString& text = *row_it_;
+		col_it_->setText(text);
+		col_it_->first();
+		if (col_ = col_it_->next(col_); col_ == icu::BreakIterator::DONE)
+		{
+			col_ = col_it_->last();
+		}
+
+		curr_row_len_ = text.countChar32();
+		return true;
+	}
+
+	void add_row()
+	{
+		if (rows_.empty())
+		{
+			rows_.emplace_front();
+			return;
+		}
+
+		auto it = rows_.begin();
+		std::advance(it, row_);
+		row_it_ = rows_.emplace(it);
+	}
+
+	void write_utf8(const std::string& input)
+	{
+		icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
+		int32_t num_points = u_in.countChar32();
+		std::println("Added {0} graphemes ({1} chars).", num_points, input.size());
+		row_it_->insert(col_, u_in);
+		col_ += num_points;
+		col_it_->setText(*row_it_);
+		col_it_->next(col_ - 1);
+	}
+
+	bool move_up()
+	{
+		if (row_ == 0)
+			return false;
+
+		--row_;
+		--row_it_;
+		return refresh_row();
+	}
+
+	int32_t move_up(int32_t count)
+	{
+		for (int32_t i = 0; i < count; ++i)
+		{
+			if (!move_up())
+				return i;
+		}
+		return count;
+	}
+
+	bool move_down()
+	{
+		if (row_ == rows_.size() - 1)
+			return false;
+
+		++row_;
+		++row_it_;
+		return refresh_row();
+	}
+
+	int32_t move_down(int32_t count)
+	{
+		for (int32_t i = 0; i < count; ++i)
+		{
+			if (!move_down())
+				return i;
+		}
+		return count;
+	}
+
+	bool move_left()
+	{
+		if (col_ == 0)
+			return false;
+
+		if (col_ = col_it_->previous(); col_ == icu::BreakIterator::DONE)
+		{
+			col_ = col_it_->first();
+			return false;
+		}
+
+		return true;
+	}
+
+	int32_t move_left(int32_t count)
+	{
+		for (int32_t i = 0; i < count; ++i)
+		{
+			if (!move_left())
+				return i;
+		}
+		return count;
+	}
+
+	bool move_right()
+	{
+		if (col_ == (curr_row_len_ - 1))
+			return false;
+
+		if (col_ = col_it_->next(); col_ == icu::BreakIterator::DONE)
+		{
+			col_ = col_it_->last();
+			return false;
+		}
+		
+		return true;
+	}
+
+	int32_t move_right(int32_t count)
+	{
+		for (int32_t i = 0; i < count; ++i)
+		{
+			if (!move_right())
+				return i;
+		}
+		return count;
+	}
+
+	void move_cursor(int32_t x, int32_t y)
+	{
+		if (y > 0)
+			move_down(y);
+		else if (y < 0)
+			move_up(std::abs(y));
+
+		if (x > 0)
+			move_right(x);
+		else if (x < 0)
+			move_left(std::abs(x));
+	};
+
+	/* Get a ANSI string to print this to console.
+	This should be made replaceable (it is not the editor's job). */
+	std::string get_printout() const
+	{
+		std::size_t num_rows = rows_.size();
+
+		std::string title = std::format(" SMol Editor ({}) ", file_);
+
+		// This needs to be UnicodeString later (handle non-english filenames).
+		std::string left_msg = std::format("{} - {} line{}{}", 
+			file_, 
+			num_rows, 
+			(num_rows != 1 ? "s" : ""), 
+			(is_dirty() ? " (modified)" : ""));
+
+		std::string right_msg = std::format("{}/{}", row_, col_);
+
+		/* Print program chars. */
+		std::stringstream ss;
+		ss << CLEAR_SCREEN CLEAR_CURSOR;
+		ss << CSI_CODE(33);
+		ss << TermUtils::line(1, 1 + num_rows, 1, height_ - 1, "~");
+		ss << CSI_RESET;
+		ss << TermUtils::status_line(height_, width_, left_msg, right_msg);
+		
+		/* Print user chars. */
+		ss << CLEAR_CURSOR;
+		auto it = rows_.begin();
+		// std::advance() this based on scroll pos.
+		for (; it != rows_.end(); ++it)
+		{
+			std::string out_str{};
+			it->toUTF8String(out_str);
+			ss << out_str << "\n";
+		}
+
+		ss << MOVE_CURSOR_FORMAT(col_ + 1, row_ + 1);
+		return ss.str();
+	}
+
+protected:
+
+	int32_t row_ = 0;
+	int32_t col_ = 0;
+	int32_t width_ = 1;
+	int32_t height_ = 1;
+	int32_t dirty_ = 0;
+	int32_t curr_row_len_ = 0;
+	std::list<icu::UnicodeString> rows_{};
+	std::list<icu::UnicodeString>::iterator row_it_{};
+	UErrorCode status_ = U_ZERO_ERROR;
+	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
+	std::string file_ = "new file";
+};
+
 ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 
-	int32_t width = proc.get_var<int32_t>("TERM_W");
-	int32_t height = proc.get_var<int32_t>("TERM_H");
+	int32_t term_w = proc.get_var<int32_t>("TERM_W");
+	int32_t term_h = proc.get_var<int32_t>("TERM_H");
 
-	if (width < 20 || height < 10)
+	if (term_w < 20 || term_h < 10)
 	{
 		proc.warnln("The terminal window is too small, or 'TERM_W'/'TERM_H' wasn't set.");
 		co_return 1;
 	}
 
-	com::CommandReply begin_msg;
-	begin_msg.set_con_mode(com::ConsoleMode::Raw);
-	begin_msg.set_configure(true);
-	begin_msg.set_reply(
-		BEGIN_ALT_SCREEN_BUFFER 
-		CLEAR_CURSOR 
-		CLEAR_SCREEN
-		MOVE_CURSOR(2, 2));
-
-	proc.write(begin_msg);
-
-	std::string filename = "new file";
-	icu::UnicodeString buffer;
+	EditorState state{term_w, term_h};
 
 	if (args.size() > 1)
 	{
-		filename = args[1];
+		state.open(args[1]);
 	}
-	
-	std::string title = std::format(" Text Editor ({}) ", filename);
-	std::string left_msg = std::format("{} - X lines (modified)", filename);
-	std::string right_msg = "3/4";
 
-	std::stringstream ss;
-	ss << CSI_CODE(33);
-	ss << TermUtils::line(1, 1, 1, height - 1, "~");
-	ss << CSI_RESET;
-	ss << TermUtils::status_line(height, width, left_msg, right_msg);
-	ss << MOVE_CURSOR(1, 1);
-	proc.put("{}", ss.str());
+
+	auto accept_input = [&](const std::string& input)
+	{
+		if (input.size() == 0)
+			return;
+
+		if (input[0] == '\r')
+		{
+			state.add_row();
+			std::println("Added line break.");
+			return;
+		}
+
+		if (input[0] == '\x1b')
+		{
+			if (input.size() == 1)
+				return;
+			
+			if (input[1] == '[' && input.size() >= 3)
+			{
+				switch(input[2])
+				{
+					case 'A': state.move_up(); return;
+					case 'B': state.move_down(); return;
+					case 'C': state.move_right(); return;
+					case 'D': state.move_left(); return;
+					default: return;
+				}
+			}
+		}
+
+		state.write_utf8(input);
+	};
+
+	com::CommandReply begin_msg;
+	begin_msg.set_reply(std::format(BEGIN_ALT_SCREEN_BUFFER "{}", state.get_printout()));
+	proc.write(begin_msg);
 
 	while (true)
 	{
@@ -76,59 +328,23 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (input.has_screen_data())
 		{
 			com::ScreenData screen = input.screen_data();
-			width = screen.size_x();
-			height = screen.size_y();
+			state.set_size(screen.size_x(), screen.size_y());
 		}
 
 		/* Next, read the actual command and consider it based on first-byte. */
 		std::string str_in = input.command();
 
-		if (str_in.length() == 0)
-			continue;
+		/* Clean erroneous nulls (we should fix this somewhere else). */
+		if (str_in.back() == '\0')
+			str_in.pop_back();
+
+		accept_input(str_in);
 
 		if (str_in[0] == '\x1b' && str_in[1] == '\0')
 			break;
 
-		if (str_in[0] == '\x08' || str_in[0] == '\x7f')
-		{
-			UErrorCode status = U_ZERO_ERROR;
-			std::unique_ptr<icu::BreakIterator> bi(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status));
-			if (U_FAILURE(status) || !bi)
-			{
-				proc.warnln("Warning: Failed to create break iterator!");
-				continue;
-			}
-
-			bi->setText(buffer);
-			int32_t end = buffer.length();
-			int32_t last_char_start = bi->preceding(end);
-			if (last_char_start != icu::BreakIterator::DONE)
-			{
-				buffer.remove(last_char_start);
-				proc.put(CSI "D" CSI "X");
-			}
-
-			continue;
-		}
-
-		if (str_in.back() == '\0')
-			str_in.pop_back();
-
-		icu::UnicodeString chunk = icu::UnicodeString::fromUTF8(str_in);
-		buffer.append(chunk);
-		
-		std::string writeback;
-		icu::UnicodeString ret_str = chunk.unescape();
-		ret_str.toUTF8String(writeback);
-		proc.put("{}", writeback);
+		proc.put("{}", state.get_printout());
 	}
-
-	/* Trim any whitespace from the buffer string, convert the result back to utf8,
-		and clear the buffer before sending it for processing. */
-	std::string out_cmd;
-	buffer.trim();
-	buffer.toUTF8String(out_cmd);
-	buffer.remove();
 
 	com::CommandReply end_msg;
 	end_msg.set_con_mode(com::ConsoleMode::Cooked);

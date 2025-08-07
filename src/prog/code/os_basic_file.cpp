@@ -21,7 +21,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 	co_return 1;
 }
 
-ProcessTask Programs::CmdChangeDir(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdChangeDir(Proc& proc, std::vector<std::string> args)
 {
 	if (args.size() != 2)
 	{
