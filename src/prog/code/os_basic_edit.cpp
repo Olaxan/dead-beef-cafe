@@ -70,7 +70,8 @@ public:
 			col_ = col_it_->last();
 		}
 		row_ = static_cast<int32_t>(std::distance(rows_.begin(), row_it_));
-		curr_row_len_ = text.countChar32();
+		curr_row_len_ = text.length(); //text.countChar32();
+
 		return true;
 	}
 
@@ -89,43 +90,87 @@ public:
 		row_it_->remove(curr, len_rest);
 		row_it_ = rows_.emplace(++row_it_, std::move(rest));
 		col_ = 0;
-
+		
 		refresh_row();
+		++dirty_;
 	}
 
 	void remove_back()
 	{
 		if (col_ == 0)
+		{
+			if (row_ > 0 && row_it_ != rows_.begin())
+			{
+				icu::UnicodeString pop = *row_it_;
+				row_it_ = rows_.erase(row_it_);
+				--row_it_;
+				int32_t prev_end = row_it_->countChar32();
+				row_it_->append(pop);
+				refresh_row();
+				move_to(prev_end);
+				++dirty_;
+			}
 			return;
+		}
 
-		row_it_->remove(--col_, 1);
+		int32_t curr = col_it_->current();
+		col_ = col_it_->previous();
+		row_it_->removeBetween(col_, curr);
 		refresh_row();
+		++dirty_;
 	}
 
 	void remove_front()
 	{
-		row_it_->remove(col_, 1);
-		refresh_row();
+		if (int32_t next = col_it_->next(); next != icu::BreakIterator::DONE)
+		{
+			row_it_->removeBetween(col_, next);
+			++dirty_;
+		}
+		else if (row_ < (static_cast<int32_t>(rows_.size()) - 1))
+		{
+			icu::UnicodeString copy = *row_it_;
+			row_it_ = rows_.erase(row_it_);
+			row_it_->insert(0, copy);
+			++dirty_;
+		}
+
+		/* refresh_row resets the iterator to the correct col_ value, 
+		so we don't need to worry about the iterator pos. after next(). */
+		refresh_row(); 
 	}
 
-	void write_utf8(const std::string& input)
+	void insert_utf8(const std::string& input)
 	{
 		icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 		int32_t num_points = u_in.countChar32();
+		std::println("Inserted {0} code point(s).", num_points);
 		row_it_->insert(col_, u_in);
 		col_ += num_points;
-		col_it_->setText(*row_it_);
-		col_it_->next(col_ - 1);
+		refresh_row();
+		++dirty_;
 	}
 
-	bool move_up()
+	int32_t move_to(int32_t n)
+	{
+		col_it_->first();
+		if (col_ = col_it_->next(n); col_ == icu::BreakIterator::DONE)
+		{
+			col_ = col_it_->last();
+		}
+		
+		return col_;
+	}
+
+	int32_t move_up()
 	{
 		if (row_ == 0)
-			return false;
+			return 0;
 
 		--row_;
 		--row_it_;
-		return refresh_row();
+		refresh_row();
+		return 1;
 	}
 
 	int32_t move_up(int32_t count)
@@ -138,14 +183,15 @@ public:
 		return count;
 	}
 
-	bool move_down()
+	int32_t move_down()
 	{
 		if (row_ == rows_.size() - 1)
 			return false;
 
 		++row_;
 		++row_it_;
-		return refresh_row();
+		refresh_row();
+		return 1;
 	}
 
 	int32_t move_down(int32_t count)
@@ -158,18 +204,18 @@ public:
 		return count;
 	}
 
-	bool move_left()
+	int32_t move_left()
 	{
 		if (col_ == 0)
-			return false;
+			return 0;
 
 		if (col_ = col_it_->previous(); col_ == icu::BreakIterator::DONE)
 		{
 			col_ = col_it_->first();
-			return false;
+			return 0;
 		}
 
-		return true;
+		return 1;
 	}
 
 	int32_t move_left(int32_t count)
@@ -182,18 +228,23 @@ public:
 		return count;
 	}
 
-	bool move_right()
+	int32_t move_home()
+	{
+		return move_left(curr_row_len_);
+	}
+
+	int32_t move_right()
 	{
 		if (col_ == (curr_row_len_))
-			return false;
+			return 0;
 
 		if (col_ = col_it_->next(); col_ == icu::BreakIterator::DONE)
 		{
 			col_ = col_it_->last();
-			return false;
+			return 0;
 		}
 		
-		return true;
+		return 1;
 	}
 
 	int32_t move_right(int32_t count)
@@ -204,6 +255,11 @@ public:
 				return i;
 		}
 		return count;
+	}
+
+	int32_t move_end()
+	{
+		return move_right(curr_row_len_);
 	}
 
 	void move_cursor(int32_t x, int32_t y)
@@ -234,11 +290,11 @@ public:
 			(num_rows != 1 ? "s" : ""), 
 			(is_dirty() ? " (modified)" : ""));
 
-		std::string right_msg = std::format("{}/{}", row_ + 1, col_);
+		std::string right_msg = std::format("{}/{}[={}] ({}c)", row_ + 1, col_, col_it_->current(), curr_row_len_);
 
 		/* Print program chars. */
 		std::stringstream ss;
-		ss << CLEAR_SCREEN CLEAR_CURSOR;
+		ss << HIDE_CURSOR CLEAR_SCREEN CLEAR_CURSOR;
 		ss << CSI_CODE(33);
 		ss << TermUtils::line(1, 1 + num_rows, 1, height_ - 1, "~");
 		ss << CSI_RESET;
@@ -256,6 +312,7 @@ public:
 		}
 
 		ss << MOVE_CURSOR_FORMAT(col_ + 1, row_ + 1);
+		ss << SHOW_CURSOR;
 		return ss.str();
 	}
 
@@ -277,6 +334,13 @@ protected:
 ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
+
+	if (fs == nullptr)
+	{
+		proc.errln("No filesystem!");
+		co_return 1;
+	}
 
 	int32_t term_w = proc.get_var<int32_t>("TERM_W");
 	int32_t term_h = proc.get_var<int32_t>("TERM_H");
@@ -291,9 +355,9 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	if (args.size() > 1)
 	{
-		state.open(args[1]);
+		if (File* f = fs.open(args[1]))
+			state.open_file(f);
 	}
-
 
 	auto accept_input = [&](const std::string& input)
 	{
@@ -303,7 +367,6 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (input[0] == '\r')
 		{
 			state.add_row();
-			std::println("Added line break.");
 			return;
 		}
 
@@ -314,6 +377,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 			return;
 		}
 
+		/* Escapes */
 		if (input[0] == '\x1b')
 		{
 			if (input.size() == 1)
@@ -327,6 +391,8 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 					case 'B': state.move_down(); return;
 					case 'C': state.move_right(); return;
 					case 'D': state.move_left(); return;
+					case 'H': state.move_home(); return;
+					case 'F': state.move_end(); return;
 					case '3': state.remove_front(); return;
 					default: return;
 				}
@@ -335,7 +401,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 			return;
 		}
 
-		state.write_utf8(input);
+		state.insert_utf8(input);
 	};
 
 	com::CommandReply begin_msg;
