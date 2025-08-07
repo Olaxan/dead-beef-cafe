@@ -24,9 +24,8 @@ public:
 	World& get_world() { return world_; }
 	DeviceState get_state() const { return state_; }
 
-	Task<bool> start_host();
-	Task<bool> shutdown_host();
-	Task<bool> boot_from(const File& boot_file);
+	bool start_host();
+	bool shutdown_host();
 
 	auto& get_devices() const { return devices_; }
 

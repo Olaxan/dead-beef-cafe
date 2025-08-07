@@ -353,10 +353,21 @@ int main(int argc, char* argv[])
 		
 		std::jthread runner([&io_context] { io_context.run(); });
 
-		bool vtt = enable_vtt_mode();
-		bool raw = enable_raw_mode();
-		SetConsoleOutputCP(CP_UTF8);
-		std::println("Set terminal mode: VTTY = {}, RAW = {}.", vtt, raw);
+		if (enable_raw_mode() == false)
+		{
+			std::println("Warning: Failed to configure raw terminal mode. The game will exit.");
+			return 1;
+		}
+		
+		if (enable_vtt_mode() == false)
+		{
+			std::println("Warning: Failed to configure virtual terminal mode. The app might not work as intended.");
+		}
+		
+		if (SetConsoleOutputCP(CP_UTF8) == false)
+		{
+			std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as indended.");
+		}
 
 		while (true)
 		{
