@@ -89,15 +89,22 @@ public:
 		row_it_->remove(curr, len_rest);
 		row_it_ = rows_.emplace(++row_it_, std::move(rest));
 		col_ = 0;
+
 		refresh_row();
 	}
 
-	void remove_one()
+	void remove_back()
 	{
 		if (col_ == 0)
 			return;
-			
+
 		row_it_->remove(--col_, 1);
+		refresh_row();
+	}
+
+	void remove_front()
+	{
+		row_it_->remove(col_, 1);
 		refresh_row();
 	}
 
@@ -303,7 +310,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		/* Backspace */
 		if (input[0] == '\x7f')
 		{
-			state.remove_one();
+			state.remove_back();
 			return;
 		}
 
@@ -320,6 +327,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 					case 'B': state.move_down(); return;
 					case 'C': state.move_right(); return;
 					case 'D': state.move_left(); return;
+					case '3': state.remove_front(); return;
 					default: return;
 				}
 			}
@@ -360,6 +368,10 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (str_in.back() == '\0')
 			str_in.pop_back();
 
+		for (char c : str_in)
+			std::print("{}, ", (int)c);
+		std::println("was received.");
+
 		accept_input(str_in);
 
 		if (str_in[0] == '\x1b' && str_in[1] == '\0')
@@ -369,10 +381,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 	}
 
 	com::CommandReply end_msg;
-	end_msg.set_con_mode(com::ConsoleMode::Cooked);
-	end_msg.set_configure(true);
 	end_msg.set_reply(END_ALT_SCREEN_BUFFER "Goodbye...\n");
-
 	proc.write(end_msg);
 
 	co_return 0;
