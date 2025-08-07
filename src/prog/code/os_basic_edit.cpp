@@ -92,11 +92,19 @@ public:
 		refresh_row();
 	}
 
+	void remove_one()
+	{
+		if (col_ == 0)
+			return;
+			
+		row_it_->remove(--col_, 1);
+		refresh_row();
+	}
+
 	void write_utf8(const std::string& input)
 	{
 		icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 		int32_t num_points = u_in.countChar32();
-		std::println("Added {0} graphemes ({1} chars).", num_points, input.size());
 		row_it_->insert(col_, u_in);
 		col_ += num_points;
 		col_it_->setText(*row_it_);
@@ -292,6 +300,13 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 			return;
 		}
 
+		/* Backspace */
+		if (input[0] == '\x7f')
+		{
+			state.remove_one();
+			return;
+		}
+
 		if (input[0] == '\x1b')
 		{
 			if (input.size() == 1)
@@ -308,6 +323,8 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 					default: return;
 				}
 			}
+
+			return;
 		}
 
 		state.write_utf8(input);
