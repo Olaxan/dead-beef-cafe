@@ -85,6 +85,7 @@ enum class FileSystemError : uint32_t
 };
 
 using FileOpResult = std::pair<uint64_t, FileSystemError>;
+using FilePtrResult = std::pair<File*, FileSystemError>;
 
 class FileSystem
 {
@@ -133,6 +134,9 @@ public:
 
 	FileSystemError remove_file(uint64_t fid, bool recurse = false);
 	FileSystemError remove_file(const FilePath& path, bool recurse = false);
+
+	/* Returns a pointer to a file, if found; otherwise nullptr. */
+	FilePtrResult open(const FilePath& path);
 
 protected:
 

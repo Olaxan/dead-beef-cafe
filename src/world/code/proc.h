@@ -126,7 +126,7 @@ public:
         };
     }
 
-	/* Try to read something from the reader function, if it has been provided. 
+	/* Try to read something from a reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
 	template<typename T> 
 	std::optional<T> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)

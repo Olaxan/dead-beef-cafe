@@ -126,7 +126,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 	co_return 1;
 }
 
-ProcessTask Programs::CmdGoUp(Proc &proc, std::vector<std::string> args)
+ProcessTask Programs::CmdGoUp(Proc& proc, std::vector<std::string> args)
 {
 	if (Navigator* nav = proc.get_data<Navigator>())
 	{

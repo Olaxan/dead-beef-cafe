@@ -15,6 +15,7 @@
 #include <print>
 #include <chrono>
 #include <format>
+#include <cctype>
 
 class EditorState
 {
@@ -25,15 +26,28 @@ public:
 	EditorState(int32_t width, int32_t height)
 	: width_(width), height_(height), status_(U_ZERO_ERROR), col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status_))
 	{
-		rows_.emplace_back("May all the beautiful horses,");
-		rows_.emplace_back("who gallop so valiantly,");
-		rows_.emplace_back("be turned into glue!");
 		init_state();
 	}
 
 	bool open(std::string filename)
 	{
 		file_ = filename;
+		return true;
+	}
+
+	bool set_file(FilePath path, File* f)
+	{
+		if (f == nullptr)
+			return false;
+
+		std::string_view view = f->get_view();
+		rows_.clear();
+		std::ranges::transform(std::views::split(view, "\r\n"), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
+		init_state();
+
+		std::println("Loaded {} row(s).", rows_.size());
+		
+		path_ = path;
 		return true;
 	}
 
@@ -329,7 +343,14 @@ protected:
 	UErrorCode status_ = U_ZERO_ERROR;
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
 	std::string file_ = "new file";
+	FilePath path_{};
 };
+
+EagerTask<int32_t> input_filename(Proc& proc)
+{
+
+	co_return 0;
+}
 
 ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 {
@@ -355,8 +376,18 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	if (args.size() > 1)
 	{
-		//if (File* f = fs.open(args[1]))
-		// 	state.open_file(f);
+		FilePath path(args[1]);
+
+		if (path.is_relative())
+			path.prepend(proc.get_var("SHELL_PATH"));
+
+		auto [f, err] = fs->open(path);
+		if (f && err == FileSystemError::Success)
+		{
+			state.set_file(path, f);
+		}
+
+		std::println("Opening {}: {}.", path, FileSystem::get_fserror_name(err));
 	}
 
 	auto accept_input = [&](const std::string& input)
@@ -401,7 +432,8 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 			return;
 		}
 
-		state.insert_utf8(input);
+		if (!std::iscntrl(input[0]))
+			state.insert_utf8(input);
 	};
 
 	com::CommandReply begin_msg;
