@@ -56,7 +56,7 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.warnln("Couldn't create directory: {}.", FileSystem::get_fserror_name(err));
+			proc.warnln("Failed to create directory: {}.", FileSystem::get_fserror_name(err));
 			co_return static_cast<int32_t>(err);
 		}
 	}
@@ -83,7 +83,7 @@ ProcessTask Programs::CmdMakeFile(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.warnln("Couldn't create file: {}.", FileSystem::get_fserror_name(err));
+			proc.warnln("Failed to create file: {}.", FileSystem::get_fserror_name(err));
 			co_return static_cast<int32_t>(err);
 		}
 	}
@@ -117,7 +117,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 		FileSystemError err = nav->remove_file(args[1]);
 
 		if (err != FileSystemError::Success)
-			proc.warnln("{}", FileSystem::get_fserror_name(err));
+			proc.warnln("Failed to remove file: {}.", FileSystem::get_fserror_name(err));
 
 		co_return static_cast<int32_t>(err);
 	}
