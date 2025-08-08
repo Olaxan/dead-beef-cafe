@@ -43,9 +43,8 @@ public:
 		std::string_view view = f->get_view();
 		rows_.clear();
 		std::ranges::transform(std::views::split(view, "\r\n"), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
-		init_state();
-
 		std::println("Loaded {} row(s).", rows_.size());
+		init_state();
 		
 		path_ = path;
 		return true;
@@ -348,7 +347,11 @@ protected:
 
 EagerTask<int32_t> input_filename(Proc& proc)
 {
+	co_return 0;
+}
 
+EagerTask<int32_t> handle_exit_save(Proc& proc)
+{
 	co_return 0;
 }
 
@@ -390,50 +393,66 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		std::println("Opening {}: {}.", path, FileSystem::get_fserror_name(err));
 	}
 
-	auto accept_input = [&](const std::string& input)
+	enum class HandlerReturn
+	{
+		Handled = 0,
+		Unhandled,
+		WantSave,
+		WantExit
+	};
+
+	auto accept_input = [&](const std::string& input) -> HandlerReturn
 	{
 		if (input.size() == 0)
-			return;
+			return HandlerReturn::Handled;
 
 		if (input[0] == '\r')
 		{
 			state.add_row();
-			return;
+			return HandlerReturn::Handled;
 		}
 
 		/* Backspace */
 		if (input[0] == '\x7f')
 		{
 			state.remove_back();
-			return;
+			return HandlerReturn::Handled;
 		}
 
 		/* Escapes */
 		if (input[0] == '\x1b')
 		{
 			if (input.size() == 1)
-				return;
+				return HandlerReturn::WantExit;
+
+			if (input[1] == '\0')
+				return HandlerReturn::WantExit;
 			
 			if (input[1] == '[' && input.size() >= 3)
 			{
 				switch(input[2])
 				{
-					case 'A': state.move_up(); return;
-					case 'B': state.move_down(); return;
-					case 'C': state.move_right(); return;
-					case 'D': state.move_left(); return;
-					case 'H': state.move_home(); return;
-					case 'F': state.move_end(); return;
-					case '3': state.remove_front(); return;
-					default: return;
+					case 'A': state.move_up(); return HandlerReturn::Handled;
+					case 'B': state.move_down(); return HandlerReturn::Handled;
+					case 'C': state.move_right(); return HandlerReturn::Handled;
+					case 'D': state.move_left(); return HandlerReturn::Handled;
+					case 'H': state.move_home(); return HandlerReturn::Handled;
+					case 'F': state.move_end(); return HandlerReturn::Handled;
+					case '3': state.remove_front(); return HandlerReturn::Handled;
+					default: return HandlerReturn::Handled;
 				}
 			}
 
-			return;
+			return HandlerReturn::Handled;
 		}
 
 		if (!std::iscntrl(input[0]))
+		{
 			state.insert_utf8(input);
+			HandlerReturn::Handled;
+		}
+
+		return HandlerReturn::Unhandled;
 	};
 
 	com::CommandReply begin_msg;
@@ -470,10 +489,21 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 			std::print("{}, ", (int)c);
 		std::println("was received.");
 
-		accept_input(str_in);
+		HandlerReturn ret = accept_input(str_in);
 
-		if (str_in[0] == '\x1b' && str_in[1] == '\0')
-			break;
+		if (ret == HandlerReturn::WantExit)
+		{
+			if (!state.is_dirty())
+				break;
+			
+			if (co_await handle_exit_save())
+				break;
+		}
+
+		if (ret == HandlerReturn::WantSave)
+		{
+			
+		}		
 
 		proc.put("{}", state.get_printout());
 	}
