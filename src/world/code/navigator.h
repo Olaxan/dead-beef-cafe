@@ -9,27 +9,24 @@ class Navigator
 {
 public:
 
-	Navigator(FileSystem& sys)
-		: fs_(sys) 
+	Navigator(FileSystem& sys) : fs_(sys) 
 	{ 
 		current_ = fs_.get_root();
 	}
 
-	std::vector<std::string> get_files() const;
-	std::string get_path() const;
-	std::string get_dir() const;
+	std::vector<std::string_view> get_files() const;
+	FilePath get_path() const;
+	std::string_view get_dir() const;
 	uint64_t get_current() const { return current_; }
 
-	uint64_t create_file(std::string name) const;
-	uint64_t create_directory(std::string name) const;
+	FileOpResult create_file(FilePath path) const;
+	FileOpResult create_directory(FilePath path) const;
 
-	bool remove_file(std::string name, bool recurse = false) const;
+	FileSystemError remove_file(FilePath name, bool recurse = false) const;
 		
 	bool go_up();
-	bool go_to(std::string dir);
+	bool go_to(FilePath path);
 	bool go_to(uint64_t fid);
-
-	bool enter(std::string dir);
 
 private:
 

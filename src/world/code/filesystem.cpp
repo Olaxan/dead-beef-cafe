@@ -5,13 +5,114 @@
 #include <functional>
 #include <print>
 
-FileSystem::FileSystem()
+/* --- File Path --- */
+
+FilePath::FilePath(std::string path)
 {
-	root_ = add_root_file<File>("root");
+	path_ = path.empty() ? "/" : path;
+	make();
+}
+
+void FilePath::make()
+{
+	valid_ = false;
+
+	if (path_.empty())
+		return;
+
+	relative_ = (path_[0] != '/');
+
+	if (path_.back() == '/')
+		path_.pop_back();
+
+	valid_ = true;
+}
+
+std::string_view FilePath::get_parent_view() const
+{
+	std::string_view path(path_);
+	if (!path.empty() && path.back() == '/')
+        path.remove_suffix(1);
+
+    // Find last slash
+    auto last_slash = path.rfind('/');
+    if (last_slash == std::string_view::npos)
+        return {}; // No parent
+
+    return path.substr(0, last_slash);
+}
+
+FilePath FilePath::get_parent_path() const
+{
+	return FilePath(get_parent_view());
+}
+
+std::string_view FilePath::get_name() const
+{
+	std::string_view path(path_);
+	if (!path.empty() && path.back() == '/')
+        path.remove_suffix(1);
+
+    // Find last slash
+    auto last_slash = path.rfind('/');
+    if (last_slash == std::string_view::npos)
+        return {}; // No parent
+
+    return path.substr(last_slash + 1);
+}
+
+void FilePath::prepend(const FilePath& other)
+{
+	if (!other.is_valid_path())
+		return;
+
+	const std::string& other_path = other.path_;
+	path_ = std::format("{}/{}", other_path, path_);
+	make();
+}
+
+void FilePath::append(const FilePath& other)
+{
+	if (!other.is_valid_path())
+		return;
+
+	const std::string& other_path = other.path_;
+	path_ = std::format("{}/{}", path_, other_path);
+	make();
+}
+
+
+/* --- File System --- */
+
+FileSystem::FileSystem()
+{ }
+
+const char* FileSystem::get_fserror_name(FileSystemError code)
+{
+	switch (code)
+	{
+		case FileSystemError::FileNotFound: return "File not found";
+		case FileSystemError::FileExists: return "The file already exists";
+		case FileSystemError::FolderNotEmpty: return "Folder not empty";
+		case FileSystemError::InsufficientPermissions: return "Insufficient permissions";
+		case FileSystemError::InvalidFlags: return "Invalid file flags";
+		case FileSystemError::IOError: return "I/O error";
+		case FileSystemError::Other: return "Unknown error";
+		case FileSystemError::Success: return "The operation completed successfully";
+		default: return "Unknown error";
+	}
+}
+
+bool FileSystem::is_file(uint64_t fid) const
+{
+	return fid == get_root() || files_.contains(fid);
 }
 
 bool FileSystem::is_dir(uint64_t fid) const
 {
+	if (fid == get_root())
+		return true;
+
 	if (auto it = files_.find(fid); it != files_.end())
 		return it->second->has_flag(FileModeFlags::Directory);
 
@@ -35,17 +136,31 @@ bool FileSystem::is_empty(uint64_t fid) const
 	return files.empty();
 }
 
-std::string FileSystem::get_filename(uint64_t fid) const
+std::string_view FileSystem::get_filename(uint64_t fid) const
 {
-	if (auto it = fid_to_name_.find(fid); it != fid_to_name_.end())
-		return it->second;
+	if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
+		return it->second.get_name();
 
-	return "";
+	return {};
 }
 
-uint64_t FileSystem::get_fid(std::string filename) const
+FilePath FileSystem::get_path(uint64_t fid) const
 {
-	if (auto it = name_to_fid_.find(filename); it != name_to_fid_.end())
+	if (fid == get_root())
+		return {"/"};
+
+	if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
+		return it->second;
+
+	return {};
+}
+
+uint64_t FileSystem::get_fid(const FilePath& path) const
+{
+	if (path.is_root_or_empty())
+		return get_root();
+
+	if (auto it = path_to_fid_.find(path); it != path_to_fid_.end())
 		return it->second;
 
 	return 0;
@@ -96,38 +211,79 @@ std::vector<uint64_t> FileSystem::get_root_chain(uint64_t fid) const
 	return chain;
 }
 
-uint64_t FileSystem::create_file(std::string filename, uint64_t root)
+FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
 {
-	return add_file<File>(filename, root);
+	if (get_fid(path))
+		return std::make_pair(0, FileSystemError::FileExists);
+
+	std::println("Creating file under '{}' (recurse = {}).", path, recurse);
+	
+	if (recurse)
+		create_ensure_path(path);
+
+	return add_file<File>(path);
 }
 
-uint64_t FileSystem::create_directory(std::string filename, uint64_t root)
+FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
 {
-	return add_file<File>(filename, root, FileModeFlags::Directory);
+	if (get_fid(path))
+		return std::make_pair(0, FileSystemError::FileExists);
+	
+	std::println("Creating dir under '{}' (recurse = {}).", path, recurse);
+
+	if (recurse)
+		create_ensure_path(path);
+
+	return add_file<File>(path, FileModeFlags::Directory);
 }
 
-bool FileSystem::remove_file(uint64_t fid, bool recurse)
+uint64_t FileSystem::create_ensure_path(const FilePath& path)
 {
+	FilePath parent = path.get_parent_path();
+	if (uint64_t parent_fid = get_fid(parent))
+	{
+		std::println("Directory parent '{}' ({}) exists.", parent, parent_fid);
+		return parent_fid;
+	}
+	else
+	{
+		auto [new_parent_fid, err] = create_directory(parent, true);
+		std::println("Directory parent '{}' ({}) was created.", parent, new_parent_fid);
+		return new_parent_fid;
+	}
+}
+
+FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
+{
+	if (!is_file(fid))
+		return FileSystemError::FileNotFound;
+
 	if (is_empty(fid))
 	{
 		mappings_.erase(fid);
 		roots_.erase(fid);
-		if (auto it = fid_to_name_.find(fid); it != fid_to_name_.end())
+		if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
 		{
-			name_to_fid_.erase(it->second);
-			fid_to_name_.erase(it);
+			path_to_fid_.erase(it->second);
+			fid_to_path_.erase(it);
 		}
-		return true;
+		return FileSystemError::Success;
 	}
 	else if (recurse)
 	{
 		for (uint64_t child : get_files(fid))
 		{
-			if (!remove_file(child, true))
-				return false;
+			if (FileSystemError err = remove_file(child, true); err != FileSystemError::Success)
+				return err;
 		}
 		return remove_file(fid, false);
 	}
 
-	return false;
+	return FileSystemError::FolderNotEmpty;
+}
+
+FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
+{
+	uint64_t fid = get_fid(path);
+	return remove_file(fid, recurse);
 }

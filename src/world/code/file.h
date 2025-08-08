@@ -9,7 +9,8 @@ enum class FileModeFlags : uint8_t
 	Read = 1,
 	Write = 2,
 	Execute = 4,
-	Directory = 8
+	Directory = 8,
+	System = 16
 };
 
 class File

@@ -355,8 +355,8 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	if (args.size() > 1)
 	{
-		if (File* f = fs.open(args[1]))
-			state.open_file(f);
+		//if (File* f = fs.open(args[1]))
+		// 	state.open_file(f);
 	}
 
 	auto accept_input = [&](const std::string& input)

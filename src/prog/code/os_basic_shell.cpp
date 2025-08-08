@@ -73,10 +73,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		proc.set_var("SHELL_PATH", nav.get_path());
+		FilePath path = nav.get_path();
+
+		proc.set_var("SHELL_PATH", path.get_string());
 
 		std::string usr_str = TermUtils::color(std::format("usr@{}", our_os.get_hostname()), TermColor::BrightMagenta);
-		std::string path_str = TermUtils::color(nav.get_path(), TermColor::BrightBlue);
+		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);
 		std::string net_str = (our_os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);

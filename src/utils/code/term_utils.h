@@ -6,6 +6,7 @@
 #define ESC "\x1b"
 #define CSI "\x1b["
 #define DEL "\x7f"
+#define CTRL_KEY(k) ((k) & 0x1f)
 #define OSC_BEGIN(code) "\x1b]" #code ";"
 #define OSC_END "\x1b\x5c"
 #define CSI_CODE(code) "\x1b[" #code "m"
@@ -31,6 +32,7 @@
 #define DELETE_CHAR CSI "P"
 #define ERASE_CHAR CSI "X"
 #define REVERSE_VIDEO CSI_CODE(7)
+
 
 
 enum class TermColor

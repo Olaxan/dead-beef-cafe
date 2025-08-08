@@ -210,28 +210,28 @@ public:
 	template<typename ...Args>
 	void warn(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		put("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Yellow));
+		put("(" CSI_CODE(33) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
 	}
 
 	/* Write to the process 'standard output', with yellow ANSI colours, with  a \n at the end. */
 	template<typename ...Args>
 	void warnln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		putln("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Yellow));
+		putln("(" CSI_CODE(33) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
 	}
 
 	/* Write to the process 'standard output', only with red ANSI colours. */
 	template<typename ...Args>
 	void err(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		put("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Red));
+		put("(" CSI_CODE(31) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
 	}
 
 	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
 	template<typename ...Args>
 	void errln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		putln("{0}", TermUtils::color(std::format(fmt, std::forward<Args>(args)...), TermColor::Red));
+		putln("(" CSI_CODE(31) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
 	}
 
 

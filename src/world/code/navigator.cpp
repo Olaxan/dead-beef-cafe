@@ -12,12 +12,12 @@ bool Navigator::go_up()
 	return old != current_;
 }
 
-std::vector<std::string> Navigator::get_files() const
+std::vector<std::string_view> Navigator::get_files() const
 {
 	if (!fs_.is_dir(current_))
 		return { fs_.get_filename(current_) };
 
-	std::vector<std::string> out{};
+	std::vector<std::string_view> out{};
 	for (int64_t child : fs_.get_files(current_))
 	{
 		out.emplace_back(fs_.get_filename(child));
@@ -26,41 +26,38 @@ std::vector<std::string> Navigator::get_files() const
 	return out;
 }
 
-std::string Navigator::get_path() const
+FilePath Navigator::get_path() const
 {
-	std::vector<uint64_t> chain = fs_.get_root_chain(current_);
-	std::reverse(chain.begin(), chain.end());
-	
-	std::stringstream ss;
-
-	for (uint64_t file : chain)
-		ss << "/" << fs_.get_filename(file);
-
-	return ss.str();
+	return fs_.get_path(current_);
 }
 
-std::string Navigator::get_dir() const
+std::string_view Navigator::get_dir() const
 {
 	return fs_.get_filename(current_);
 }
 
-uint64_t Navigator::create_file(std::string name) const
+FileOpResult Navigator::create_file(FilePath path) const
 {
-	return fs_.create_file(name, current_);
+	if (path.is_relative())
+		path.prepend(get_path());
+	
+	return fs_.create_file(path);
 }
 
-uint64_t Navigator::create_directory(std::string name) const
+FileOpResult Navigator::create_directory(FilePath path) const
 {
-	return fs_.create_directory(name, current_);
+	if (path.is_relative())
+		path.prepend(get_path());
+	
+	return fs_.create_directory(path);
 }
 
-bool Navigator::remove_file(std::string name, bool recurse) const
+FileSystemError Navigator::remove_file(FilePath path, bool recurse) const
 {
-	if (uint64_t fid = fs_.get_fid(name))
-	{
-		return fs_.remove_file(fid, recurse);
-	}
-	return false;
+	if (path.is_relative())
+		path.prepend(get_path());
+
+	return fs_.remove_file(path, recurse);
 }
 
 bool Navigator::go_to(uint64_t dir)
@@ -73,14 +70,13 @@ bool Navigator::go_to(uint64_t dir)
 	return true;
 }
 
-bool Navigator::enter(std::string dir)
+bool Navigator::go_to(FilePath path)
 {
-	std::vector<uint64_t> near = fs_.get_files(current_);
-	uint64_t proxy = fs_.get_fid(dir);
-	if (auto it = std::find(near.begin(), near.end(), proxy); it != near.end())
-	{
-		return go_to(*it);
-	}
+	if (path.is_relative())
+		path.prepend(get_path());
+
+	if (uint64_t fid = fs_.get_fid(path))
+		return go_to(fid);
 
 	return false;
 }
