@@ -40,7 +40,7 @@ public:
 	std::size_t get_num_rows() const { return rows_.size(); }
 	int32_t get_col() const { return col_; }
 	int32_t get_row() const { return row_; }
-	std::string_view get_filename() const { return file_; }
+	std::string_view get_filename() const { return has_file() ? path_->get_name() : "new file"; }
 	bool is_dirty() const { return dirty_ > 0; }
 	bool has_file() const { return path_.has_value(); }
 	std::optional<FilePath> get_path() const { return path_; }
@@ -53,7 +53,7 @@ public:
 
 		std::string_view view = f->get_view();
 		rows_.clear();
-		std::ranges::transform(std::views::split(view, "\r\n"), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
+		std::ranges::transform(std::views::split(view, '\n'), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
 		std::println("Loaded {} row(s).", rows_.size());
 		init_state();
 		
@@ -194,7 +194,7 @@ public:
 			u.toUTF8String(out);
 			return out;
 		})
-		| std::views::join_with(std::string("\r\n"))
+		| std::views::join_with('\n')
 		| std::ranges::to<std::string>();
 	}
 
@@ -388,7 +388,7 @@ public:
 
 		// This needs to be UnicodeString later (handle non-english filenames).
 		std::string left_msg = std::format("{} - {} line{}{}", 
-			file_, 
+			get_filename(), 
 			num_rows, 
 			(num_rows != 1 ? "s" : ""), 
 			(is_dirty() ? " (modified)" : ""));
@@ -433,7 +433,6 @@ protected:
 	std::list<icu::UnicodeString>::iterator row_it_{};
 	UErrorCode error_ = U_ZERO_ERROR;
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
-	std::string file_ = "new file";
 	std::optional<FilePath> path_{};
 };
 

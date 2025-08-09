@@ -17,12 +17,12 @@ bool File::has_flag(FileModeFlags flag)
 
 void File::write(std::string content)
 {
-	content_.append(std::move(content));
+	content_ = std::move(content);
 }
 
 void File::append(std::string content)
 {
-	content_.insert(0, std::move(content));
+	content_.append(std::move(content));
 }
 
 std::string_view File::get_view() const
