@@ -84,6 +84,14 @@ enum class FileSystemError : uint32_t
 	Other
 };
 
+enum class FileAccessFlags : uint32_t
+{
+	None = 0,
+	Read = 1,
+	Write = 2,
+	Create = 4
+};
+
 using FileOpResult = std::pair<uint64_t, FileSystemError>;
 using FilePtrResult = std::pair<File*, FileSystemError>;
 
@@ -136,7 +144,7 @@ public:
 	FileSystemError remove_file(const FilePath& path, bool recurse = false);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
-	FilePtrResult open(const FilePath& path);
+	FilePtrResult open(const FilePath& path, FileAccessFlags flags);
 
 protected:
 

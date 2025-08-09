@@ -1,5 +1,11 @@
 #pragma once
 
+#include <unicode/utypes.h>
+#include <unicode/ucol.h>
+#include <unicode/ustring.h>
+#include <unicode/ustream.h>
+#include <unicode/brkiter.h>
+
 #include <string>
 #include <format>
 
@@ -55,6 +61,8 @@ enum class TermColor
 	BrightWhite,
 };
 
+//class icu::UnicodeString;
+
 namespace TermUtils
 {
 
@@ -68,6 +76,8 @@ namespace TermUtils
 	std::string line(int32_t length);
 	std::string msg_line(std::string str, int32_t length);
 	std::string status_line(int32_t line, int32_t width, std::string left, std::string right);
+	std::string status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right);
+	std::string status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right);
 	std::string line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out_char);
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg);

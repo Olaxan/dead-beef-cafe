@@ -15,6 +15,16 @@ bool File::has_flag(FileModeFlags flag)
 	return (static_cast<uint8_t>(flags_) & static_cast<uint8_t>(flag)) == static_cast<uint8_t>(flag);
 }
 
+void File::write(std::string content)
+{
+	content_.append(std::move(content));
+}
+
+void File::append(std::string content)
+{
+	content_.insert(0, std::move(content));
+}
+
 std::string_view File::get_view() const
 {
 	return std::string_view(content_);

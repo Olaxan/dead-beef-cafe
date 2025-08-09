@@ -26,6 +26,9 @@ public:
 	void clear_flag(FileModeFlags flags);
 	bool has_flag(FileModeFlags flags);
 
+	void write(std::string content);
+	void append(std::string content);
+	
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
 

@@ -21,19 +21,30 @@ class EditorState
 {
 public:
 
+	enum class HandlerReturn
+	{
+		Handled = 0,
+		Unhandled,
+		WantSave,
+		WantExit
+	};
+
 	EditorState() = delete;
 
-	EditorState(int32_t width, int32_t height)
-	: width_(width), height_(height), status_(U_ZERO_ERROR), col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status_))
+	EditorState(int32_t width, int32_t height, bool multiline = true)
+	: width_(width), height_(height), multiline_(multiline), error_(U_ZERO_ERROR), col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), error_))
 	{
 		init_state();
 	}
 
-	bool open(std::string filename)
-	{
-		file_ = filename;
-		return true;
-	}
+	std::size_t get_num_rows() const { return rows_.size(); }
+	int32_t get_col() const { return col_; }
+	int32_t get_row() const { return row_; }
+	std::string_view get_filename() const { return file_; }
+	bool is_dirty() const { return dirty_ > 0; }
+	bool has_file() const { return path_.has_value(); }
+	std::optional<FilePath> get_path() const { return path_; }
+	void set_dirty(int32_t new_dirty) { dirty_ = new_dirty; }
 
 	bool set_file(FilePath path, File* f)
 	{
@@ -49,12 +60,6 @@ public:
 		path_ = path;
 		return true;
 	}
-
-	std::size_t get_num_rows() const { return rows_.size(); }
-	int32_t get_col() const { return col_; }
-	int32_t get_row() const { return row_; }
-	std::string_view get_filename() const { return file_; }
-	bool is_dirty() const { return dirty_ > 0; }
 
 	void init_state()
 	{
@@ -73,6 +78,18 @@ public:
 		height_ = height;
 	}
 
+	void set_status(std::string new_status)
+	{
+		status_ = icu::UnicodeString::fromUTF8(std::move(new_status));
+	}
+
+	void set_status(const char* new_status)
+	{
+		status_ = icu::UnicodeString(new_status);
+	}
+
+	void reset_status() { status_.remove(); }
+
 	bool refresh_row()
 	{
 		const icu::UnicodeString& text = *row_it_;
@@ -90,6 +107,10 @@ public:
 
 	void add_row()
 	{
+
+		if (!multiline_)
+			return;
+
 		if (rows_.empty())
 		{
 			rows_.emplace_front();
@@ -162,6 +183,77 @@ public:
 		col_ += num_points;
 		refresh_row();
 		++dirty_;
+	}
+
+	std::string as_utf8() const
+	{
+		return rows_ 
+		| std::views::transform([](const icu::UnicodeString& u) -> std::string
+		{
+			std::string out{};
+			u.toUTF8String(out);
+			return out;
+		})
+		| std::views::join_with(std::string("\r\n"))
+		| std::ranges::to<std::string>();
+	}
+
+	HandlerReturn accept_input(std::string input)
+	{
+		if (input.size() == 0)
+			return HandlerReturn::Handled;
+
+		/* Clean erroneous nulls (we should fix this somewhere else). */
+		if (input.back() == '\0')
+			input.pop_back();
+
+		if (input[0] == '\r')
+		{
+			add_row();
+			return HandlerReturn::Handled;
+		}
+
+		/* Backspace */
+		if (input[0] == '\x7f')
+		{
+			remove_back();
+			return HandlerReturn::Handled;
+		}
+
+		if (input[0] == CTRL_KEY('s'))
+				return HandlerReturn::WantSave;
+
+		/* Escapes */
+		if (input[0] == '\x1b')
+		{
+			if (input.size() == 1)
+				return HandlerReturn::WantExit;
+
+			if (input[1] == '\0')
+				return HandlerReturn::WantExit;
+			
+			if (input[1] == '[' && input.size() >= 3)
+			{
+				switch(input[2])
+				{
+					case 'A': move_up(); return HandlerReturn::Handled;
+					case 'B': move_down(); return HandlerReturn::Handled;
+					case 'C': move_right(); return HandlerReturn::Handled;
+					case 'D': move_left(); return HandlerReturn::Handled;
+					case 'H': move_home(); return HandlerReturn::Handled;
+					case 'F': move_end(); return HandlerReturn::Handled;
+					case '3': remove_front(); return HandlerReturn::Handled;
+					default: return HandlerReturn::Handled;
+				}
+			}
+
+			return HandlerReturn::Handled;
+		}
+
+		insert_utf8(input);
+		HandlerReturn::Handled;
+
+		return HandlerReturn::Unhandled;
 	}
 
 	int32_t move_to(int32_t n)
@@ -294,8 +386,6 @@ public:
 	{
 		std::size_t num_rows = rows_.size();
 
-		std::string title = std::format(" SMol Editor ({}) ", file_);
-
 		// This needs to be UnicodeString later (handle non-english filenames).
 		std::string left_msg = std::format("{} - {} line{}{}", 
 			file_, 
@@ -311,7 +401,7 @@ public:
 		ss << CSI_CODE(33);
 		ss << TermUtils::line(1, 1 + num_rows, 1, height_ - 1, "~");
 		ss << CSI_RESET;
-		ss << TermUtils::status_line(height_, width_, left_msg, right_msg);
+		ss << TermUtils::status_line(height_, width_, status_.length() ? status_ : icu::UnicodeString::fromUTF8(left_msg), right_msg);
 		
 		/* Print user chars. */
 		ss << CLEAR_CURSOR;
@@ -337,22 +427,75 @@ protected:
 	int32_t height_ = 1;
 	int32_t dirty_ = 0;
 	int32_t curr_row_len_ = 0;
+	bool multiline_ = true;
+	icu::UnicodeString status_{};
 	std::list<icu::UnicodeString> rows_{};
 	std::list<icu::UnicodeString>::iterator row_it_{};
-	UErrorCode status_ = U_ZERO_ERROR;
+	UErrorCode error_ = U_ZERO_ERROR;
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
 	std::string file_ = "new file";
-	FilePath path_{};
+	std::optional<FilePath> path_{};
 };
 
-EagerTask<int32_t> input_filename(Proc& proc)
+EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Proc& proc, std::string prefix)
 {
-	co_return 0;
+	OS& os = *proc.owning_os;
+
+	EditorState substate{25, 1, false};
+	substate.init_state();
+
+	state.set_status(std::format("{}: {}", prefix, substate.as_utf8()));
+	proc.put("{}", state.get_printout());
+
+	while (true)
+	{
+		co_await os.wait(0.16f);
+
+		std::optional<com::CommandQuery> opt_input = proc.read<com::CommandQuery>();
+
+		if (!opt_input.has_value())
+			continue;
+
+		std::string str_in = opt_input->command();
+		substate.accept_input(str_in);
+
+		state.set_status(std::format("{}: {}", prefix, substate.as_utf8()));
+		proc.put("{}", state.get_printout());
+	}
+
+	std::println("Finished writing.");
+	state.reset_status();
+
+	co_return substate.as_utf8();
 }
 
-EagerTask<int32_t> handle_exit_save(Proc& proc)
+EagerTask<bool> handle_save_as(EditorState& state, Proc& proc)
 {
-	co_return 0;
+	OS& os = *proc.owning_os;
+
+	std::optional<std::string> name = co_await write_in_statusbar(state, proc, "Save as");
+
+	co_return false;
+}
+
+EagerTask<bool> handle_save(EditorState& state, Proc& proc)
+{
+	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
+
+	if (auto opt_path = state.get_path(); opt_path.has_value())
+	{
+		auto [file, err] = fs->open(*opt_path, FileAccessFlags::Create);
+		if (err == FileSystemError::Success)
+		{
+			file->write(state.as_utf8());
+			state.set_dirty(0);
+			co_return true;
+		}
+	}
+
+	co_return (co_await handle_save_as(state, proc));
+
 }
 
 ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
@@ -384,7 +527,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("SHELL_PATH"));
 
-		auto [f, err] = fs->open(path);
+		auto [f, err] = fs->open(path, FileAccessFlags::Create);
 		if (f && err == FileSystemError::Success)
 		{
 			state.set_file(path, f);
@@ -392,68 +535,6 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 		std::println("Opening {}: {}.", path, FileSystem::get_fserror_name(err));
 	}
-
-	enum class HandlerReturn
-	{
-		Handled = 0,
-		Unhandled,
-		WantSave,
-		WantExit
-	};
-
-	auto accept_input = [&](const std::string& input) -> HandlerReturn
-	{
-		if (input.size() == 0)
-			return HandlerReturn::Handled;
-
-		if (input[0] == '\r')
-		{
-			state.add_row();
-			return HandlerReturn::Handled;
-		}
-
-		/* Backspace */
-		if (input[0] == '\x7f')
-		{
-			state.remove_back();
-			return HandlerReturn::Handled;
-		}
-
-		/* Escapes */
-		if (input[0] == '\x1b')
-		{
-			if (input.size() == 1)
-				return HandlerReturn::WantExit;
-
-			if (input[1] == '\0')
-				return HandlerReturn::WantExit;
-			
-			if (input[1] == '[' && input.size() >= 3)
-			{
-				switch(input[2])
-				{
-					case 'A': state.move_up(); return HandlerReturn::Handled;
-					case 'B': state.move_down(); return HandlerReturn::Handled;
-					case 'C': state.move_right(); return HandlerReturn::Handled;
-					case 'D': state.move_left(); return HandlerReturn::Handled;
-					case 'H': state.move_home(); return HandlerReturn::Handled;
-					case 'F': state.move_end(); return HandlerReturn::Handled;
-					case '3': state.remove_front(); return HandlerReturn::Handled;
-					default: return HandlerReturn::Handled;
-				}
-			}
-
-			return HandlerReturn::Handled;
-		}
-
-		if (!std::iscntrl(input[0]))
-		{
-			state.insert_utf8(input);
-			HandlerReturn::Handled;
-		}
-
-		return HandlerReturn::Unhandled;
-	};
 
 	com::CommandReply begin_msg;
 	begin_msg.set_reply(std::format(BEGIN_ALT_SCREEN_BUFFER "{}", state.get_printout()));
@@ -481,28 +562,26 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		/* Next, read the actual command and consider it based on first-byte. */
 		std::string str_in = input.command();
 
-		/* Clean erroneous nulls (we should fix this somewhere else). */
-		if (str_in.back() == '\0')
-			str_in.pop_back();
-
 		for (char c : str_in)
 			std::print("{}, ", (int)c);
 		std::println("was received.");
 
-		HandlerReturn ret = accept_input(str_in);
+		EditorState::HandlerReturn ret = state.accept_input(str_in);
 
-		if (ret == HandlerReturn::WantExit)
+		if (ret == EditorState::HandlerReturn::WantExit)
 		{
 			if (!state.is_dirty())
 				break;
+
+			state.set_status("The file is unsaved (Ctrl+S to save).");
 			
-			if (co_await handle_exit_save())
+			if (co_await handle_save(state, proc))
 				break;
 		}
 
-		if (ret == HandlerReturn::WantSave)
+		if (ret == EditorState::HandlerReturn::WantSave)
 		{
-			
+			co_await handle_save(state, proc);
 		}		
 
 		proc.put("{}", state.get_printout());

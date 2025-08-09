@@ -288,7 +288,7 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
-FilePtrResult FileSystem::open(const FilePath& path)
+FilePtrResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 {
 	if (uint64_t fid = get_fid(path); is_file(fid))
 	{
@@ -297,6 +297,14 @@ FilePtrResult FileSystem::open(const FilePath& path)
 		
 		if (auto it = files_.find(fid); it != files_.end())
 			return std::make_pair(it->second.get(), FileSystemError::Success);
+	}
+
+	/* Not equal here! */
+	if (flags == FileAccessFlags::Create)
+	{
+		auto [new_fid, err] = create_file(path);
+		if (err == FileSystemError::Success)
+			return open(path, flags);
 	}
 
 	return std::make_pair(nullptr, FileSystemError::FileNotFound);

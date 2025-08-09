@@ -1,5 +1,11 @@
 #include "term_utils.h"
 
+#include <unicode/utypes.h>
+#include <unicode/ucol.h>
+#include <unicode/ustring.h>
+#include <unicode/ustream.h>
+#include <unicode/brkiter.h>
+
 #include <sstream>
 
 int32_t TermUtils::get_ansi_fg_color(TermColor color)
@@ -78,6 +84,36 @@ std::string TermUtils::status_line(int32_t line, int32_t width, std::string left
 	ss << " ";
 	ss << left;
 	ss << std::string(width - (left.length() + right.length() + 2), ' ');
+	ss << right;
+	ss << " ";
+	ss << CSI_RESET;
+	return ss.str();
+}
+
+std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right)
+{
+	std::string left_out;
+	left.toUTF8String(left_out);
+	std::stringstream ss;
+	ss << REVERSE_VIDEO;
+	ss << MOVE_CURSOR_FORMAT(1, line);
+	ss << " ";
+	ss << left_out;
+	ss << std::string(width - (left.countChar32() + right.length() + 2), ' ');
+	ss << right;
+	ss << " ";
+	ss << CSI_RESET;
+	return ss.str();
+}
+
+std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right)
+{
+	std::stringstream ss;
+	ss << REVERSE_VIDEO;
+	ss << MOVE_CURSOR_FORMAT(1, line);
+	ss << " ";
+	ss << left;
+	ss << std::string(width - (left.countChar32() + right.countChar32() + 2), ' ');
 	ss << right;
 	ss << " ";
 	ss << CSI_RESET;
