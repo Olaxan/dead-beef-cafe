@@ -260,13 +260,36 @@ FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
 
 	if (is_empty(fid))
 	{
-		mappings_.erase(fid);
+		/* Get the root of this file and erase the file from its parent mapping,
+		if such a root exists. */
+		if (auto parent = roots_.find(fid); parent != roots_.end())
+		{
+			auto range = mappings_.equal_range(parent->second);
+			auto it = range.first;
+			
+			for (; it != range.second; )
+			{
+				if (it->second == fid)
+				{
+					it = mappings_.erase(it);
+				}
+				else ++it;
+			}
+		}
+
+		/* Actually remove this file from the roots map. */
 		roots_.erase(fid);
+
+		/* Remove the file from the path-fid/fid-path mappings. */
 		if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
 		{
 			path_to_fid_.erase(it->second);
 			fid_to_path_.erase(it);
 		}
+
+		/* Remove the file itself. */
+		files_.erase(fid);
+
 		return FileSystemError::Success;
 	}
 	else if (recurse)
