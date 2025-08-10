@@ -275,10 +275,10 @@ FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
 				}
 				else ++it;
 			}
-		}
 
-		/* Actually remove this file from the roots map. */
-		roots_.erase(fid);
+			/* Actually remove this file from the roots map. */
+			roots_.erase(parent);
+		}
 
 		/* Remove the file from the path-fid/fid-path mappings. */
 		if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
