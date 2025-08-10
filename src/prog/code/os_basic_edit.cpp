@@ -25,6 +25,9 @@ public:
 	{
 		Handled = 0,
 		Unhandled,
+		PutChar,
+		Return,
+		Erase,
 		WantSave,
 		WantExit
 	};
@@ -40,11 +43,12 @@ public:
 	std::size_t get_num_rows() const { return rows_.size(); }
 	int32_t get_col() const { return col_; }
 	int32_t get_row() const { return row_; }
-	std::string_view get_filename() const { return has_file() ? path_->get_name() : "new file"; }
+	std::string_view get_filename() const { return has_file() ? path_->get_name() : "*new file*"; }
 	bool is_dirty() const { return dirty_ > 0; }
 	bool has_file() const { return path_.has_value(); }
 	std::optional<FilePath> get_path() const { return path_; }
 	void set_dirty(int32_t new_dirty) { dirty_ = new_dirty; }
+	void set_path(FilePath new_path) { path_ = std::move(new_path); }
 
 	bool set_file(FilePath path, File* f)
 	{
@@ -210,14 +214,14 @@ public:
 		if (input[0] == '\r')
 		{
 			add_row();
-			return HandlerReturn::Handled;
+			return HandlerReturn::Return;
 		}
 
 		/* Backspace */
 		if (input[0] == '\x7f')
 		{
 			remove_back();
-			return HandlerReturn::Handled;
+			return HandlerReturn::Erase;
 		}
 
 		if (input[0] == CTRL_KEY('s'))
@@ -251,9 +255,7 @@ public:
 		}
 
 		insert_utf8(input);
-		HandlerReturn::Handled;
-
-		return HandlerReturn::Unhandled;
+		return HandlerReturn::PutChar;
 	}
 
 	int32_t move_to(int32_t n)
@@ -456,23 +458,43 @@ EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Pro
 			continue;
 
 		std::string str_in = opt_input->command();
-		substate.accept_input(str_in);
+		EditorState::HandlerReturn ret = substate.accept_input(str_in);
+
+		if (ret == EditorState::HandlerReturn::WantExit)
+		{
+			state.set_status("Save aborted.");
+			co_return std::nullopt;
+		}
+
+		if (ret == EditorState::HandlerReturn::Return)
+		{
+			break;
+		}
 
 		state.set_status(std::format("{}: {}", prefix, substate.as_utf8()));
 		proc.put("{}", state.get_printout());
 	}
 
-	std::println("Finished writing.");
 	state.reset_status();
-
 	co_return substate.as_utf8();
 }
 
+EagerTask<bool> handle_save(EditorState& state, Proc& proc);
 EagerTask<bool> handle_save_as(EditorState& state, Proc& proc)
 {
 	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
 
-	std::optional<std::string> name = co_await write_in_statusbar(state, proc, "Save as");
+	if (std::optional<std::string> name = co_await write_in_statusbar(state, proc, "Save as"))
+	{
+		FilePath new_path(*name);
+		if (new_path.is_relative())
+			new_path.prepend(proc.get_var("SHELL_PATH"));
+
+		state.set_path(new_path);
+
+		co_return (co_await handle_save(state, proc));
+	}
 
 	co_return false;
 }
@@ -573,9 +595,6 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 				break;
 
 			state.set_status("The file is unsaved (Ctrl+S to save).");
-			
-			if (co_await handle_save(state, proc))
-				break;
 		}
 
 		if (ret == EditorState::HandlerReturn::WantSave)

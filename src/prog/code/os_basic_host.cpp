@@ -28,6 +28,13 @@ ProcessTask Programs::InitProg(Proc& proc, std::vector<std::string> args)
 ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
+
+	if (fs == nullptr)
+	{
+		proc.errln("No filesystem!");
+		co_return 1;
+	}
 
 	if (DeviceState state = os.get_state(); state != DeviceState::PoweredOff)
 	{
