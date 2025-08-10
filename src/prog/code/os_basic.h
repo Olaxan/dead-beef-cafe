@@ -2,12 +2,15 @@
 
 #include "os.h"
 #include "proc.h"
+#include "netw.h"
 
 #include <coroutine>
 #include <vector>
 
 using CmdSocketServer = Socket<com::CommandQuery, com::CommandReply>;
 using CmdSocketClient = Socket<com::CommandReply, com::CommandQuery>;
+using CmdSocketAwaiterServer = MessageAwaiter<com::CommandQuery, com::CommandReply>;
+using CmdSocketAwaiterClient = MessageAwaiter<com::CommandReply, com::CommandQuery>;
 
 namespace Programs
 {

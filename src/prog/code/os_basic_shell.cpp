@@ -55,6 +55,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		return {};
 	});
 
+	proc.add_reader<CmdSocketAwaiterServer>([sock]() -> std::any
+	{
+		return sock->async_read();
+	});
+
 	proc.add_reader<com::CommandQuery>([sock]() -> std::any
 	{
 		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())

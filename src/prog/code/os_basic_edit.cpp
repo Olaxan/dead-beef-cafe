@@ -438,6 +438,26 @@ protected:
 	std::optional<FilePath> path_{};
 };
 
+EagerTask<com::CommandQuery> await_input(Proc& proc)
+{
+	OS& os = *proc.owning_os;
+
+	if (auto async_read = proc.read<CmdSocketAwaiterServer>())
+	{
+		co_return (co_await *async_read);
+	}
+	else
+	{
+		while (true)
+		{
+			if (std::optional<com::CommandQuery> opt_input = proc.read<com::CommandQuery>())
+				co_return *opt_input;
+
+			co_await os.wait(0.16f);
+		}
+	}
+}
+
 EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Proc& proc, std::string prefix)
 {
 	OS& os = *proc.owning_os;
@@ -450,14 +470,8 @@ EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Pro
 
 	while (true)
 	{
-		co_await os.wait(0.16f);
-
-		std::optional<com::CommandQuery> opt_input = proc.read<com::CommandQuery>();
-
-		if (!opt_input.has_value())
-			continue;
-
-		std::string str_in = opt_input->command();
+		com::CommandQuery query_in = co_await await_input(proc);
+		std::string str_in = query_in.command();
 		EditorState::HandlerReturn ret = substate.accept_input(str_in);
 
 		if (ret == EditorState::HandlerReturn::WantExit)
@@ -563,15 +577,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		std::optional<com::CommandQuery> opt_input = proc.read<com::CommandQuery>();
-
-		if (!opt_input.has_value())
-		{
-			co_await os.wait(0.16f);
-			continue;
-		}
-
-		const com::CommandQuery& input = *opt_input;
+		com::CommandQuery input = co_await await_input(proc);
 
 		/* First, update terminal parameters if we're being passed configuration data. */
 		if (input.has_screen_data())
