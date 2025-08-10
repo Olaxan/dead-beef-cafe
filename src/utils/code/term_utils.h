@@ -24,6 +24,7 @@
 #define END_ALT_SCREEN_BUFFER CSI "?1049l"
 #define CLEAR_SCREEN CSI "2J"
 #define CLEAR_CURSOR CSI "H"
+#define CLEAR_LINE CSI "K"
 #define MOVE_CURSOR(x, y) CSI #y ";" #x "H"
 #define MOVE_CURSOR_FORMAT(x, y) std::format(CSI "{};{}H", y, x)
 #define MOVE_CURSOR_PLACEHOLDER CSI "{};{}H"
