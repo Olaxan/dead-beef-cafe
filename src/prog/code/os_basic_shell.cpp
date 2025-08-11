@@ -26,12 +26,16 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	if (fs == nullptr)
 	{
-		proc.errln("fatal: No file system!");
+		proc.errln("No file system!");
 		co_return 1;
 	}
 
 	auto sock = os.create_socket<CmdSocketServer>();
-	os.bind_socket(sock, 22);
+	if (!os.bind_socket(sock, 22))
+	{
+		proc.errln("Failed to bind socket 22 for reading.");
+		co_return 1;
+	}
 
 	/* Register writer functors in the process so that output
 	is delivered in the form of command objects via the socket. */

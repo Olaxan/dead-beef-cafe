@@ -89,9 +89,6 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/sbin/shutdown", Programs::CmdShutdown},
 		{"/sbin/shell", Programs::CmdShell},
 		{"/sbin/boot", Programs::CmdBoot },
-		{"/bin/cpu", Programs::InitCpu},
-		{"/bin/net", Programs::InitNet},
-		{"/bin/disk", Programs::InitDisk},
 		{"/bin/ls", Programs::CmdList},
 		{"/bin/cd", Programs::CmdChangeDir},
 		{"/bin/mkdir", Programs::CmdMakeDir},
@@ -102,7 +99,10 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/usr/bin/count", Programs::CmdCount},
 		{"/usr/bin/snake", Programs::CmdSnake},
 		{"/usr/bin/dogs", Programs::CmdDogs},
-		{"/usr/bin/edit", Programs::CmdEdit}
+		{"/usr/bin/edit", Programs::CmdEdit},
+		{"/lib/modules/kernel/drivers/cpu", Programs::InitCpu},
+		{"/lib/modules/kernel/drivers/net", Programs::InitNet},
+		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
 	};
 
 	for (auto& fn : os_progs)
