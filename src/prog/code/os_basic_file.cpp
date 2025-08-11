@@ -5,6 +5,8 @@
 #include "filesystem.h"
 #include "navigator.h"
 
+#include "CLI/CLI.hpp"
+
 #include <string>
 #include <vector>
 #include <print>
@@ -106,24 +108,92 @@ ProcessTask Programs::CmdOpenFile(Proc& proc, std::vector<std::string> args)
 
 ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 {
-	if (args.size() != 2)
+
+	FileSystem* fs = proc.owning_os->get_filesystem();
+
+	CLI::App app{"Utility to remove files and directories."};
+
+	struct RmArgs
 	{
-		proc.warnln("Usage: rm [file/directory]");
-		co_return 1;
+		bool recurse = false;
+		bool force = false;
+		bool verbose = false;
+		bool no_preserve_root = false;
+		std::vector<FilePath> paths{};
+	} params{};
+
+
+	app.add_option("-p,--path,path", params.paths, "Files to remove (full or relative paths)")->required();
+
+	app.add_flag("-r,--recurse", params.recurse, "Delete files recursively");
+	app.add_flag("-f,--force", params.force, "Don't exit on error");
+	app.add_flag("-v,--verbose", params.verbose, "Tell us exactly what is going on");
+	app.add_flag("--no-preserve-root", params.no_preserve_root, "Do not treat the root directory '/' as protected from deletion");
+
+	std::ranges::reverse(args);
+	args.pop_back();
+
+	int32_t files_removed = 0;
+
+	auto remover = [&proc, &files_removed, &params](const FileSystem& fs, const FilePath& path, FileSystemError code) -> bool
+	{
+		switch (code)
+		{
+			case (FileSystemError::Success):
+			{
+				++files_removed;
+				if (params.verbose) { proc.putln("Removed '{}'.", path); }
+				return true;
+			}
+			case (FileSystemError::FolderNotEmpty):
+			{
+				if (params.recurse)
+				{
+					if (params.verbose) { proc.putln("Deleting files in '{}':", path); };
+					return true;
+				}
+				else break;
+			}
+			case (FileSystemError::PreserveRoot):
+			{
+				if (params.no_preserve_root)
+				{
+					if (params.verbose) { proc.warnln("Deleting root directory '/' -- you asked for it!"); };
+					return true;
+				}
+				else break;
+			}
+			default:
+			{
+				if (params.verbose) { proc.warnln("Failed to remove file '{}': {}.", path, FileSystem::get_fserror_name(code)); }
+				return params.force;
+			}
+		}
+
+		proc.warnln("Failed to remove file '{}': {}.", path, FileSystem::get_fserror_name(code));
+		return false;
+	};
+
+	try
+	{
+        app.parse(std::move(args));
+    }
+	catch(const CLI::ParseError& e)
+	{
+		int res = app.exit(e, proc.s_out, proc.s_err);
+        co_return res;
+    }
+
+	for (auto& path : params.paths)
+	{
+		if (path.is_relative())
+			path.prepend(proc.get_var("SHELL_PATH"));
+
+		fs->remove_file(path, remover);
 	}
 
-	if (Navigator* nav = proc.get_data<Navigator>())
-	{
-		FileSystemError err = nav->remove_file(args[1]);
-
-		if (err != FileSystemError::Success)
-			proc.warnln("Failed to remove file: {}.", FileSystem::get_fserror_name(err));
-
-		co_return static_cast<int32_t>(err);
-	}
-
-	proc.errln("No file navigator.");
-	co_return 1;
+	proc.putln("Removed {0} file(s).", files_removed);
+	co_return static_cast<int32_t>(files_removed == 0);
 }
 
 ProcessTask Programs::CmdGoUp(Proc& proc, std::vector<std::string> args)

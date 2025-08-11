@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <print>
+#include <iostream>
 
 /* --- File Path --- */
 
@@ -50,6 +51,7 @@ FilePath FilePath::get_parent_path() const
 std::string_view FilePath::get_name() const
 {
 	std::string_view path(path_);
+
 	if (!path.empty() && path.back() == '/')
         path.remove_suffix(1);
 
@@ -97,6 +99,7 @@ const char* FileSystem::get_fserror_name(FileSystemError code)
 		case FileSystemError::InsufficientPermissions: return "Insufficient permissions";
 		case FileSystemError::InvalidFlags: return "Invalid file flags";
 		case FileSystemError::IOError: return "I/O error";
+		case FileSystemError::PreserveRoot: return "The operation can't be performed on the root directory";
 		case FileSystemError::Other: return "Unknown error";
 		case FileSystemError::Success: return "The operation completed successfully";
 		default: return "Unknown error";
@@ -106,6 +109,11 @@ const char* FileSystem::get_fserror_name(FileSystemError code)
 bool FileSystem::is_file(uint64_t fid) const
 {
 	return fid == get_root() || files_.contains(fid);
+}
+
+bool FileSystem::is_file(const FilePath& path) const
+{
+	return get_fid(path) != 0;
 }
 
 bool FileSystem::is_dir(uint64_t fid) const
@@ -169,7 +177,7 @@ uint64_t FileSystem::get_fid(const FilePath& path) const
 std::vector<uint64_t> FileSystem::get_files(uint64_t dir) const
 {
 	if (!is_dir(dir))
-		return {dir};
+		return {};
 
 	std::vector<uint64_t> v{};
 
@@ -251,6 +259,86 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path)
 		std::println("Directory parent '{}' ({}) was created.", parent, new_parent_fid);
 		return new_parent_fid;
 	}
+}
+
+bool FileSystem::remove_file(uint64_t fid, FileRemoverFn&& func)
+{
+	FilePath path = get_path(fid);
+	return remove_file(path, std::forward<FileRemoverFn>(func));
+}
+
+bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
+{
+	uint64_t fid = get_fid(path);
+
+	/* If this is the root directory, ensure we can operate on it. */
+	if (path == "/" && !func(*this, path, FileSystemError::PreserveRoot))
+	{
+		return false;
+	}
+
+	/* If this file doesn't exist, report it to callback and return. */
+	if (!is_file(fid))
+	{
+		func(*this, path, FileSystemError::FileNotFound);
+		return false;
+	}
+
+	/* If we're not empty, and the callback doesn't say that's okay, fail. */
+	if (!(is_empty(fid) || func(*this, path, FileSystemError::FolderNotEmpty)))
+	{
+		return false;
+	}
+
+	/* If we get here, the callback must have given green light for recursion.
+	Remove all children. */
+	for (uint64_t child : get_files(fid))
+	{
+		if (!remove_file(child, std::forward<FileRemoverFn>(func)))
+		{
+			return false;
+		}
+	}
+
+	/* Even if callback requests resume, fail if not empty after recursion. */
+	if (!is_empty(fid))
+	{
+		func(*this, path, FileSystemError::FolderNotEmpty);
+		return false;
+	}
+
+	/* Get the root of this file and erase the file from its parent mapping,
+	if such a root exists. */
+	if (auto parent = roots_.find(fid); parent != roots_.end())
+	{
+		auto range = mappings_.equal_range(parent->second);
+		auto it = range.first;
+		
+		for (; it != range.second; )
+		{
+			if (it->second == fid)
+			{
+				it = mappings_.erase(it);
+			}
+			else ++it;
+		}
+
+		/* Actually remove this file from the roots map. */
+		roots_.erase(parent);
+	}
+
+	/* Remove the file from the path-fid/fid-path mappings. */
+	if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
+	{
+		path_to_fid_.erase(it->second);
+		fid_to_path_.erase(it);
+	}
+
+	/* Remove the file itself. */
+	files_.erase(fid);
+
+	return func(*this, path, FileSystemError::Success);
+
 }
 
 FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)

@@ -2,11 +2,14 @@
 
 #include <vector>
 #include <memory>
+#include <functional>
 #include <unordered_map>
 #include <concepts>
 #include <print>
 
 #include "file.h"
+
+class FileSystem;
 
 class FilePath
 {
@@ -81,6 +84,7 @@ enum class FileSystemError : uint32_t
 	InvalidFlags,
 	FolderNotEmpty,
 	IOError,
+	PreserveRoot,
 	Other
 };
 
@@ -94,6 +98,7 @@ enum class FileAccessFlags : uint32_t
 
 using FileOpResult = std::pair<uint64_t, FileSystemError>;
 using FilePtrResult = std::pair<File*, FileSystemError>;
+using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 
 class FileSystem
 {
@@ -105,6 +110,7 @@ public:
 
 	/* Returns whether file handle is valid. This is not the opposite of is_dir, as a directory is a file. */
 	bool is_file(uint64_t fid) const;
+	bool is_file(const FilePath& path) const;
 
 	/* Returns whether the specified file is valid, and whether or not it's a directory. */
 	bool is_dir(uint64_t fid) const;
@@ -142,6 +148,11 @@ public:
 
 	FileSystemError remove_file(uint64_t fid, bool recurse = false);
 	FileSystemError remove_file(const FilePath& path, bool recurse = false);
+
+	/* Version of remove_file that takes a deciding callback, which aborts the operation if returning false.
+	If true is returned, the operation should proceed even if an error is reported. */
+	bool remove_file(uint64_t fid, FileRemoverFn&& func);
+	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
 	FilePtrResult open(const FilePath& path, FileAccessFlags flags);
