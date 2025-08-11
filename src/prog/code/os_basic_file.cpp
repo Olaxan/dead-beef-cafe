@@ -112,6 +112,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 	FileSystem* fs = proc.owning_os->get_filesystem();
 
 	CLI::App app{"Utility to remove files and directories."};
+	app.allow_windows_style_options(false);
 
 	struct RmArgs
 	{
