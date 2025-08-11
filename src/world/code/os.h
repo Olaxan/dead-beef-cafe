@@ -28,14 +28,10 @@ public:
 	OS(Host& owner)
 		: owner_(owner) 
 	{ 
-		register_commands(); 
 		register_devices(); 
 	}
 
 	virtual ~OS() { }
-
-	/* Placeholder -- just statically add all known commands to command list. */
-	virtual void register_commands() {};
 
 	virtual std::size_t register_devices();
 
@@ -132,22 +128,10 @@ public:
 		return sid.has_value();
 	}
 
-
-	void add_program(const std::string& cmd_name, ProcessFn command)
-	{
-		commands_[cmd_name] = std::move(command);
-	}
-
 	[[nodiscard]] TimerAwaiter wait(float seconds);
 	void schedule(float seconds, schedule_fn callback);
 
 protected:
-
-	[[nodiscard]] auto get_program(const std::string& cmd)
-	{ 
-		auto it = commands_.find(cmd);
-		return std::pair{it, it != commands_.end() };
-	}
 
 	[[nodiscard]] virtual ProcessFn get_default_shell() const
 	{
@@ -168,7 +152,6 @@ protected:
 	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
-	std::unordered_map<std::string, ProcessFn> commands_{}; // This should probably be shared between all OS instances (static?)
 
 	friend Proc;
 };

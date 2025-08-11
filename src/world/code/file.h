@@ -34,6 +34,7 @@ public:
 	
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
+	const ProcessFn& get_executable() const;
 
 private:
 

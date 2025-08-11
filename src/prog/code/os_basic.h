@@ -51,38 +51,7 @@ class BasicOS : public OS
 public:
 
 	BasicOS() = delete;
-
-	BasicOS(Host& owner) : OS(owner) 
-	{ 
-		register_commands(); 
-		register_devices();
-	};
-
-	void register_commands() override
-	{
-		commands_ = {
-			{"wait", Programs::CmdWait},
-			{"echo", Programs::CmdEcho},
-			{"count", Programs::CmdCount},
-			{"shutdown", Programs::CmdShutdown},
-			{"proc", Programs::CmdProc},
-			{"shell", Programs::CmdShell},
-			{"boot", Programs::CmdBoot },
-			{"cpu", Programs::InitCpu},
-			{"net", Programs::InitNet},
-			{"disk", Programs::InitDisk},
-			{"snake", Programs::CmdSnake},
-			{"ls", Programs::CmdList},
-			{"cd", Programs::CmdChangeDir},
-			{"mkdir", Programs::CmdMakeDir},
-			{"touch", Programs::CmdMakeFile},
-			{"open", Programs::CmdOpenFile},
-			{"rm", Programs::CmdRemoveFile},
-			{"..", Programs::CmdGoUp},
-			{"dogs", Programs::CmdDogs},
-			{"edit", Programs::CmdEdit}
-		};
-	}
+	BasicOS(Host& owner);
 
 protected:
 

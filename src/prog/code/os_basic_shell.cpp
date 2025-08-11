@@ -18,10 +18,11 @@
 #include <chrono>
 #include <format>
 
+
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
-	OS& our_os = *proc.owning_os;
-	FileSystem* fs = our_os.get_filesystem();
+	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
 
 	if (fs == nullptr)
 	{
@@ -29,8 +30,8 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	auto sock = our_os.create_socket<CmdSocketServer>();
-	our_os.bind_socket(sock, 22);
+	auto sock = os.create_socket<CmdSocketServer>();
+	os.bind_socket(sock, 22);
 
 	/* Register writer functors in the process so that output
 	is delivered in the form of command objects via the socket. */
@@ -81,10 +82,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		FilePath path = nav.get_path();
 
 		proc.set_var("SHELL_PATH", path.get_string());
+		proc.set_var("PATH", "/bin;/usr/bin;/sbin");
 
-		std::string usr_str = TermUtils::color(std::format("usr@{}", our_os.get_hostname()), TermColor::BrightMagenta);
+		std::string usr_str = TermUtils::color(std::format("usr@{}", os.get_hostname()), TermColor::BrightMagenta);
 		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);
-		std::string net_str = (our_os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
+		std::string net_str = (os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
 
@@ -158,7 +160,53 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		buffer.toUTF8String(out_cmd);
 		buffer.remove();
 
-		int32_t ret = co_await proc.exec(out_cmd);
+		/* At this point we have a valid command -- attempt to execute it. */
+		int32_t ret = co_await std::invoke([&proc, &os, &fs](const std::string& cmd) -> EagerTask<int32_t>
+		{
+			std::string temp{};
+			std::vector<std::string> args{};
+			
+			std::stringstream ss(cmd);
+
+			while (ss >> std::quoted(temp))
+			{
+				args.push_back(std::move(temp));
+			}
+
+			if (args.empty())
+				co_return 1;
+
+			const std::string& name = *std::begin(args);
+
+			for (auto str : proc.get_var<std::string>("PATH") | std::views::split(';'))
+			{
+				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
+	
+				if (auto [ptr, err] = fs->open(prog_path, FileAccessFlags::Read); err == FileSystemError::Success)
+				{
+					if (!ptr->has_flag(FileModeFlags::Execute))
+					{
+						proc.warnln("File '{}' is missing 'execute' flag.", prog_path);
+						co_return 1;
+					}
+	
+					if (auto& prog = ptr->get_executable())
+					{
+						int32_t ret = co_await os.create_process(prog, std::move(args), &proc);
+						co_return ret;
+					}
+					else
+					{
+						proc.errln("Access violation.");
+						co_return 1;
+					}
+				}
+			}
+
+			proc.warnln("'{0}': No such file or directory.", name);
+			co_return 1;
+
+		}, out_cmd);
 
 		if (term_w)
 		{

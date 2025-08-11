@@ -58,12 +58,12 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 		proc.putln("[INIT] found device driver '{}'", driver);
 		co_await os.wait(0.25f);
 
-		if (int32_t ret = co_await proc.exec(driver); ret != 0)
-		{
-			proc.errln("[ERROR] boot failure: driver init failure (code {})", ret);
-			os.set_state(DeviceState::Error);
-			co_return 1;
-		}
+		// if (int32_t ret = co_await proc.exec(driver); ret != 0)
+		// {
+		// 	proc.errln("[ERROR] boot failure: driver init failure (code {})", ret);
+		// 	os.set_state(DeviceState::Error);
+		// 	co_return 1;
+		// }
 	}
 
 	os.set_state(DeviceState::PoweredOn);

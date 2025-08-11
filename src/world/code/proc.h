@@ -277,12 +277,6 @@ public:
 	/* Variant of 'dispatch' which awaits its own hosted process task. */
 	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
 
-	/* Execute a sub-process on this process. */
-	EagerTask<int32_t> exec(std::string cmd);
-
-	/* Execute a sub-process on this process. */
-	EagerTask<int32_t> exec(com::CommandQuery query);
-
 
 public:
 

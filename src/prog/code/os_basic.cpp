@@ -2,6 +2,8 @@
 
 #include "device.h"
 #include "netw.h"
+#include "proc.h"
+#include "filesystem.h"
 
 #include "CLI/CLI.hpp"
 
@@ -69,4 +71,48 @@ ProcessTask Programs::CmdWait(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("Waited {0} seconds.", delay);
 	co_return 0;
+}
+
+BasicOS::BasicOS(Host& owner) : OS(owner)
+{
+	register_devices();
+
+	FileSystem* fs = get_filesystem();
+	if (fs == nullptr)
+		return;
+
+	std::vector<std::pair<std::string, ProcessFn>> os_progs = 
+	{
+		{"/bin/..", Programs::CmdGoUp},
+		{"/bin/proc", Programs::CmdProc},
+		{"/bin/wait", Programs::CmdWait},
+		{"/sbin/shutdown", Programs::CmdShutdown},
+		{"/sbin/shell", Programs::CmdShell},
+		{"/sbin/boot", Programs::CmdBoot },
+		{"/bin/cpu", Programs::InitCpu},
+		{"/bin/net", Programs::InitNet},
+		{"/bin/disk", Programs::InitDisk},
+		{"/bin/ls", Programs::CmdList},
+		{"/bin/cd", Programs::CmdChangeDir},
+		{"/bin/mkdir", Programs::CmdMakeDir},
+		{"/bin/touch", Programs::CmdMakeFile},
+		{"/bin/open", Programs::CmdOpenFile},
+		{"/bin/echo", Programs::CmdEcho},
+		{"/bin/rm", Programs::CmdRemoveFile},
+		{"/usr/bin/count", Programs::CmdCount},
+		{"/usr/bin/snake", Programs::CmdSnake},
+		{"/usr/bin/dogs", Programs::CmdDogs},
+		{"/usr/bin/edit", Programs::CmdEdit}
+	};
+
+	for (auto& fn : os_progs)
+	{
+		if (auto [fid, ptr, err] = fs->create_file(fn.first); err == FileSystemError::Success)
+		{
+			ptr->write(std::forward<ProcessFn>(fn.second));
+			ptr->set_flag(FileModeFlags::Execute);
+		}
+	}
+
+
 }
