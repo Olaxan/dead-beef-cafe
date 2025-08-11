@@ -222,9 +222,9 @@ std::vector<uint64_t> FileSystem::get_root_chain(uint64_t fid) const
 FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
 {
 	if (get_fid(path))
-		return std::make_pair(0, FileSystemError::FileExists);
+		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
 
-	std::println("Creating file under '{}' (recurse = {}).", path, recurse);
+	//std::println("Creating file under '{}' (recurse = {}).", path, recurse);
 	
 	if (recurse)
 		create_ensure_path(path);
@@ -235,9 +235,9 @@ FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
 FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
 {
 	if (get_fid(path))
-		return std::make_pair(0, FileSystemError::FileExists);
+		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
 	
-	std::println("Creating dir under '{}' (recurse = {}).", path, recurse);
+	//std::println("Creating dir under '{}' (recurse = {}).", path, recurse);
 
 	if (recurse)
 		create_ensure_path(path);
@@ -250,13 +250,13 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path)
 	FilePath parent = path.get_parent_path();
 	if (uint64_t parent_fid = get_fid(parent))
 	{
-		std::println("Directory parent '{}' ({}) exists.", parent, parent_fid);
+		//std::println("Directory parent '{}' ({}) exists.", parent, parent_fid);
 		return parent_fid;
 	}
 	else
 	{
-		auto [new_parent_fid, err] = create_directory(parent, true);
-		std::println("Directory parent '{}' ({}) was created.", parent, new_parent_fid);
+		auto [new_parent_fid, ptr, err] = create_directory(parent, true);
+		//std::println("Directory parent '{}' ({}) was created.", parent, new_parent_fid);
 		return new_parent_fid;
 	}
 }
@@ -413,7 +413,7 @@ FilePtrResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 	/* Not equal here! */
 	if (flags == FileAccessFlags::Create)
 	{
-		auto [new_fid, err] = create_file(path);
+		auto [new_fid, ptr, err] = create_file(path);
 		if (err == FileSystemError::Success)
 			return open(path, flags);
 	}

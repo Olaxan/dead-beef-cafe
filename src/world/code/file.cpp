@@ -15,6 +15,12 @@ bool File::has_flag(FileModeFlags flag)
 	return (static_cast<uint8_t>(flags_) & static_cast<uint8_t>(flag)) == static_cast<uint8_t>(flag);
 }
 
+void File::write(ProcessFn&& exec)
+{
+	executable_ = exec;
+	content_ = "BIN64::";
+}
+
 void File::write(std::string content)
 {
 	content_ = std::move(content);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "proc.h"
+
 #include <string>
 #include <sstream>
 
@@ -26,6 +28,7 @@ public:
 	void clear_flag(FileModeFlags flags);
 	bool has_flag(FileModeFlags flags);
 
+	void write(ProcessFn&& exec);
 	void write(std::string content);
 	void append(std::string content);
 	
@@ -36,6 +39,7 @@ private:
 
 	uint64_t fid_{};
 	std::string content_{};
+	ProcessFn executable_{nullptr};
 	FileModeFlags flags_{FileModeFlags::None};
 
 };

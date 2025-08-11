@@ -284,9 +284,6 @@ public:
 	EagerTask<int32_t> exec(com::CommandQuery query);
 
 
-	/* --- STREAM BUFFERS ASSOCIATED WITH PROC --- */
-
-
 public:
 
 	int32_t pid{0};

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <concepts>
 #include <print>
+#include <tuple>
 
 #include "file.h"
 
@@ -96,7 +97,7 @@ enum class FileAccessFlags : uint32_t
 	Create = 4
 };
 
-using FileOpResult = std::pair<uint64_t, FileSystemError>;
+using FileOpResult = std::tuple<uint64_t, File*, FileSystemError>;
 using FilePtrResult = std::pair<File*, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 
@@ -136,10 +137,10 @@ public:
 	uint64_t get_root() const { return root_; }
 	std::vector<uint64_t> get_root_chain(uint64_t fid) const;
 
-	/* Create a file at the specified location (and fills in missing directories). */
+	/* Create a file at the specified location (and optionally fills in missing directories). */
 	FileOpResult create_file(const FilePath& path, bool recurse = true);
 
-	/* Create a folder at the specified location (and fills in missing directories). */
+	/* Create a folder at the specified location (and optionally fills in missing directories). */
 	FileOpResult create_directory(const FilePath& path, bool recurse = true);
 
 	/* Walks a provided path and creates all the directories that are missing. 
@@ -157,8 +158,6 @@ public:
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
 	FilePtrResult open(const FilePath& path, FileAccessFlags flags);
 
-protected:
-
 	template<std::derived_from<File> T>
 	FileOpResult add_file(const FilePath& path, FileModeFlags flags = FileModeFlags::None)
 	{
@@ -166,7 +165,7 @@ protected:
 		uint64_t parent_fid = get_fid(parent);
 
 		if (parent_fid == 0)
-			return std::make_pair(0, FileSystemError::FileNotFound);
+			return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 
 		uint64_t fid = ++fid_counter_;
 		auto [it, success] = files_.emplace(fid, std::make_unique<T>(fid, flags));
@@ -177,9 +176,11 @@ protected:
 			path_to_fid_[path] = fid;
 			roots_[fid] = parent_fid;
 			mappings_.insert(std::make_pair(parent_fid, fid));
+
+			return std::make_tuple(fid, it->second.get(), FileSystemError::Success);
 		}
 
-		return std::make_pair(fid, FileSystemError::Success);
+		return std::make_tuple(fid, nullptr, FileSystemError::IOError);
 	}
 
 private:

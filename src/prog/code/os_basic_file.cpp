@@ -50,7 +50,7 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 
 	if (Navigator* nav = proc.get_data<Navigator>())
 	{
-		auto [fid, err] = nav->create_directory(args[1]);
+		auto [fid, ptr, err] = nav->create_directory(args[1]);
 		if (err == FileSystemError::Success)
 		{
 			proc.putln("Created directory '{}':{} under {}.", args[1], fid, nav->get_current());
@@ -77,7 +77,7 @@ ProcessTask Programs::CmdMakeFile(Proc& proc, std::vector<std::string> args)
 
 	if (Navigator* nav = proc.get_data<Navigator>())
 	{
-		auto [fid, err] = nav->create_file(args[1]);
+		auto [fid, ptr, err] = nav->create_file(args[1]);
 		if (err == FileSystemError::Success)
 		{
 			proc.putln("Created file '{}':{} under {}.", args[1], fid, nav->get_current());
@@ -135,6 +135,16 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 
 	int32_t files_removed = 0;
 
+	try
+	{
+        app.parse(std::move(args));
+    }
+	catch(const CLI::ParseError& e)
+	{
+		int res = app.exit(e, proc.s_out, proc.s_err);
+        co_return res;
+    }
+
 	auto remover = [&proc, &files_removed, &params](const FileSystem& fs, const FilePath& path, FileSystemError code) -> bool
 	{
 		switch (code)
@@ -158,7 +168,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 			{
 				if (params.no_preserve_root)
 				{
-					if (params.verbose) { proc.warnln("Deleting root directory '/' -- you asked for it!"); };
+					if (params.verbose) { proc.warnln("Deleting root directory '/' (you asked for it!)"); };
 					return true;
 				}
 				else break;
@@ -173,16 +183,6 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 		proc.warnln("Failed to remove file '{}': {}.", path, FileSystem::get_fserror_name(code));
 		return false;
 	};
-
-	try
-	{
-        app.parse(std::move(args));
-    }
-	catch(const CLI::ParseError& e)
-	{
-		int res = app.exit(e, proc.s_out, proc.s_err);
-        co_return res;
-    }
 
 	for (auto& path : params.paths)
 	{
