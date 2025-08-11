@@ -3,6 +3,8 @@
 #include "device.h"
 #include "netw.h"
 
+#include "CLI/CLI.hpp"
+
 #include <string>
 #include <cstdlib>
 #include <print>
@@ -15,17 +17,39 @@ ProcessTask Programs::CmdEcho(Proc& proc, std::vector<std::string> args)
 
 ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 {
-	if (args.size() < 2)
-	{
-		proc.putln("Usage: count [num]");
-		co_return 1;
-	}
+	CLI::App app{"A program that counts!"};
 
-	int32_t max = std::atoi(args[1].c_str());
+	float delay = 1.f;
+	int32_t count = 5;
+	app.add_option("-c", count, "The number to count to");
+	app.add_option("-d", delay, "The time to wait per count");
 
-	for (int32_t i = 0; i < max; ++i)
+	std::ranges::reverse(args);
+	args.pop_back();
+	
+	try
 	{
-		co_await proc.owning_os->wait(1.f);
+        app.parse(std::move(args));
+    }
+	catch(const CLI::ParseError& e)
+	{
+		std::stringstream s_out;
+		std::stringstream s_err;
+		int res = app.exit(e, s_out, s_err);
+		if (std::string str_out = s_out.str(); !str_out.empty())
+		{
+			proc.putln("{}", str_out);
+		}
+		if (std::string str_err = s_err.str(); !str_err.empty())
+		{
+			proc.errln("{}", str_err);
+		}
+        co_return res;
+    }
+
+	for (int32_t i = 0; i < count; ++i)
+	{
+		co_await proc.owning_os->wait(delay);
 		proc.putln("{0}...", i + 1);
 	}
 
