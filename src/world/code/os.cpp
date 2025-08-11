@@ -60,18 +60,18 @@ Proc* OS::create_process(std::ostream& os)
     The process function itself, however, is not run yet. */
     int32_t pid = pid_counter_++;
     std::println("Created process (pid = {0}) on {1}.", pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, this, os}));
+    auto [it, success] = processes_.emplace(std::make_pair(pid, std::make_unique<Proc>(pid, this, os)));
 
-    return success ? &(it->second) : nullptr;
+    return success ? it->second.get() : nullptr;
 }
 
 Proc* OS::create_process(Proc* host)
 {
     int32_t pid = pid_counter_++;
     std::println("Created child process (pid = {0}) under {1} on {2}.", pid, host->pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(std::make_pair(pid, Proc{pid, host}));
+    auto [it, success] = processes_.emplace(std::make_pair(pid, std::make_unique<Proc>(pid, host)));
 
-    return success ? &(it->second) : nullptr;
+    return success ? it->second.get() : nullptr;
 }
 
 EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string> args, std::ostream &os)
@@ -108,7 +108,7 @@ EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string
 void OS::get_processes(std::function<void(const Proc&)> reader) const
 {
     for (const auto& [pid, proc] : processes_)
-        std::invoke(reader, proc);
+        std::invoke(reader, *proc);
 }
 
 FileSystem* OS::get_filesystem() const

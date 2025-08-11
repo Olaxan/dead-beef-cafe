@@ -166,7 +166,7 @@ protected:
 	std::string hostname_ = {};
 	DeviceState state_{DeviceState::PoweredOff};
 	std::unordered_map<int32_t, Device*> devices_{};
-	std::unordered_map<int32_t, Proc> processes_{};
+	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
 	std::unordered_map<std::string, ProcessFn> commands_{}; // This should probably be shared between all OS instances (static?)
 

@@ -57,3 +57,15 @@ EagerTask<int32_t> Proc::exec(com::CommandQuery query)
 {
 	co_return (co_await exec(query.command()));
 }
+
+int ProcCoutBuf::sync()
+{
+	proc_->putln("{}", this->str());
+	return 0;
+}
+
+int ProcCerrBuf::sync()
+{
+	proc_->errln("{}", this->str());
+	return 0;
+}

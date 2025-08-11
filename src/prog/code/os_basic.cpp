@@ -26,24 +26,14 @@ ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 
 	std::ranges::reverse(args);
 	args.pop_back();
-	
+
 	try
 	{
         app.parse(std::move(args));
     }
 	catch(const CLI::ParseError& e)
 	{
-		std::stringstream s_out;
-		std::stringstream s_err;
-		int res = app.exit(e, s_out, s_err);
-		if (std::string str_out = s_out.str(); !str_out.empty())
-		{
-			proc.putln("{}", str_out);
-		}
-		if (std::string str_err = s_err.str(); !str_err.empty())
-		{
-			proc.errln("{}", str_err);
-		}
+		int res = app.exit(e, proc.s_out, proc.s_err);
         co_return res;
     }
 

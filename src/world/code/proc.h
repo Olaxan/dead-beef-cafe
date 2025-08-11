@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <any>
 #include <typeindex>
+#include <sstream>
+#include <ostream>
 
 class Proc;
 class OS;
@@ -33,18 +35,49 @@ enum class EnvVarAccessMode
 	Inherit
 };
 
+class ProcCoutBuf : public std::stringbuf
+{
+public:
+	ProcCoutBuf(Proc* proc)
+		: proc_(proc) {}
+
+	virtual int sync() override;
+
+protected:
+	Proc* proc_;
+
+};
+
+class ProcCerrBuf : public std::stringbuf
+{
+public:
+	ProcCerrBuf(Proc* proc)
+		: proc_(proc) {}
+
+	virtual int sync() override;
+
+protected:
+	Proc* proc_;
+
+};
+
 class Proc
 {
 public:
 
-	Proc(int32_t pid, OS* owner, std::ostream& out_stream)
-		: pid(pid), owning_os(owner), out_stream(out_stream) { }
+	Proc(int32_t pid, OS* owner, std::ostream& out_stream = std::cout)
+		: pid(pid), owning_os(owner), out_stream(out_stream)
+	{
+		s_err << std::unitbuf;
+		s_out << std::unitbuf;
+	}
 
 	Proc(int32_t pid, Proc* host)
-		: pid(pid), host(host), owning_os(host->owning_os), out_stream(host->out_stream) { }
-
-	Proc(int32_t pid, OS* owner)
-		: Proc(pid, owner, std::cout) { }
+		: pid(pid), host(host), owning_os(host->owning_os), out_stream(host->out_stream)
+	{
+		s_err << std::unitbuf;
+		s_out << std::unitbuf;
+	}
 
 	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
 	int32_t get_pid() const { return pid; }
@@ -250,12 +283,20 @@ public:
 	/* Execute a sub-process on this process. */
 	EagerTask<int32_t> exec(com::CommandQuery query);
 
+
+	/* --- STREAM BUFFERS ASSOCIATED WITH PROC --- */
+
+
 public:
 
 	int32_t pid{0};
 	std::ostream& out_stream;
 	OS* owning_os{nullptr};
 	Proc* host{nullptr};
+	ProcCoutBuf buf_out{this};
+	ProcCerrBuf buf_err{this};
+	std::ostream s_out{&buf_out};
+	std::ostream s_err{&buf_err};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	std::any data_{};
