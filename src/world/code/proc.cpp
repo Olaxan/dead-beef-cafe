@@ -60,12 +60,20 @@ EagerTask<int32_t> Proc::exec(com::CommandQuery query)
 
 int ProcCoutBuf::sync()
 {
-	proc_->putln("{}", this->str());
+	if (this->in_avail() == 0)
+		return 0;
+
+	proc_->put("{}", this->str());
+	this->str("");
 	return 0;
 }
 
 int ProcCerrBuf::sync()
 {
-	proc_->errln("{}", this->str());
+	if (this->in_avail() == 0)
+		return 0;
+
+	proc_->err("{}", this->str());
+	this->str("");
 	return 0;
 }

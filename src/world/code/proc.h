@@ -67,16 +67,16 @@ public:
 
 	Proc(int32_t pid, OS* owner, std::ostream& out_stream = std::cout)
 		: pid(pid), owning_os(owner), out_stream(out_stream)
-	{
-		s_err << std::unitbuf;
-		s_out << std::unitbuf;
-	}
+	{ }
 
 	Proc(int32_t pid, Proc* host)
 		: pid(pid), host(host), owning_os(host->owning_os), out_stream(host->out_stream)
+	{ }
+
+	~Proc()
 	{
-		s_err << std::unitbuf;
-		s_out << std::unitbuf;
+		s_err << std::flush;
+		s_out << std::flush;
 	}
 
 	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
