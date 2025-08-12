@@ -34,6 +34,8 @@ public:
 	bool is_relative() const { return relative_; }
 	bool is_valid_path() const { return valid_; }
 	bool is_root_or_empty() const { return path_.empty() || path_ == "/"; }
+	bool is_backup() const;
+	bool is_config() const;
 
 	std::string_view get_parent_view() const;
 	FilePath get_parent_path() const;
@@ -72,7 +74,7 @@ struct std::formatter<FilePath> : std::formatter<std::string>
 {
     auto format(const FilePath& addr, auto& ctx) const
 	{
-        return std::formatter<std::string>::format(addr.path_, ctx);
+        return std::formatter<std::string>::format(addr.get_string(), ctx);
     }
 };
 
@@ -115,6 +117,7 @@ public:
 
 	/* Returns whether the specified file is valid, and whether or not it's a directory. */
 	bool is_dir(uint64_t fid) const;
+	bool is_dir(const FilePath& path) const;
 
 	/* Returns whether the specified file has a parent, or if it is a tree root. */
 	bool is_directory_root(uint64_t fid) const;
@@ -132,7 +135,27 @@ public:
 	Returns root id for empty or single-slash paths. */
 	uint64_t get_fid(const FilePath& path) const;
 
-	std::vector<uint64_t> get_files(uint64_t fid) const;
+	/* Return the number of children of this node. */
+	std::size_t get_links(uint64_t fid);
+
+	/* Returns the number of bytes of this file. */
+	std::size_t get_bytes(uint64_t fid);
+
+	/* Returns a string representation of bits set on this file. */
+	std::string get_flags(uint64_t fid);
+
+	/* Returns a string describing the owner of this file. */
+	std::string get_owner(uint64_t fid);
+
+	/* Returns a string describing the last-modified date of this file. */
+	std::string get_mdate(uint64_t fid);
+
+	std::vector<uint64_t> get_files(uint64_t fid, bool recurse = false) const;
+	std::vector<uint64_t> get_files(const FilePath& path, bool recurse = false) const;
+
+	std::vector<FilePath> get_paths(uint64_t fid, bool recurse = false) const;
+	std::vector<FilePath> get_paths(const FilePath& path, bool recurse = false) const;
+
 	uint64_t get_parent_folder(uint64_t fid) const;
 	uint64_t get_root() const { return root_; }
 	std::vector<uint64_t> get_root_chain(uint64_t fid) const;

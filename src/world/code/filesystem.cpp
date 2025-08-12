@@ -29,6 +29,18 @@ void FilePath::make()
 	valid_ = true;
 }
 
+bool FilePath::is_backup() const
+{
+	std::string_view name = get_name();
+	return name.back() == '~';
+}
+
+bool FilePath::is_config() const
+{
+	std::string_view name = get_name();
+	return name.front() == '.';
+}
+
 std::string_view FilePath::get_parent_view() const
 {
 	std::string_view path(path_);
@@ -127,6 +139,11 @@ bool FileSystem::is_dir(uint64_t fid) const
 	return false;
 }
 
+bool FileSystem::is_dir(const FilePath& path) const
+{
+	return is_dir(get_fid(path));
+}
+
 bool FileSystem::is_directory_root(uint64_t fid) const
 {
 	if (auto it = roots_.find(fid); it != roots_.end())
@@ -174,7 +191,50 @@ uint64_t FileSystem::get_fid(const FilePath& path) const
 	return 0;
 }
 
-std::vector<uint64_t> FileSystem::get_files(uint64_t dir) const
+std::size_t FileSystem::get_links(uint64_t fid)
+{
+	return mappings_.count(fid);
+}
+
+std::size_t FileSystem::get_bytes(uint64_t fid)
+{
+	if (auto it = files_.find(fid); it != files_.end())
+	{
+		return it->second->size();
+	}
+
+	return 0;
+}
+
+std::string FileSystem::get_flags(uint64_t fid)
+{
+	std::string out(5, '-');
+
+	if (auto it = files_.find(fid); it != files_.end())
+	{
+		const File& file = *it->second;
+		out[0] = file.has_flag(FileModeFlags::Directory) 	? 'd' : '-';
+		out[1] = file.has_flag(FileModeFlags::System)		? 's' : '-';
+		out[2] = file.has_flag(FileModeFlags::Read) 		? 'r' : '-';
+		out[3] = file.has_flag(FileModeFlags::Write) 		? 'w' : '-';
+		out[4] = file.has_flag(FileModeFlags::Execute) 		? 'x' : '-';
+		/* This will need modifying when file permissions get extended. */
+	}
+
+	return out;
+}
+
+std::string FileSystem::get_owner(uint64_t fid)
+{
+	return "system"; //not implemented
+}
+
+std::string FileSystem::get_mdate(uint64_t fid)
+{
+	return "2025-08-23 16:32"; //not implemented
+}
+
+std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
 {
 	if (!is_dir(dir))
 		return {};
@@ -184,7 +244,34 @@ std::vector<uint64_t> FileSystem::get_files(uint64_t dir) const
 	auto range = mappings_.equal_range(dir);
 	std::transform(range.first, range.second, std::back_inserter(v), [](std::pair<uint64_t, uint64_t> element){ return element.second; });
 
+	if (recurse)
+	{
+		std::vector<uint64_t> v2{};
+		for (uint64_t child : v)
+		{
+			v2.append_range(get_files(child, true));
+		}
+		v.append_range(v2);
+	}
+
 	return v;
+}
+
+std::vector<uint64_t> FileSystem::get_files(const FilePath& path, bool recurse) const
+{
+	return get_files(get_fid(path), recurse);
+}
+
+std::vector<FilePath> FileSystem::get_paths(uint64_t fid, bool recurse) const
+{
+	std::vector<FilePath> out;
+	std::ranges::transform(get_files(fid, recurse), std::back_inserter(out), [this](uint64_t node){ return get_path(node); });
+	return out;
+}
+
+std::vector<FilePath> FileSystem::get_paths(const FilePath& path, bool recurse) const
+{
+	return get_paths(get_fid(path), recurse);
 }
 
 uint64_t FileSystem::get_parent_folder(uint64_t fid) const

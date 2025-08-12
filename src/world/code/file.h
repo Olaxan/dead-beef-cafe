@@ -26,11 +26,13 @@ public:
 
 	void set_flag(FileModeFlags flags);
 	void clear_flag(FileModeFlags flags);
-	bool has_flag(FileModeFlags flags);
+	bool has_flag(FileModeFlags flags) const;
 
 	void write(ProcessFn&& exec);
 	void write(std::string content);
 	void append(std::string content);
+
+	std::size_t size() const;
 	
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
