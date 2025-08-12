@@ -93,8 +93,8 @@ public:
 	MessageQueue<T_Rx> rxq{};
 	MessageQueue<T_Tx> txq{};
 
-	MessageQueue<NotifySocketFn<T_Rx>> await_rx_{};
-	MessageQueue<NotifySocketFn<T_Tx>> await_tx_{};
+	mutable MessageQueue<NotifySocketFn<T_Rx>> await_rx_{};
+	mutable MessageQueue<NotifySocketFn<T_Tx>> await_tx_{};
 
 protected:
 

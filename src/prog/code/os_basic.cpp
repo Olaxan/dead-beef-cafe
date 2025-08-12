@@ -89,6 +89,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/sbin/shutdown", Programs::CmdShutdown},
 		{"/sbin/shell", Programs::CmdShell},
 		{"/sbin/boot", Programs::CmdBoot },
+		{"/sbin/login", Programs::CmdLogin},
 		{"/bin/ls", Programs::CmdList},
 		{"/bin/cd", Programs::CmdChangeDir},
 		{"/bin/mkdir", Programs::CmdMakeDir},

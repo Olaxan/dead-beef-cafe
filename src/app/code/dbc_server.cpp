@@ -13,6 +13,7 @@
 #include "os.h"
 #include "msg_queue.h"
 #include "os_basic.h"
+#include "os_input.h"
 #include "host_utils.h"
 
 #include "proto/test.pb.h"

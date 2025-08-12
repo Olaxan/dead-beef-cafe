@@ -4,6 +4,7 @@
 #include "netw.h"
 #include "filesystem.h"
 #include "navigator.h"
+#include "os_input.h"
 
 #include <unicode/utypes.h>
 #include <unicode/ucol.h>
@@ -78,9 +79,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	icu::UnicodeString buffer;
 
-	int32_t term_w = 0;
-	int32_t term_h = 0;
-
 	while (true)
 	{
 		FilePath path = nav.get_path();
@@ -94,75 +92,18 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
 
-		while (true)
+		auto format = [&proc](const com::CommandQuery& query)
 		{
-			com::CommandQuery input = co_await sock->async_read();
-
 			/* First, update terminal parameters if we're being passed configuration data. */
-			if (input.has_screen_data())
+			if (query.has_screen_data())
 			{
-				com::ScreenData screen = input.screen_data();
-				term_w = screen.size_x();
-				term_h = screen.size_y();
-				proc.set_var("TERM_W", term_w);
-				proc.set_var("TERM_H", term_h);
+				com::ScreenData screen = query.screen_data();
+				proc.set_var("TERM_W", screen.size_x());
+				proc.set_var("TERM_H", screen.size_y());
 			}
+		};
 
-			/* Next, read the actual command and consider it based on first-byte. */
-			std::string str_in = input.command();
-	
-			if (str_in.length() == 0)
-				continue;
-
-			if (str_in[0] == '\x1b')
-				continue;
-
-			if (str_in[0] == '\x08' || str_in[0] == '\x7f')
-			{
-				UErrorCode status = U_ZERO_ERROR;
-				std::unique_ptr<icu::BreakIterator> bi(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status));
-				if (U_FAILURE(status) || !bi)
-				{
-					proc.warnln("Warning: Failed to create break iterator!");
-					continue;
-				}
-
-				bi->setText(buffer);
-				int32_t end = buffer.length();
-				int32_t last_char_start = bi->preceding(end);
-				if (last_char_start != icu::BreakIterator::DONE)
-				{
-					buffer.remove(last_char_start);
-					proc.put(CSI "D" CSI "X");
-				}
-
-				continue;
-			}
-
-			if (str_in[0] == '\r')
-			{
-				proc.put("\r\n");
-				break;
-			}
-
-			if (str_in.back() == '\0')
-				str_in.pop_back();
-
-			icu::UnicodeString chunk = icu::UnicodeString::fromUTF8(str_in);
-			buffer.append(chunk);
-			
-			std::string writeback;
-			icu::UnicodeString ret_str = chunk.unescape();
-			ret_str.toUTF8String(writeback);
-			proc.put("{}", writeback);
-		}
-
-		/* Trim any whitespace from the buffer string, convert the result back to utf8,
-		 and clear the buffer before sending it for processing. */
-		std::string out_cmd;
-		buffer.trim();
-		buffer.toUTF8String(out_cmd);
-		buffer.remove();
+		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, format);
 
 		/* At this point we have a valid command -- attempt to execute it. */
 		int32_t ret = co_await std::invoke([&proc, &os, &fs](const std::string& cmd) -> EagerTask<int32_t>
@@ -212,7 +153,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		}, out_cmd);
 
-		if (term_w)
+		if (int32_t term_w = proc.get_var<int32_t>("TERM_W"))
 		{
 			/* Print a prettier result line if the terminal width parameter is set. */
 			auto const current_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
