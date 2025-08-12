@@ -62,7 +62,7 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 			{
 				int32_t points_removed = end - last_char_start;
 				buffer.remove(last_char_start);
-				proc.put(CSI "{}D" CSI "X", points_removed);
+				proc.put(CSI "{}D" CSI "0K", points_removed);
 			}
 
 			continue;
@@ -85,7 +85,7 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 			std::string writeback;
 			icu::UnicodeString ret_str = chunk.unescape();
 			ret_str.toUTF8String(writeback);
-			proc.put("{}", params.password ? std::string(ret_str.countChar32(), '*') : writeback);
+			proc.put("{}", params.password ? std::string(ret_str.length(), '*') : writeback);
 		}
 	}
 
