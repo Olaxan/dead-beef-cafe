@@ -186,7 +186,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			{
 				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
 	
-				if (auto [ptr, err] = fs->open(prog_path, FileAccessFlags::Read); err == FileSystemError::Success)
+				if (auto [fid, ptr, err] = fs->open(prog_path, FileAccessFlags::Read); err == FileSystemError::Success)
 				{
 					if (!ptr->has_flag(FileModeFlags::Execute))
 					{
@@ -201,7 +201,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 					}
 					else
 					{
-						proc.errln("Access violation.");
+						proc.errln("No program entry point detected!");
 						co_return 1;
 					}
 				}

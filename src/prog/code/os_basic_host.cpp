@@ -62,7 +62,7 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 		{
 			FilePath driver_path(std::format("/lib/modules/kernel/drivers/{}", driver_name));
 
-			if (auto [ptr, err] = fs->open(driver_path, FileAccessFlags::Read); err == FileSystemError::Success)
+			if (auto [fid, ptr, err] = fs->open(driver_path, FileAccessFlags::Read); err == FileSystemError::Success)
 			{
 				if (auto& prog = ptr->get_executable())
 				{

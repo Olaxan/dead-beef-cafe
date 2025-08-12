@@ -100,7 +100,6 @@ enum class FileAccessFlags : uint32_t
 };
 
 using FileOpResult = std::tuple<uint64_t, File*, FileSystemError>;
-using FilePtrResult = std::pair<File*, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 
 class FileSystem
@@ -179,7 +178,7 @@ public:
 	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
-	FilePtrResult open(const FilePath& path, FileAccessFlags flags);
+	FileOpResult open(const FilePath& path, FileAccessFlags flags);
 
 	template<std::derived_from<File> T>
 	FileOpResult add_file(const FilePath& path, FileModeFlags flags = FileModeFlags::None)

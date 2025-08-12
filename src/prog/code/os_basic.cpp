@@ -96,6 +96,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/bin/open", Programs::CmdOpenFile},
 		{"/bin/echo", Programs::CmdEcho},
 		{"/bin/rm", Programs::CmdRemoveFile},
+		{"/bin/cat", Programs::CmdCat},
 		{"/usr/bin/count", Programs::CmdCount},
 		{"/usr/bin/snake", Programs::CmdSnake},
 		{"/usr/bin/dogs", Programs::CmdDogs},

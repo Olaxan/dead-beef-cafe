@@ -521,10 +521,10 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 
 	if (auto opt_path = state.get_path(); opt_path.has_value())
 	{
-		auto [file, err] = fs->open(*opt_path, FileAccessFlags::Create);
+		auto [fid, ptr, err] = fs->open(*opt_path, FileAccessFlags::Create);
 		if (err == FileSystemError::Success)
 		{
-			file->write(state.as_utf8());
+			ptr->write(state.as_utf8());
 			state.set_dirty(0);
 			co_return true;
 		}
@@ -563,7 +563,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("SHELL_PATH"));
 
-		auto [f, err] = fs->open(path, FileAccessFlags::Create);
+		auto [fid, f, err] = fs->open(path, FileAccessFlags::Create);
 		if (f && err == FileSystemError::Success)
 		{
 			state.set_file(path, f);

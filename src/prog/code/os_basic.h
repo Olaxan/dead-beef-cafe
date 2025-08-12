@@ -38,6 +38,7 @@ namespace Programs
 	ProcessTask CmdMakeFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdOpenFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdRemoveFile(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdCat(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdGoUp(Proc& proc, std::vector<std::string> args);
 
 	/* Test programs */

@@ -486,15 +486,15 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
-FilePtrResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
+FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 {
 	if (uint64_t fid = get_fid(path); is_file(fid))
 	{
 		if (is_dir(fid))
-			return std::make_pair(nullptr, FileSystemError::InvalidFlags);
+			return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
 		
 		if (auto it = files_.find(fid); it != files_.end())
-			return std::make_pair(it->second.get(), FileSystemError::Success);
+			return std::make_tuple(fid, it->second.get(), FileSystemError::Success);
 	}
 
 	/* Not equal here! */
@@ -505,5 +505,5 @@ FilePtrResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 			return open(path, flags);
 	}
 
-	return std::make_pair(nullptr, FileSystemError::FileNotFound);
+	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
