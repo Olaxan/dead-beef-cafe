@@ -86,8 +86,8 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/bin/..", Programs::CmdGoUp},
 		{"/bin/proc", Programs::CmdProc},
 		{"/bin/wait", Programs::CmdWait},
+		{"/bin/shell", Programs::CmdShell},
 		{"/sbin/shutdown", Programs::CmdShutdown},
-		{"/sbin/shell", Programs::CmdShell},
 		{"/sbin/boot", Programs::CmdBoot },
 		{"/sbin/login", Programs::CmdLogin},
 		{"/bin/ls", Programs::CmdList},
@@ -114,5 +114,11 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 			ptr->write(std::forward<ProcessFn>(fn.second));
 			ptr->set_flag(FileModeFlags::Execute);
 		}
+	}
+
+	if (auto [fid, ptr, err] = fs->create_file("/etc/passwd"); err == FileSystemError::Success)
+	{
+		ptr->write("root:x:0:0::/root:/bin/shell\n");
+		ptr->append("fredr:x:0:0::/home/fredr:/bin/shell");
 	}
 }
