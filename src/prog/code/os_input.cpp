@@ -5,6 +5,7 @@
 #include "proc.h"
 #include "netw.h"
 
+#include <print>
 #include <optional>
 
 EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
@@ -59,8 +60,9 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 			int32_t last_char_start = bi->preceding(end);
 			if (last_char_start != icu::BreakIterator::DONE && params.echo)
 			{
+				int32_t points_removed = end - last_char_start;
 				buffer.remove(last_char_start);
-				proc.put(CSI "D" CSI "X");
+				proc.put(CSI "{}D" CSI "X", points_removed);
 			}
 
 			continue;
