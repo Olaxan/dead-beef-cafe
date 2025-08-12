@@ -19,5 +19,11 @@ using CmdQueryFn = std::function<void(const com::CommandQuery&)>;
 
 namespace CmdInput
 {
-	EagerTask<std::string> read_cmd_utf8(Proc& proc, CmdQueryFn callback = nullptr);
+	struct CmdReaderParams
+	{
+		bool echo{true};
+		bool password{false};
+	};
+
+	EagerTask<std::string> read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback = nullptr);
 }

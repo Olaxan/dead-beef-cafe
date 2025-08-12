@@ -7,7 +7,7 @@
 
 #include <optional>
 
-EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdQueryFn callback)
+EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
 {
 
 	icu::UnicodeString buffer;
@@ -57,7 +57,7 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdQueryFn callback)
 			bi->setText(buffer);
 			int32_t end = buffer.length();
 			int32_t last_char_start = bi->preceding(end);
-			if (last_char_start != icu::BreakIterator::DONE)
+			if (last_char_start != icu::BreakIterator::DONE && params.echo)
 			{
 				buffer.remove(last_char_start);
 				proc.put(CSI "D" CSI "X");
@@ -78,10 +78,13 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdQueryFn callback)
 		icu::UnicodeString chunk = icu::UnicodeString::fromUTF8(str_in);
 		buffer.append(chunk);
 		
-		std::string writeback;
-		icu::UnicodeString ret_str = chunk.unescape();
-		ret_str.toUTF8String(writeback);
-		proc.put("{}", writeback);
+		if (params.echo)
+		{
+			std::string writeback;
+			icu::UnicodeString ret_str = chunk.unescape();
+			ret_str.toUTF8String(writeback);
+			proc.put("{}", params.password ? std::string(ret_str.countChar32(), '*') : writeback);
+		}
 	}
 
 	/* Trim any whitespace from the buffer string, convert the result back to utf8,

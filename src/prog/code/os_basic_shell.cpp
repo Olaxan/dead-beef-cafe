@@ -79,6 +79,8 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	icu::UnicodeString buffer;
 
+	CmdInput::CmdReaderParams read_params;
+
 	while (true)
 	{
 		FilePath path = nav.get_path();
@@ -103,7 +105,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 		};
 
-		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, format);
+		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
 
 		/* At this point we have a valid command -- attempt to execute it. */
 		int32_t ret = co_await std::invoke([&proc, &os, &fs](const std::string& cmd) -> EagerTask<int32_t>
