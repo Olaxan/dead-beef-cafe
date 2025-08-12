@@ -114,6 +114,4 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 			ptr->set_flag(FileModeFlags::Execute);
 		}
 	}
-
-
 }
