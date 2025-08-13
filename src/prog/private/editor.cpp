@@ -24,11 +24,12 @@ void EditorState::init_state()
 	--row_it_; // Move iterator to last line (not end).
 	row_ = static_cast<int32_t>((rows_.size() - 1));
 	refresh_row();
+	move_end();
 }
 
-bool EditorState::refresh_row()
+void EditorState::refresh_row()
 {
-	const icu::UnicodeString& text = *row_it_;
+	const icu::UnicodeString& text = row_it_->chars;
 	col_it_->setText(text);
 	col_it_->first();
 	if (col_ = col_it_->next(col_); col_ == icu::BreakIterator::DONE)
@@ -36,9 +37,55 @@ bool EditorState::refresh_row()
 		col_ = col_it_->last();
 	}
 	row_ = static_cast<int32_t>(std::distance(rows_.begin(), row_it_));
-	curr_row_len_ = text.length(); //text.countChar32();
+	curr_row_bytes_ = text.length(); 
+	curr_row_symbols_ = text.countChar32();
 
-	return true;
+	refresh_render();
+}
+
+void EditorState::refresh_render()
+{
+	constexpr int32_t tab_stop_length = 8;
+
+	const icu::UnicodeString& chars = row_it_->chars;
+	icu::UnicodeString& render = row_it_->render;
+
+	render.remove();
+
+	if (chars.isEmpty())
+		return;
+
+	copy_it_->setText(chars);
+
+	icu::UnicodeString temp{};
+	int32_t p1 = 0;
+	int32_t p2 = copy_it_->first();
+	int32_t render_len = 0;
+
+	while ((p2 = copy_it_->next()) != icu::BreakIterator::DONE)
+	{
+		int32_t step = p2 - p1;
+		std::println("({}-{})", p1, p2);
+		chars.extractBetween(p1, p2, temp);
+
+		int32_t next_tab = (render_len == 0) ? tab_stop_length : static_cast<int32_t>(std::ceil(static_cast<float>(render_len) / static_cast<float>(tab_stop_length)) * tab_stop_length);
+		int32_t space_count = next_tab - render_len;
+
+		if (temp == '\t')
+		{
+			std::println("Padding with {} spaces.", space_count);
+			render.padTrailing(next_tab, 'X');
+			render_len += space_count;
+		}
+		else
+		{
+			std::println("Inserting {} chars.", temp.length());
+			render.append(temp);
+			render_len += step;
+		}
+
+		p1 = p2;
+	}
 }
 
 void EditorState::add_row()
@@ -52,11 +99,13 @@ void EditorState::add_row()
 		return;
 	}
 
+	icu::UnicodeString& chars = row_it_->chars;
+
 	icu::UnicodeString rest;
 	int32_t curr = col_it_->current();
-	int32_t len_rest = curr_row_len_ - curr;
-	row_it_->extract(curr, len_rest, rest);
-	row_it_->remove(curr, len_rest);
+	int32_t len_rest = curr_row_bytes_ - curr;
+	chars.extract(curr, len_rest, rest);
+	chars.remove(curr, len_rest);
 	row_it_ = rows_.emplace(++row_it_, std::move(rest));
 	col_ = 0;
 	
@@ -70,11 +119,11 @@ void EditorState::remove_back()
 	{
 		if (row_ > 0 && row_it_ != rows_.begin())
 		{
-			icu::UnicodeString pop = *row_it_;
+			icu::UnicodeString pop = row_it_->chars;
 			row_it_ = rows_.erase(row_it_);
 			--row_it_;
-			int32_t prev_end = row_it_->countChar32();
-			row_it_->append(pop);
+			int32_t prev_end = row_it_->chars.countChar32();
+			row_it_->chars.append(pop);
 			refresh_row();
 			move_to(prev_end);
 			++dirty_;
@@ -84,7 +133,7 @@ void EditorState::remove_back()
 
 	int32_t curr = col_it_->current();
 	col_ = col_it_->previous();
-	row_it_->removeBetween(col_, curr);
+	row_it_->chars.removeBetween(col_, curr);
 	refresh_row();
 	++dirty_;
 }
@@ -93,14 +142,14 @@ void EditorState::remove_front()
 {
 	if (int32_t next = col_it_->next(); next != icu::BreakIterator::DONE)
 	{
-		row_it_->removeBetween(col_, next);
+		row_it_->chars.removeBetween(col_, next);
 		++dirty_;
 	}
 	else if (row_ < (static_cast<int32_t>(rows_.size()) - 1))
 	{
-		icu::UnicodeString copy = *row_it_;
+		icu::UnicodeString copy = row_it_->chars;
 		row_it_ = rows_.erase(row_it_);
-		row_it_->insert(0, copy);
+		row_it_->chars.insert(0, copy);
 		++dirty_;
 	}
 
@@ -114,7 +163,7 @@ void EditorState::insert_utf8(const std::string& input)
 	icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 	int32_t num_points = u_in.countChar32();
 	std::println("Inserted {0} code point(s).", num_points);
-	row_it_->insert(col_, u_in);
+	row_it_->chars.insert(col_, u_in);
 	col_ += num_points;
 	refresh_row();
 	++dirty_;
@@ -123,10 +172,10 @@ void EditorState::insert_utf8(const std::string& input)
 std::string EditorState::as_utf8() const
 {
 	return rows_ 
-	| std::views::transform([](const icu::UnicodeString& u) -> std::string
+	| std::views::transform([](const EditorRow& u) -> std::string
 	{
 		std::string out{};
-		u.toUTF8String(out);
+		u.chars.toUTF8String(out);
 		return out;
 	})
 	| std::views::join_with('\n')
@@ -268,12 +317,12 @@ int32_t EditorState::move_left(int32_t count)
 
 int32_t EditorState::move_home()
 {
-	return move_left(curr_row_len_);
+	return move_left(curr_row_bytes_);
 }
 
 int32_t EditorState::move_right()
 {
-	if (col_ == (curr_row_len_))
+	if (col_ == (curr_row_bytes_))
 		return 0;
 
 	if (col_ = col_it_->next(); col_ == icu::BreakIterator::DONE)
@@ -297,7 +346,7 @@ int32_t EditorState::move_right(int32_t count)
 
 int32_t EditorState::move_end()
 {
-	return move_right(curr_row_len_);
+	return move_right(curr_row_bytes_);
 }
 
 void EditorState::move_cursor(int32_t x, int32_t y)
@@ -324,7 +373,7 @@ std::string EditorState::get_printout() const
 		(num_rows != 1 ? "s" : ""), 
 		(is_dirty() ? " (modified)" : ""));
 
-	std::string right_msg = std::format("{}/{}[={}] ({}c)", row_ + 1, col_, col_it_->current(), curr_row_len_);
+	std::string right_msg = std::format("{}/{}[={}] ({}c)", row_ + 1, col_, col_it_->current(), curr_row_bytes_);
 
 	/* Print program chars. */
 	std::stringstream ss;
@@ -341,7 +390,7 @@ std::string EditorState::get_printout() const
 	for (; it != rows_.end(); ++it)
 	{
 		std::string out_str{};
-		it->toUTF8String(out_str);
+		it->render.toUTF8String(out_str);
 		ss << out_str << "\n";
 	}
 

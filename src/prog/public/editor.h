@@ -33,6 +33,11 @@ public:
 
 	struct EditorRow
 	{
+		EditorRow() = default;
+		
+		EditorRow(const icu::UnicodeString& other)
+			: chars(other) {};
+
 		icu::UnicodeString chars{};
 		icu::UnicodeString render{};
 	};
@@ -40,7 +45,9 @@ public:
 	EditorState() = delete;
 
 	EditorState(int32_t width, int32_t height, bool multiline = true)
-	: width_(width), height_(height), multiline_(multiline), error_(U_ZERO_ERROR), col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), error_))
+		: width_(width), height_(height), multiline_(multiline), 
+		col_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), error_)),
+		copy_it_(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), error_))
 	{
 		init_state();
 	}
@@ -100,7 +107,10 @@ public:
 
 	/* This important function must be called when a operation has been performed,
 	and refreshes the state of the *current* row. */
-	bool refresh_row();
+	void refresh_row();
+
+	/* Refreshes the render string -- called by refresh_row. */
+	void refresh_render();
 
 	/* Add a linebreak at the current cursor position,
 	breaking the text in twain if needed. */
@@ -148,12 +158,14 @@ protected:
 	int32_t width_{1};
 	int32_t height_{1};
 	int32_t dirty_ {0};
-	int32_t curr_row_len_{0};
+	int32_t curr_row_bytes_{0};
+	int32_t curr_row_symbols_{0};
 	bool multiline_{true};
 	icu::UnicodeString status_{};
-	std::list<icu::UnicodeString> rows_{};
-	std::list<icu::UnicodeString>::iterator row_it_{};
+	std::list<EditorRow> rows_{};
+	std::list<EditorRow>::iterator row_it_{};
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
+	std::unique_ptr<icu::BreakIterator> copy_it_{nullptr};
 	UErrorCode error_{U_ZERO_ERROR};
 	std::optional<FilePath> path_{};
 
