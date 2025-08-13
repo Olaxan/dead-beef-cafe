@@ -31,6 +31,12 @@ public:
 		WantExit
 	};
 
+	struct EditorRow
+	{
+		icu::UnicodeString chars{};
+		icu::UnicodeString render{};
+	};
+
 	EditorState() = delete;
 
 	EditorState(int32_t width, int32_t height, bool multiline = true)
@@ -39,18 +45,39 @@ public:
 		init_state();
 	}
 
+	/* Return the number of filled editor rows. */
 	std::size_t get_num_rows() const { return rows_.size(); }
+
+	/* Return the cursor X position. */
 	int32_t get_col() const { return col_; }
+
+	/* Return the cursor Y position. */
 	int32_t get_row() const { return row_; }
+
+	/* Get the filename of the current file, or a default if the file has never been saved. */
 	std::string_view get_filename() const { return has_file() ? path_->get_name() : "*new file*"; }
+
+	/* Returns whether the current file has had modifications done since the last save. */
 	bool is_dirty() const { return dirty_ > 0; }
+
+	/* Return whether this file has ever been saved (has a file path). */
 	bool has_file() const { return path_.has_value(); }
+
+	/* Returns the last-saved-to file path, if the file has been saved, or nullopt otherwise. */
 	std::optional<FilePath> get_path() const { return path_; }
+
+	/* Set the new dirtiness state of the file (number of modifications since last save). */
 	void set_dirty(int32_t new_dirty) { dirty_ = new_dirty; }
+
+	/* Set the save-to filepath of the file. */
 	void set_path(FilePath new_path) { path_ = std::move(new_path); }
 
+	/* Open a file and load some text from it. */
 	bool set_file(FilePath path, File* f);
 
+	/* Initialise the state of the editor after it has been constructed,
+	or a new file has been loaded. Ensures the editor is in a valid state,
+	i.e. has a row for typing, aligns iterators, etc. */
 	void init_state();
 
 	void set_size(int32_t width, int32_t height)
@@ -129,5 +156,5 @@ protected:
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
 	UErrorCode error_{U_ZERO_ERROR};
 	std::optional<FilePath> path_{};
-	
+
 };
