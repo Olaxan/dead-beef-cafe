@@ -424,17 +424,17 @@ public:
 
 protected:
 
-	int32_t row_ = 0;
-	int32_t col_ = 0;
-	int32_t width_ = 1;
-	int32_t height_ = 1;
-	int32_t dirty_ = 0;
-	int32_t curr_row_len_ = 0;
-	bool multiline_ = true;
+	int32_t row_{0};
+	int32_t col_{0};
+	int32_t width_{1};
+	int32_t height_{1};
+	int32_t dirty_ {0};
+	int32_t curr_row_len_{0};
+	bool multiline_{true};
 	icu::UnicodeString status_{};
 	std::list<icu::UnicodeString> rows_{};
 	std::list<icu::UnicodeString>::iterator row_it_{};
-	UErrorCode error_ = U_ZERO_ERROR;
+	UErrorCode error_{U_ZERO_ERROR};
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
 	std::optional<FilePath> path_{};
 };

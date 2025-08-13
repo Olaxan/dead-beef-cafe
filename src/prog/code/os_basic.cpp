@@ -26,11 +26,10 @@ ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 	app.add_option("-c", count, "The number to count to");
 	app.add_option("-d", delay, "The time to wait per count");
 
-	std::ranges::reverse(args);
-	args.pop_back();
-
 	try
 	{
+		std::ranges::reverse(args);
+		args.pop_back();
         app.parse(std::move(args));
     }
 	catch(const CLI::ParseError& e)
@@ -60,6 +59,8 @@ ProcessTask Programs::CmdProc(Proc& proc, std::vector<std::string> args)
 
 ProcessTask Programs::CmdWait(Proc& proc, std::vector<std::string> args)
 {
+	OS& os = *proc.owning_os;
+
 	if (args.size() < 2)
 	{
 		proc.putln("Usage: wait [time (s)]");
@@ -67,7 +68,7 @@ ProcessTask Programs::CmdWait(Proc& proc, std::vector<std::string> args)
 	}
 
 	float delay = static_cast<float>(std::atof(args[1].c_str()));
-	co_await proc.owning_os->wait(delay);
+	co_await os.wait(delay);
 
 	proc.putln("Waited {0} seconds.", delay);
 	co_return 0;
@@ -120,5 +121,10 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	{
 		ptr->write("root:x:0:0::/root:/bin/shell\n");
 		ptr->append("fredr:x:0:0::/home/fredr:/bin/shell");
+	}
+
+	if (auto [fid, ptr, err] = fs->create_file("/etc/shadow"); err == FileSystemError::Success)
+	{
+		ptr->write("fredr:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824:1:0:99999:7:::");
 	}
 }

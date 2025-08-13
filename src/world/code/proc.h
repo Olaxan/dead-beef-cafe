@@ -278,9 +278,19 @@ public:
 	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
 
 
+	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
+
+	int32_t set_sid();
+	int32_t set_uid(int32_t new_uid);
+	int32_t set_gid(int32_t new_gid);
+
+
 public:
 
 	int32_t pid{0};
+	int32_t sid{0};
+	int32_t uid{0};
+	int32_t gid{0};
 	std::ostream& out_stream;
 	OS* owning_os{nullptr};
 	Proc* host{nullptr};

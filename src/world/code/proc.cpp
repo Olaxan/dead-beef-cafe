@@ -8,19 +8,37 @@
 #include <sstream>
 #include <string>
 
-void Proc::dispatch(ProcessFn &program, std::vector<std::string> args, bool resume)
+void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resume)
 {
 	this->args = std::move(args);
 	task = std::move(std::invoke(program, *this, args));
 	if (resume) task->handle.resume();
 }
 
-EagerTask<int32_t> Proc::await_dispatch(ProcessFn &program, std::vector<std::string> args)
+EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::string> args)
 {
 	this->args = std::move(args);
 	task = std::move(std::invoke(program, *this, this->args));
 	task->handle.resume();
 	co_return (co_await *task);
+}
+
+int32_t Proc::set_sid()
+{
+	sid = 1;
+	return sid;
+}
+
+int32_t Proc::set_uid(int32_t new_uid)
+{
+	uid = new_uid;
+	return 0;
+}
+
+int32_t Proc::set_gid(int32_t new_gid)
+{
+	gid = new_gid;
+	return 0;
 }
 
 int ProcCoutBuf::sync()

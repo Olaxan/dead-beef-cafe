@@ -146,6 +146,7 @@ protected:
 
 	Host& owner_;
 	int32_t pid_counter_{0};
+	int32_t sid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
 	DeviceState state_{DeviceState::PoweredOff};
