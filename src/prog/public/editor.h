@@ -34,7 +34,7 @@ public:
 	struct EditorRow
 	{
 		EditorRow() = default;
-		
+
 		EditorRow(const icu::UnicodeString& other)
 			: chars(other) {};
 
@@ -60,6 +60,9 @@ public:
 
 	/* Return the cursor Y position. */
 	int32_t get_row() const { return row_; }
+
+	/* Returns the column index (Y), adjusted for tab stops. */
+	int32_t get_adjusted_col() const;
 
 	/* Get the filename of the current file, or a default if the file has never been saved. */
 	std::string_view get_filename() const { return has_file() ? path_->get_name() : "*new file*"; }

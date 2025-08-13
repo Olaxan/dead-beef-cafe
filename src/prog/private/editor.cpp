@@ -1,5 +1,6 @@
 #include "editor.h"
 
+
 bool EditorState::set_file(FilePath path, File* f)
 {
 	if (f == nullptr)
@@ -45,7 +46,7 @@ void EditorState::refresh_row()
 
 void EditorState::refresh_render()
 {
-	constexpr int32_t tab_stop_length = 8;
+	constexpr int32_t tab_stop_length = 4;
 
 	const icu::UnicodeString& chars = row_it_->chars;
 	icu::UnicodeString& render = row_it_->render;
@@ -65,7 +66,6 @@ void EditorState::refresh_render()
 	while ((p2 = copy_it_->next()) != icu::BreakIterator::DONE)
 	{
 		int32_t step = p2 - p1;
-		std::println("({}-{})", p1, p2);
 		chars.extractBetween(p1, p2, temp);
 
 		int32_t next_tab = (render_len == 0) ? tab_stop_length : static_cast<int32_t>(std::ceil(static_cast<float>(render_len) / static_cast<float>(tab_stop_length)) * tab_stop_length);
@@ -73,19 +73,53 @@ void EditorState::refresh_render()
 
 		if (temp == '\t')
 		{
-			std::println("Padding with {} spaces.", space_count);
-			render.padTrailing(next_tab, 'X');
+			render.padTrailing(next_tab);
 			render_len += space_count;
 		}
 		else
 		{
-			std::println("Inserting {} chars.", temp.length());
 			render.append(temp);
 			render_len += step;
 		}
 
 		p1 = p2;
 	}
+}
+
+int32_t EditorState::get_adjusted_col() const
+{
+	constexpr int32_t tab_stop_length = 4;
+
+	const icu::UnicodeString& chars = row_it_->chars;
+	const icu::UnicodeString& render = row_it_->render;
+
+	if (chars.isEmpty())
+		return 0;
+
+	copy_it_->setText(chars);
+
+	int32_t adj = 0;
+	int32_t step = 0;
+	int32_t p1 = 0;
+	int32_t p2 = copy_it_->first();
+
+	while ((p2 = copy_it_->next()) != icu::BreakIterator::DONE)
+	{
+		if (p2 > col_)
+			break;
+
+		step = p2 - p1;
+
+		if (chars.charAt(p1) == '\t')
+		{
+			adj += (tab_stop_length - 1) - (adj % tab_stop_length);
+		}
+
+		adj += step;
+		p1 = p2;
+	}
+
+	return adj;
 }
 
 void EditorState::add_row()
@@ -394,7 +428,9 @@ std::string EditorState::get_printout() const
 		ss << out_str << "\n";
 	}
 
-	ss << MOVE_CURSOR_FORMAT(col_ + 1, row_ + 1);
+	int32_t y = get_adjusted_col();
+
+	ss << MOVE_CURSOR_FORMAT(y + 1, row_ + 1);
 	ss << SHOW_CURSOR;
 	return ss.str();
 }
