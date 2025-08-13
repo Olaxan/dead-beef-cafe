@@ -66,8 +66,6 @@ void EditorState::refresh_render()
 	while ((p2 = copy_it_->next()) != icu::BreakIterator::DONE)
 	{
 		int32_t step = p2 - p1;
-		chars.extractBetween(p1, p2, temp);
-
 		int32_t next_tab = (render_len == 0) ? tab_stop_length : static_cast<int32_t>(std::ceil(static_cast<float>(render_len + 1) / static_cast<float>(tab_stop_length)) * tab_stop_length);
 		int32_t space_count = next_tab - render_len;
 
@@ -78,6 +76,7 @@ void EditorState::refresh_render()
 		}
 		else
 		{
+			chars.extractBetween(p1, p2, temp);
 			render.append(temp);
 			render_len += step;
 		}
