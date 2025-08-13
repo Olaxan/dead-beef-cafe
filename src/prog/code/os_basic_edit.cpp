@@ -18,6 +18,7 @@
 #include <format>
 #include <cctype>
 
+
 class EditorState
 {
 public:
