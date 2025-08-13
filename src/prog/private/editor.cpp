@@ -68,10 +68,10 @@ void EditorState::refresh_render()
 		int32_t step = p2 - p1;
 		chars.extractBetween(p1, p2, temp);
 
-		int32_t next_tab = (render_len == 0) ? tab_stop_length : static_cast<int32_t>(std::ceil(static_cast<float>(render_len) / static_cast<float>(tab_stop_length)) * tab_stop_length);
+		int32_t next_tab = (render_len == 0) ? tab_stop_length : static_cast<int32_t>(std::ceil(static_cast<float>(render_len + 1) / static_cast<float>(tab_stop_length)) * tab_stop_length);
 		int32_t space_count = next_tab - render_len;
 
-		if (temp == '\t')
+		if (chars.char32At(p1) == '\t')
 		{
 			render.padTrailing(next_tab);
 			render_len += space_count;
@@ -110,7 +110,7 @@ int32_t EditorState::get_adjusted_col() const
 
 		step = p2 - p1;
 
-		if (chars.charAt(p1) == '\t')
+		if (chars.char32At(p1) == '\t')
 		{
 			adj += (tab_stop_length - 1) - (adj % tab_stop_length);
 		}
