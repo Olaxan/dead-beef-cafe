@@ -71,17 +71,31 @@ public:
 
 	void reset_status() { status_.remove(); }
 
+	/* This important function must be called when a operation has been performed,
+	and refreshes the state of the *current* row. */
 	bool refresh_row();
 
+	/* Add a linebreak at the current cursor position,
+	breaking the text in twain if needed. */
 	void add_row();
+
+	/* Remove one unicode character, erasing backwards (backspace key). */
 	void remove_back();
+
+	/* Remove one unicode character, erasing forwards (delete key). */
 	void remove_front();
 
+	/* Insert some text into the current cursor position,
+	formatted as utf-8. */
 	void insert_utf8(const std::string& input);
 
+	/* Get the contents of the buffer as a utf-8 formatted string. */
 	std::string as_utf8() const;
 
+	/* Take some text from the input stream and process it. */
 	HandlerReturn accept_input(std::string input);
+
+	/* --- Cursor movement functions --- */
 
 	int32_t move_to(int32_t n);
 	int32_t move_up();
@@ -112,7 +126,8 @@ protected:
 	icu::UnicodeString status_{};
 	std::list<icu::UnicodeString> rows_{};
 	std::list<icu::UnicodeString>::iterator row_it_{};
-	UErrorCode error_{U_ZERO_ERROR};
 	std::unique_ptr<icu::BreakIterator> col_it_{nullptr};
+	UErrorCode error_{U_ZERO_ERROR};
 	std::optional<FilePath> path_{};
+	
 };
