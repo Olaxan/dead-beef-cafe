@@ -5,8 +5,8 @@
 #--------------------------------------------------------------------------
 
 PROJECT(World)
-FILE(GLOB world_headers code/*.h)
-FILE(GLOB world_sources code/*.cpp)
+FILE(GLOB world_headers public/*.h)
+FILE(GLOB world_sources private/*.cpp)
 
 SET(files_world ${world_headers} ${world_sources})
 SOURCE_GROUP("world" FILES ${files_world})
@@ -18,5 +18,4 @@ FIND_PACKAGE(Protobuf REQUIRED)
 FIND_PACKAGE(ICU COMPONENTS uc io i18n REQUIRED)
 
 TARGET_LINK_LIBRARIES(world PUBLIC utils proto protobuf::libprotobuf ICU::uc ICU::io ICU::i18n)
-
-TARGET_INCLUDE_DIRECTORIES(world INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/code/)
+TARGET_INCLUDE_DIRECTORIES(world PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
