@@ -129,13 +129,14 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			{
 				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
 	
-				if (auto [fid, ptr, err] = fs->open(prog_path, FileAccessFlags::Read); err == FileSystemError::Success)
+				if (auto [fid, ptr, err] = fs->open(prog_path); err == FileSystemError::Success)
 				{
-					if (!ptr->has_flag(FileModeFlags::Execute))
-					{
-						proc.warnln("File '{}' is missing 'execute' flag.", prog_path);
-						co_return 1;
-					}
+					// TODO: Check permissions here.
+					// if (fs->file_has_flag(fid, FileModeFlags::OwnerExecute))
+					// {
+					// 	proc.warnln("File '{}' is missing 'execute' flag.", prog_path);
+					// 	co_return 1;
+					// }
 	
 					if (auto& prog = ptr->get_executable())
 					{

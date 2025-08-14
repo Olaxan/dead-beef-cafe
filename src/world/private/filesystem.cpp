@@ -133,10 +133,7 @@ bool FileSystem::is_dir(uint64_t fid) const
 	if (fid == get_root())
 		return true;
 
-	if (auto it = files_.find(fid); it != files_.end())
-		return it->second->has_flag(FileModeFlags::Directory);
-
-	return false;
+	return file_has_flag(fid, FileModeFlags::Directory);
 }
 
 bool FileSystem::is_dir(const FilePath& path) const
@@ -208,16 +205,25 @@ std::size_t FileSystem::get_bytes(uint64_t fid)
 
 std::string FileSystem::get_flags(uint64_t fid)
 {
-	std::string out(5, '-');
+	std::string out(11, '-');
 
-	if (auto it = files_.find(fid); it != files_.end())
+	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		const File& file = *it->second;
-		out[0] = file.has_flag(FileModeFlags::Directory) 	? 'd' : '-';
-		out[1] = file.has_flag(FileModeFlags::System)		? 's' : '-';
-		out[2] = file.has_flag(FileModeFlags::Read) 		? 'r' : '-';
-		out[3] = file.has_flag(FileModeFlags::Write) 		? 'w' : '-';
-		out[4] = file.has_flag(FileModeFlags::Execute) 		? 'x' : '-';
+		const FileModeFlags& base = it->second.flags;
+		out[ 0] = has_flag(base, FileModeFlags::Directory) 		? 'd' : '-';
+		out[ 1] = has_flag(base, FileModeFlags::System)			? 's' : '-';
+
+		out[ 2] = has_flag(base, FileModeFlags::OwnerRead) 		? 'r' : '-';
+		out[ 3] = has_flag(base, FileModeFlags::OwnerWrite) 	? 'w' : '-';
+		out[ 4] = has_flag(base, FileModeFlags::OwnerExecute) 	? 'x' : '-';
+
+		out[ 5] = has_flag(base, FileModeFlags::GroupRead) 		? 'r' : '-';
+		out[ 6] = has_flag(base, FileModeFlags::GroupWrite) 	? 'w' : '-';
+		out[ 7] = has_flag(base, FileModeFlags::GroupExecute) 	? 'x' : '-';
+
+		out[ 8] = has_flag(base, FileModeFlags::UsersRead) 		? 'r' : '-';
+		out[ 9] = has_flag(base, FileModeFlags::UsersWrite) 	? 'w' : '-';
+		out[10] = has_flag(base, FileModeFlags::UsersExecute) 	? 'x' : '-';
 		/* This will need modifying when file permissions get extended. */
 	}
 
@@ -311,8 +317,6 @@ FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
 	if (get_fid(path))
 		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
 
-	//std::println("Creating file under '{}' (recurse = {}).", path, recurse);
-	
 	if (recurse)
 		create_ensure_path(path);
 
@@ -321,15 +325,12 @@ FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
 
 FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
 {
-	if (get_fid(path))
-		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
-	
-	//std::println("Creating dir under '{}' (recurse = {}).", path, recurse);
-
-	if (recurse)
-		create_ensure_path(path);
-
-	return add_file<File>(path, FileModeFlags::Directory);
+	FileOpResult res = create_file(path, recurse);
+	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
+	{
+		file_set_flag(fid, FileModeFlags::Directory);
+	}
+	return res;
 }
 
 uint64_t FileSystem::create_ensure_path(const FilePath& path)
@@ -337,13 +338,12 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path)
 	FilePath parent = path.get_parent_path();
 	if (uint64_t parent_fid = get_fid(parent))
 	{
-		//std::println("Directory parent '{}' ({}) exists.", parent, parent_fid);
 		return parent_fid;
 	}
 	else
 	{
-		auto [new_parent_fid, ptr, err] = create_directory(parent, true);
-		//std::println("Directory parent '{}' ({}) was created.", parent, new_parent_fid);
+		auto [new_parent_fid, ptr, err] = create_file(parent, true);
+		file_set_flag(new_parent_fid, FileModeFlags::Directory);
 		return new_parent_fid;
 	}
 }
@@ -486,7 +486,7 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
-FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
+FileOpResult FileSystem::open(const FilePath& path)
 {
 	if (uint64_t fid = get_fid(path); is_file(fid))
 	{
@@ -494,16 +494,52 @@ FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 			return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
 		
 		if (auto it = files_.find(fid); it != files_.end())
-			return std::make_tuple(fid, it->second.get(), FileSystemError::Success);
-	}
-
-	/* Not equal here! */
-	if (flags == FileAccessFlags::Create)
-	{
-		auto [new_fid, ptr, err] = create_file(path);
-		if (err == FileSystemError::Success)
-			return open(path, flags);
+			return std::make_tuple(fid, it->second, FileSystemError::Success);
 	}
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+}
+
+void FileSystem::set_flag(FileModeFlags& base, FileModeFlags set_flags)
+{
+	base |= set_flags;
+}
+
+void FileSystem::clear_flag(FileModeFlags& base, FileModeFlags clear_flags)
+{
+	base = base & ~clear_flags;
+}
+
+bool FileSystem::has_flag(const FileModeFlags& base, FileModeFlags test_flags) const
+{
+	return (base & test_flags) == test_flags;
+}
+
+bool FileSystem::file_set_flag(uint64_t fid, FileModeFlags set_flags)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		set_flag(it->second.flags, set_flags);
+		return true;
+	}
+	return false;
+}
+
+bool FileSystem::file_clear_flag(uint64_t fid, FileModeFlags clear_flags)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		clear_flag(it->second.flags, clear_flags);
+		return true;
+	}
+	return false;
+}
+
+bool FileSystem::file_has_flag(uint64_t fid, FileModeFlags test_flags) const
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		return has_flag(it->second.flags, test_flags);
+	}
+	return false;
 }

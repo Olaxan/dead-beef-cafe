@@ -1,20 +1,5 @@
 #include "file.h"
 
-void File::set_flag(FileModeFlags flag)
-{
-	flags_ = static_cast<FileModeFlags>(static_cast<uint8_t>(flags_) | static_cast<uint8_t>(flag));
-}
-
-void File::clear_flag(FileModeFlags flag)
-{
-	flags_ = static_cast<FileModeFlags>(static_cast<uint8_t>(flags_) & ~static_cast<uint8_t>(flag));
-}
-
-bool File::has_flag(FileModeFlags flag) const
-{
-	return (static_cast<uint8_t>(flags_) & static_cast<uint8_t>(flag)) == static_cast<uint8_t>(flag);
-}
-
 std::size_t File::size() const
 {
 	return content_.size();

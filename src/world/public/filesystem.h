@@ -7,6 +7,7 @@
 #include <concepts>
 #include <print>
 #include <tuple>
+#include <chrono>
 
 #include "file.h"
 
@@ -91,16 +92,53 @@ enum class FileSystemError : uint32_t
 	Other
 };
 
-enum class FileAccessFlags : uint32_t
+enum class FileModeFlags : uint32_t
 {
-	None = 0,
-	Read = 1,
-	Write = 2,
-	Create = 4
+	None			= 1 << 0,
+	Directory		= 1 << 1,
+	System			= 1 << 2,
+	OwnerRead		= 1 << 3,
+	OwnerWrite		= 1 << 4,
+	OwnerExecute	= 1 << 5,
+	GroupRead		= 1 << 6,
+	GroupWrite		= 1 << 7,
+	GroupExecute	= 1 << 8,
+	UsersRead		= 1 << 9,
+	UsersWrite		= 1 << 10,
+	UsersExecute	= 1 << 11
 };
 
-using FileOpResult = std::tuple<uint64_t, File*, FileSystemError>;
+inline FileModeFlags operator | (FileModeFlags a, FileModeFlags b)
+{
+    return static_cast<FileModeFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline FileModeFlags operator & (FileModeFlags a, FileModeFlags b)
+{
+    return static_cast<FileModeFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline FileModeFlags operator ~ (FileModeFlags& a)
+{
+    return static_cast<FileModeFlags>(~static_cast<uint32_t>(a));
+}
+
+inline FileModeFlags& operator |= (FileModeFlags& a, FileModeFlags b)
+{
+    return a = a | b;
+}
+
+using FileOpResult = std::tuple<uint64_t, std::shared_ptr<File>, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
+using TimePointFile = std::chrono::time_point<std::chrono::seconds>;
+
+struct FileMeta
+{
+	FileModeFlags flags{};
+	int32_t owner_fid{0};
+	int32_t owner_gid{0};
+	TimePointFile modified{};
+};
 
 class FileSystem
 {
@@ -162,7 +200,7 @@ public:
 	/* Create a file at the specified location (and optionally fills in missing directories). */
 	FileOpResult create_file(const FilePath& path, bool recurse = true);
 
-	/* Create a folder at the specified location (and optionally fills in missing directories). */
+	/* Create a directory at the specified location (and optionally fills in missing directories). */
 	FileOpResult create_directory(const FilePath& path, bool recurse = true);
 
 	/* Walks a provided path and creates all the directories that are missing. 
@@ -178,10 +216,18 @@ public:
 	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
-	FileOpResult open(const FilePath& path, FileAccessFlags flags);
+	FileOpResult open(const FilePath& path);
+
+	void set_flag(FileModeFlags& base, FileModeFlags set_flags);
+	void clear_flag(FileModeFlags& base, FileModeFlags clear_flags);
+	bool has_flag(const FileModeFlags& base, FileModeFlags test_flags) const;
+
+	bool file_set_flag(uint64_t fid, FileModeFlags set_flags);
+	bool file_clear_flag(uint64_t fid, FileModeFlags clear_flags);
+	bool file_has_flag(uint64_t fid, FileModeFlags test_flags) const;
 
 	template<std::derived_from<File> T>
-	FileOpResult add_file(const FilePath& path, FileModeFlags flags = FileModeFlags::None)
+	FileOpResult add_file(const FilePath& path)
 	{
 		FilePath parent = path.get_parent_path();
 		uint64_t parent_fid = get_fid(parent);
@@ -190,16 +236,17 @@ public:
 			return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 
 		uint64_t fid = ++fid_counter_;
-		auto [it, success] = files_.emplace(fid, std::make_unique<T>(fid, flags));
+		auto [it, success] = files_.emplace(fid, std::make_shared<T>(fid));
 
 		if (success)
 		{
 			fid_to_path_[fid] = path;
 			path_to_fid_[path] = fid;
 			roots_[fid] = parent_fid;
+			metadata_[fid] = {};
 			mappings_.insert(std::make_pair(parent_fid, fid));
 
-			return std::make_tuple(fid, it->second.get(), FileSystemError::Success);
+			return std::make_tuple(fid, it->second, FileSystemError::Success);
 		}
 
 		return std::make_tuple(fid, nullptr, FileSystemError::IOError);
@@ -209,10 +256,11 @@ private:
 
 	const uint64_t root_{1};
 	uint64_t fid_counter_{1024};
-	std::unordered_map<uint64_t, std::unique_ptr<File>> files_ = {};
+	std::unordered_map<uint64_t, std::shared_ptr<File>> files_ = {};
 	std::unordered_map<uint64_t, FilePath> fid_to_path_{};
 	std::unordered_map<FilePath, uint64_t> path_to_fid_{};
 	std::unordered_map<uint64_t, uint64_t> roots_{};
+	std::unordered_map<uint64_t, FileMeta> metadata_{};
 	std::unordered_multimap<uint64_t, uint64_t> mappings_{};
 
 	friend class Navigator;

@@ -3,6 +3,7 @@
 #include "task.h"
 #include "msg_queue.h"
 #include "term_utils.h"
+#include "session.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
@@ -288,9 +289,7 @@ public:
 public:
 
 	int32_t pid{0};
-	int32_t sid{0};
-	int32_t uid{0};
-	int32_t gid{0};
+	SessionData sess_{};
 	std::ostream& out_stream;
 	OS* owning_os{nullptr};
 	Proc* host{nullptr};

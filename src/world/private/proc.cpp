@@ -25,19 +25,19 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 
 int32_t Proc::set_sid()
 {
-	sid = 1;
-	return sid;
+	sess_.sid = 1;
+	return sess_.sid;
 }
 
 int32_t Proc::set_uid(int32_t new_uid)
 {
-	uid = new_uid;
+	sess_.uid = new_uid;
 	return 0;
 }
 
 int32_t Proc::set_gid(int32_t new_gid)
 {
-	gid = new_gid;
+	sess_.gid = new_gid;
 	return 0;
 }
 

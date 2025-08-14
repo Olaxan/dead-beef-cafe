@@ -94,7 +94,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 
 	auto get_passwd_data = [&proc, &fs](std::string_view user) -> std::optional<LoginPasswdData>
 	{
-		if (auto [fid, ptr, err] = fs->open("/etc/passwd", FileAccessFlags::Read); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open("/etc/passwd"); err == FileSystemError::Success)
 		{
 			std::string_view f = ptr->get_view();
 	
@@ -116,7 +116,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 
 	auto get_shadow_data = [&proc, &fs](const std::string_view user) -> std::optional<LoginShadowData>
 	{
-		if (auto [fid, ptr, err] = fs->open("/etc/shadow", FileAccessFlags::Read); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open("/etc/shadow"); err == FileSystemError::Success)
 		{
 			std::string_view f = ptr->get_view();
 	

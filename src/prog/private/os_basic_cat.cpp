@@ -1,6 +1,7 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
+#include "os_fsacc.h"
 
 #include "CLI/CLI.hpp"
 
@@ -48,7 +49,7 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 		if (params.paths.size() > 1)
 			proc.putln("{}:", path);
 
-		if (auto [fid, ptr, err] = fs->open(path, FileAccessFlags::Read); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open(path); err == FileSystemError::Success)
 		{
 			proc.putln("{}", ptr->get_view());
 		}
