@@ -92,12 +92,18 @@ enum class FileSystemError : uint32_t
 	Other
 };
 
+
+/* --- File Permission Category --- */
+
 enum class FilePermissionCategory
 {
 	Owner,
 	Group,
 	Users
 };
+
+
+/* --- File Permission Triad --- */
 
 enum class FilePermissionTriad : uint8_t
 {
@@ -128,20 +134,54 @@ inline FilePermissionTriad& operator |= (FilePermissionTriad& a, FilePermissionT
     return a = a | b;
 }
 
+
+/* --- File Access Flags --- */
+
+enum class FileAccessFlags : uint32_t
+{
+	None = 0,
+	Read = 1,
+	Write = 2,
+	Execute = 4,
+	Create = 8
+};
+
+inline FileAccessFlags operator | (FileAccessFlags a, FileAccessFlags b)
+{
+    return static_cast<FileAccessFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline FileAccessFlags operator & (FileAccessFlags a, FileAccessFlags b)
+{
+    return static_cast<FileAccessFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
+{
+    return a = a | b;
+}
+
+
+/* --- Definitions --- */
+
 using FileOpResult = std::tuple<uint64_t, std::shared_ptr<File>, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 using TimePointFile = std::chrono::time_point<std::chrono::seconds>;
 
+
+/* --- File Meta-data --- */
+
 struct FileMeta
 {
 	bool is_directory{false};
-	int32_t owner_fid{0};
+	int32_t owner_uid{0};
 	int32_t owner_gid{0};
 	FilePermissionTriad perm_owner{7};
 	FilePermissionTriad perm_group{0};
 	FilePermissionTriad perm_users{0};
 	TimePointFile modified{};
 };
+
 
 class FileSystem
 {
@@ -219,17 +259,43 @@ public:
 	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
+	FileOpResult open(uint64_t fid);
 	FileOpResult open(const FilePath& path);
 
 	void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
 	void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);
 	bool has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags) const;
 
+	template <typename T>
+	static void set_flag(T& base, T set_flags)
+	{
+		static_cast<T>(static_cast<uint32_t>(base) |= static_cast<uint32_t>(set_flags));
+	}
+
+	template <typename T>
+	static void clear_flag(T& base, T clear_flags)
+	{
+		base = static_cast<T>(static_cast<uint32_t>(base) & ~static_cast<uint32_t>(clear_flags));
+	}
+
+	template <typename T>
+	static bool has_flag(T& base, T test_flags)
+	{
+		return static_cast<T>(static_cast<uint32_t>(base) & static_cast<uint32_t>(test_flags)) == test_flags;
+	}
+	
+
 	bool file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad set_flags);
 	bool file_clear_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad clear_flags);
 	bool file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
 
+	void file_set_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad set_flags);
+	void file_clear_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad clear_flags);
+	bool file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
+
 	bool file_set_directory_flag(uint64_t fid, bool new_is_dir);
+
+	bool check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode);
 
 	template<std::derived_from<File> T>
 	FileOpResult add_file(const FilePath& path)

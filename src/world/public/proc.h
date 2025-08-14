@@ -82,6 +82,7 @@ public:
 
 	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
 	int32_t get_pid() const { return pid; }
+	const SessionData& get_session() const { return sess_; }
 
 
 	/* --- FUNCTIONS THAT RELATE TO ENVIRONMENT VARIABLES ---- */

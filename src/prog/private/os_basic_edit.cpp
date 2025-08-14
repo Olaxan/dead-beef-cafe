@@ -3,6 +3,7 @@
 #include "filesystem.h"
 #include "navigator.h"
 #include "os_input.h"
+#include "os_fileio.h"
 #include "editor.h"
 
 #include <unicode/utypes.h>
@@ -102,12 +103,16 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 
 	if (auto opt_path = state.get_path(); opt_path.has_value())
 	{
-		auto [fid, ptr, err] = fs->open(*opt_path);
-		if (err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = FileUtils::open(proc, *opt_path, FileAccessFlags::Write | FileAccessFlags::Create); err == FileSystemError::Success)
 		{
 			ptr->write(state.as_utf8());
 			state.set_dirty(0);
 			co_return true;
+		}
+		else
+		{
+			state.set_status(std::format("Save failed: {}", FileSystem::get_fserror_name(err)));
+			co_return false;
 		}
 	}
 
@@ -144,9 +149,10 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("SHELL_PATH"));
 
-		if (auto [fid, f, err] = fs->open(path); err == FileSystemError::Success) 
+		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read | FileAccessFlags::Create); err == FileSystemError::Success)
 		{
-			//state.set_file(path, f);
+			//state.set_file(path, ptr);
+			co_return true;
 		}
 	}
 

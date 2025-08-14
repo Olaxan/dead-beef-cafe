@@ -488,16 +488,21 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
+FileOpResult FileSystem::open(uint64_t fid)
+{
+	if (is_dir(fid))
+		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
+	
+	if (auto it = files_.find(fid); it != files_.end())
+		return std::make_tuple(fid, it->second, FileSystemError::Success);
+
+	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+}
+
 FileOpResult FileSystem::open(const FilePath& path)
 {
 	if (uint64_t fid = get_fid(path); is_file(fid))
-	{
-		if (is_dir(fid))
-			return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
-		
-		if (auto it = files_.find(fid); it != files_.end())
-			return std::make_tuple(fid, it->second, FileSystemError::Success);
-	}
+		return open(fid);
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
@@ -521,12 +526,7 @@ bool FileSystem::file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePer
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		switch (cat)
-		{
-			case FilePermissionCategory::Owner: set_flag(it->second.perm_owner, set_flags); break;
-			case FilePermissionCategory::Group: set_flag(it->second.perm_group, set_flags); break;
-			case FilePermissionCategory::Users: set_flag(it->second.perm_users, set_flags); break;
-		}
+		file_set_flag(it->second, cat, set_flags);
 		return true;
 	}
 	return false;
@@ -536,12 +536,7 @@ bool FileSystem::file_clear_flag(uint64_t fid, FilePermissionCategory cat, FileP
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		switch (cat)
-		{
-			case FilePermissionCategory::Owner: clear_flag(it->second.perm_owner, clear_flags); break;
-			case FilePermissionCategory::Group: clear_flag(it->second.perm_group, clear_flags); break;
-			case FilePermissionCategory::Users: clear_flag(it->second.perm_users, clear_flags); break;
-		}
+		file_clear_flag(it->second, cat, clear_flags);
 		return true;
 	}
 	return false;
@@ -551,12 +546,39 @@ bool FileSystem::file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePer
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		switch (cat)
-		{
-			case FilePermissionCategory::Owner: return has_flag(it->second.perm_owner, test_flags);
-			case FilePermissionCategory::Group: return has_flag(it->second.perm_group, test_flags);
-			case FilePermissionCategory::Users: return has_flag(it->second.perm_users, test_flags);
-		}
+		file_has_flag(it->second, cat, test_flags);
+		return true;
+	}
+	return false;
+}
+
+void FileSystem::file_set_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad set_flags)
+{
+	switch (cat)
+	{
+		case FilePermissionCategory::Owner: set_flag(meta.perm_owner, set_flags); break;
+		case FilePermissionCategory::Group: set_flag(meta.perm_group, set_flags); break;
+		case FilePermissionCategory::Users: set_flag(meta.perm_users, set_flags); break;
+	}
+}
+
+void FileSystem::file_clear_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad clear_flags)
+{
+	switch (cat)
+	{
+		case FilePermissionCategory::Owner: clear_flag(meta.perm_owner, clear_flags); break;
+		case FilePermissionCategory::Group: clear_flag(meta.perm_group, clear_flags); break;
+		case FilePermissionCategory::Users: clear_flag(meta.perm_users, clear_flags); break;
+	}
+}
+
+bool FileSystem::file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags) const
+{
+	switch (cat)
+	{
+		case FilePermissionCategory::Owner: return has_flag(meta.perm_owner, test_flags);
+		case FilePermissionCategory::Group: return has_flag(meta.perm_group, test_flags);
+		case FilePermissionCategory::Users: return has_flag(meta.perm_users, test_flags);
 	}
 	return false;
 }
@@ -568,5 +590,58 @@ bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
 		it->second.is_directory = new_is_dir;
 		return true;
 	}
+	return false;
+}
+
+bool FileSystem::check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		FileMeta& meta = it->second;
+
+		bool users_match = true;
+		bool group_match = (session.gid == meta.owner_gid); // Incorrect match checking here, placeholder for logic.
+		bool owner_match = (session.uid == meta.owner_uid); // Maybe same?
+
+		bool read_valid = std::invoke([&]() -> bool
+		{
+			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+				return true;
+
+			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Read)) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Read) && owner_match) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Read) && group_match) return true;
+
+			return false;
+		});
+
+		bool write_valid = std::invoke([&]() -> bool
+		{
+			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+				return true;
+
+			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Write)) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Write) && owner_match) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Write) && group_match) return true;
+
+			return false;
+		});
+
+		bool exec_valid = std::invoke([&]() -> bool
+		{
+			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+				return true;
+
+			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Execute)) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Execute) && owner_match) return true;
+			if (file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Execute) && group_match) return true;
+
+			return false;
+		});
+
+		return read_valid && write_valid && exec_valid;
+
+	}
+	
 	return false;
 }

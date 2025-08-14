@@ -1,6 +1,7 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
+#include "os_fileio.h"
 
 #include "CLI/CLI.hpp"
 
@@ -98,7 +99,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("SHELL_PATH"));
 
-		fs->remove_file(path, remover);
+		FileUtils::remove(proc, path, remover);
 	}
 
 	proc.putln("Removed {0} file(s).", files_removed);
