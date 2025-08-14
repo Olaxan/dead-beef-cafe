@@ -133,7 +133,10 @@ bool FileSystem::is_dir(uint64_t fid) const
 	if (fid == get_root())
 		return true;
 
-	return file_has_flag(fid, FileModeFlags::Directory);
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+		return it->second.is_directory;
+
+	return false;
 }
 
 bool FileSystem::is_dir(const FilePath& path) const
@@ -205,26 +208,26 @@ std::size_t FileSystem::get_bytes(uint64_t fid)
 
 std::string FileSystem::get_flags(uint64_t fid)
 {
-	std::string out(11, '-');
+	std::string out(10, '-');
 
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		const FileModeFlags& base = it->second.flags;
-		out[ 0] = has_flag(base, FileModeFlags::Directory) 		? 'd' : '-';
-		out[ 1] = has_flag(base, FileModeFlags::System)			? 's' : '-';
+		const FilePermissionTriad& o = it->second.perm_owner;
+		const FilePermissionTriad& g = it->second.perm_group;
+		const FilePermissionTriad& u = it->second.perm_users;
+		out[0] = is_dir(fid) ? 'd' : '-';
 
-		out[ 2] = has_flag(base, FileModeFlags::OwnerRead) 		? 'r' : '-';
-		out[ 3] = has_flag(base, FileModeFlags::OwnerWrite) 	? 'w' : '-';
-		out[ 4] = has_flag(base, FileModeFlags::OwnerExecute) 	? 'x' : '-';
+		out[1] = has_flag(o, FilePermissionTriad::Read) 	? 'r' : '-';
+		out[2] = has_flag(o, FilePermissionTriad::Write) 	? 'w' : '-';
+		out[3] = has_flag(o, FilePermissionTriad::Execute) 	? 'x' : '-';
 
-		out[ 5] = has_flag(base, FileModeFlags::GroupRead) 		? 'r' : '-';
-		out[ 6] = has_flag(base, FileModeFlags::GroupWrite) 	? 'w' : '-';
-		out[ 7] = has_flag(base, FileModeFlags::GroupExecute) 	? 'x' : '-';
+		out[4] = has_flag(g, FilePermissionTriad::Read) 	? 'r' : '-';
+		out[5] = has_flag(g, FilePermissionTriad::Write) 	? 'w' : '-';
+		out[6] = has_flag(g, FilePermissionTriad::Execute) 	? 'x' : '-';
 
-		out[ 8] = has_flag(base, FileModeFlags::UsersRead) 		? 'r' : '-';
-		out[ 9] = has_flag(base, FileModeFlags::UsersWrite) 	? 'w' : '-';
-		out[10] = has_flag(base, FileModeFlags::UsersExecute) 	? 'x' : '-';
-		/* This will need modifying when file permissions get extended. */
+		out[7] = has_flag(u, FilePermissionTriad::Read) 	? 'r' : '-';
+		out[8] = has_flag(u, FilePermissionTriad::Write) 	? 'w' : '-';
+		out[9] = has_flag(u, FilePermissionTriad::Execute) 	? 'x' : '-';
 	}
 
 	return out;
@@ -328,7 +331,7 @@ FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
 	FileOpResult res = create_file(path, recurse);
 	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
 	{
-		file_set_flag(fid, FileModeFlags::Directory);
+		file_set_directory_flag(fid, true);
 	}
 	return res;
 }
@@ -342,8 +345,7 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path)
 	}
 	else
 	{
-		auto [new_parent_fid, ptr, err] = create_file(parent, true);
-		file_set_flag(new_parent_fid, FileModeFlags::Directory);
+		auto [new_parent_fid, ptr, err] = create_directory(parent, true);
 		return new_parent_fid;
 	}
 }
@@ -500,46 +502,71 @@ FileOpResult FileSystem::open(const FilePath& path)
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
 
-void FileSystem::set_flag(FileModeFlags& base, FileModeFlags set_flags)
+void FileSystem::set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags)
 {
 	base |= set_flags;
 }
 
-void FileSystem::clear_flag(FileModeFlags& base, FileModeFlags clear_flags)
+void FileSystem::clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags)
 {
 	base = base & ~clear_flags;
 }
 
-bool FileSystem::has_flag(const FileModeFlags& base, FileModeFlags test_flags) const
+bool FileSystem::has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags) const
 {
 	return (base & test_flags) == test_flags;
 }
 
-bool FileSystem::file_set_flag(uint64_t fid, FileModeFlags set_flags)
+bool FileSystem::file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad set_flags)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		set_flag(it->second.flags, set_flags);
+		switch (cat)
+		{
+			case FilePermissionCategory::Owner: set_flag(it->second.perm_owner, set_flags); break;
+			case FilePermissionCategory::Group: set_flag(it->second.perm_group, set_flags); break;
+			case FilePermissionCategory::Users: set_flag(it->second.perm_users, set_flags); break;
+		}
 		return true;
 	}
 	return false;
 }
 
-bool FileSystem::file_clear_flag(uint64_t fid, FileModeFlags clear_flags)
+bool FileSystem::file_clear_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad clear_flags)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		clear_flag(it->second.flags, clear_flags);
+		switch (cat)
+		{
+			case FilePermissionCategory::Owner: clear_flag(it->second.perm_owner, clear_flags); break;
+			case FilePermissionCategory::Group: clear_flag(it->second.perm_group, clear_flags); break;
+			case FilePermissionCategory::Users: clear_flag(it->second.perm_users, clear_flags); break;
+		}
 		return true;
 	}
 	return false;
 }
 
-bool FileSystem::file_has_flag(uint64_t fid, FileModeFlags test_flags) const
+bool FileSystem::file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		return has_flag(it->second.flags, test_flags);
+		switch (cat)
+		{
+			case FilePermissionCategory::Owner: return has_flag(it->second.perm_owner, test_flags);
+			case FilePermissionCategory::Group: return has_flag(it->second.perm_group, test_flags);
+			case FilePermissionCategory::Users: return has_flag(it->second.perm_users, test_flags);
+		}
+	}
+	return false;
+}
+
+bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		it->second.is_directory = new_is_dir;
+		return true;
 	}
 	return false;
 }

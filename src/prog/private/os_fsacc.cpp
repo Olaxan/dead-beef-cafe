@@ -2,6 +2,12 @@
 
 FileOpResult FileSystemAccessor::open(const FilePath& path, FileAccessFlags flags)
 {
+
+	if (uint64_t fid = fs_.get_fid(path))
+	{
+		
+	}
+
 	FileOpResult res = fs_.open(path);
 
 	/* Not equal here! */

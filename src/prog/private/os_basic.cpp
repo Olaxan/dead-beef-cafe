@@ -113,7 +113,9 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		if (auto [fid, ptr, err] = fs->create_file(fn.first); err == FileSystemError::Success)
 		{
 			ptr->write(std::forward<ProcessFn>(fn.second));
-			fs->file_set_flag(fid, FileModeFlags::OwnerExecute | FileModeFlags::GroupExecute | FileModeFlags::UsersExecute);
+			fs->file_set_flag(fid, FilePermissionCategory::Owner, FilePermissionTriad::All);
+			fs->file_set_flag(fid, FilePermissionCategory::Group, FilePermissionTriad::All);
+			fs->file_set_flag(fid, FilePermissionCategory::Users, FilePermissionTriad::All);
 		}
 	}
 

@@ -33,7 +33,7 @@ class FileSystemAccessor
 public:
 
 	FileSystemAccessor(const Proc& proc)
-	: proc_(proc), os_(*proc_.owning_os), fs_(*os_.get_filesystem()) { }
+	: proc_(proc), os_(*proc_.owning_os), session_(proc.sess_), fs_(*os_.get_filesystem()) { }
 
 	FileOpResult open(const FilePath& path, FileAccessFlags flags);
 
@@ -41,6 +41,7 @@ private:
 
 	const Proc& proc_;
 	const OS& os_;
+	const SessionData& session_;
 	FileSystem& fs_;
 
 };

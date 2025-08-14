@@ -92,38 +92,38 @@ enum class FileSystemError : uint32_t
 	Other
 };
 
-enum class FileModeFlags : uint32_t
+enum class FilePermissionCategory
 {
-	None			= 1 << 0,
-	Directory		= 1 << 1,
-	System			= 1 << 2,
-	OwnerRead		= 1 << 3,
-	OwnerWrite		= 1 << 4,
-	OwnerExecute	= 1 << 5,
-	GroupRead		= 1 << 6,
-	GroupWrite		= 1 << 7,
-	GroupExecute	= 1 << 8,
-	UsersRead		= 1 << 9,
-	UsersWrite		= 1 << 10,
-	UsersExecute	= 1 << 11
+	Owner,
+	Group,
+	Users
 };
 
-inline FileModeFlags operator | (FileModeFlags a, FileModeFlags b)
+enum class FilePermissionTriad : uint8_t
 {
-    return static_cast<FileModeFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	None 			= 0,
+	Read		= 1 << 0,
+	Write		= 1 << 1,
+	Execute		= 1 << 2,
+	All 		= Read | Write | Execute
+};
+
+inline FilePermissionTriad operator | (FilePermissionTriad a, FilePermissionTriad b)
+{
+    return static_cast<FilePermissionTriad>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
 }
 
-inline FileModeFlags operator & (FileModeFlags a, FileModeFlags b)
+inline FilePermissionTriad operator & (FilePermissionTriad a, FilePermissionTriad b)
 {
-    return static_cast<FileModeFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+    return static_cast<FilePermissionTriad>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
 }
 
-inline FileModeFlags operator ~ (FileModeFlags& a)
+inline FilePermissionTriad operator ~ (FilePermissionTriad& a)
 {
-    return static_cast<FileModeFlags>(~static_cast<uint32_t>(a));
+    return static_cast<FilePermissionTriad>(~static_cast<uint8_t>(a));
 }
 
-inline FileModeFlags& operator |= (FileModeFlags& a, FileModeFlags b)
+inline FilePermissionTriad& operator |= (FilePermissionTriad& a, FilePermissionTriad b)
 {
     return a = a | b;
 }
@@ -134,9 +134,12 @@ using TimePointFile = std::chrono::time_point<std::chrono::seconds>;
 
 struct FileMeta
 {
-	FileModeFlags flags{};
+	bool is_directory{false};
 	int32_t owner_fid{0};
 	int32_t owner_gid{0};
+	FilePermissionTriad perm_owner{7};
+	FilePermissionTriad perm_group{0};
+	FilePermissionTriad perm_users{0};
 	TimePointFile modified{};
 };
 
@@ -218,13 +221,15 @@ public:
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
 	FileOpResult open(const FilePath& path);
 
-	void set_flag(FileModeFlags& base, FileModeFlags set_flags);
-	void clear_flag(FileModeFlags& base, FileModeFlags clear_flags);
-	bool has_flag(const FileModeFlags& base, FileModeFlags test_flags) const;
+	void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
+	void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);
+	bool has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags) const;
 
-	bool file_set_flag(uint64_t fid, FileModeFlags set_flags);
-	bool file_clear_flag(uint64_t fid, FileModeFlags clear_flags);
-	bool file_has_flag(uint64_t fid, FileModeFlags test_flags) const;
+	bool file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad set_flags);
+	bool file_clear_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad clear_flags);
+	bool file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
+
+	bool file_set_directory_flag(uint64_t fid, bool new_is_dir);
 
 	template<std::derived_from<File> T>
 	FileOpResult add_file(const FilePath& path)

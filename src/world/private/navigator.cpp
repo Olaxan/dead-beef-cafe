@@ -49,12 +49,7 @@ FileOpResult Navigator::create_directory(FilePath path) const
 	if (path.is_relative())
 		path.prepend(get_path());
 	
-	FileOpResult ret = fs_.create_file(path);
-	if (auto [fid, ptr, err] = ret; err == FileSystemError::Success)
-	{
-		fs_.file_set_flag(fid, FileModeFlags::Directory);
-	}
-	return ret;
+	return fs_.create_directory(path);
 }
 
 FileSystemError Navigator::remove_file(FilePath path, bool recurse) const
