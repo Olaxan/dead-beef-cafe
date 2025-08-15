@@ -7,6 +7,7 @@
 
 #include <ranges>
 #include <charconv>
+#include <unordered_set>
 
 struct LoginPasswdData
 {
@@ -31,6 +32,14 @@ struct LoginShadowData
 	std::string_view expiration_date{};
 };
 
+struct LoginGroupData
+{
+	int32_t gid;
+	std::string_view group_name{};
+	std::string_view password{};
+	std::string_view members{};
+};
+
 std::optional<LoginPasswdData> parse_passwd_row(std::string_view row)
 {
 	LoginPasswdData data{};
@@ -50,12 +59,12 @@ std::optional<LoginPasswdData> parse_passwd_row(std::string_view row)
 
     if (auto [ptr, ec] = std::from_chars(s_uid.data(), s_uid.data() + s_uid.size(), data.uid); ec != std::errc())
 	{
-		data.uid = 0;
+		data.uid = -1;
 	}
 
 	if (auto [ptr, ec] = std::from_chars(s_gid.data(), s_gid.data() + s_gid.size(), data.gid); ec != std::errc())
 	{
-		data.gid = 0;
+		data.gid = -1;
 	}
 
 	return data;
@@ -77,6 +86,28 @@ std::optional<LoginShadowData> parse_shadow_row(std::string_view row)
 	data.warning_period = std::string_view(range[5]);
 	data.inactivity_period = std::string_view(range[6]);
 	data.expiration_date = std::string_view(range[7]);
+
+	return data;
+}
+
+std::optional<LoginGroupData> parse_group_row(std::string_view row)
+{
+	LoginGroupData data{};
+	auto&& range = row | std::views::split(':') | std::ranges::to<std::vector>();
+
+	if (range.size() != 4)
+		return std::nullopt;
+
+	data.group_name = std::string_view(range[0]);
+	data.password = std::string_view(range[1]);
+	data.members = std::string_view(range[3]);
+	
+	std::string_view s_gid(range[2]);
+
+    if (auto [ptr, ec] = std::from_chars(s_gid.data(), s_gid.data() + s_gid.size(), data.gid); ec != std::errc())
+	{
+		data.gid = -1;
+	}
 
 	return data;
 }
@@ -108,7 +139,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.errln("Failed to open passwords file.");
+			proc.errln("Failed to open passwords file: {}.", FileSystem::get_fserror_name(err));
 		}
 
 		return std::nullopt;
@@ -130,10 +161,34 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.errln("Failed to open shadow file.");
+			proc.errln("Failed to open shadow file: {}.", FileSystem::get_fserror_name(err));
 		}
 
 		return std::nullopt;
+	};
+
+	auto get_group_data = [&proc, &fs](const std::string_view user) -> std::unordered_set<int32_t>
+	{
+		std::unordered_set<int32_t> out{};
+		if (auto [fid, ptr, err] = fs->open("/etc/groups"); err == FileSystemError::Success)
+		{
+			std::string_view f = ptr->get_view();
+	
+			for (auto&& rline : f | std::views::split('\n'))
+			{
+				std::string_view line(rline);
+				if (std::optional<LoginGroupData> g = parse_group_row(line); g.has_value())
+				{
+					if (g->members.contains(user)) { out.insert(g->gid); }
+				}
+			}
+		}
+		else
+		{
+			proc.errln("Failed to open groups file: {}.", FileSystem::get_fserror_name(err));
+		}
+
+		return out;
 	};
 
 	auto get_password_hash = [](const LoginPasswdData& passwd, const LoginShadowData& shadow) -> std::string_view
@@ -152,6 +207,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 
 	std::optional<LoginPasswdData> passwd = get_passwd_data(username);
 	std::optional<LoginShadowData> shadow = get_shadow_data(username);
+	std::unordered_set<int32_t> groups = get_group_data(username);
 
 	if (passwd && shadow)
 	{
@@ -170,12 +226,13 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 			proc.set_sid();
 			proc.set_uid(passwd->uid);
 			proc.set_gid(passwd->gid);
+			proc.add_groups(groups);
 
 			proc.set_var("HOME", passwd->home_dir);
 			proc.set_var("SHELL", passwd->shell_path);
 			proc.set_var("USER", passwd->username);
 
-			proc.putln("Welcome, {} ({}, {}).", username, passwd->uid, passwd->gid);
+			proc.putln("Welcome, {} ({}, {}, {}).", username, passwd->uid, passwd->gid, groups);
 			co_return 0;
 		}
 		else

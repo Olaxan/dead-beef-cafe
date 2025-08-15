@@ -12,6 +12,7 @@
 #include <chrono>
 #include <iostream>
 #include <print>
+#include <unordered_set>
 
 std::size_t OS::register_devices()
 {
@@ -156,6 +157,16 @@ bool OS::set_session_gid(int32_t sid, int32_t new_gid)
 	if (auto it = sessions_.find(sid); it != sessions_.end())
     {
         it->second.gid = new_gid;
+        return true;
+    }
+    return false;
+}
+
+bool OS::add_session_groups(int32_t sid, const std::unordered_set<int32_t>& groups)
+{
+	if (auto it = sessions_.find(sid); it != sessions_.end())
+    {
+        it->second.groups.insert(groups.begin(), groups.end());
         return true;
     }
     return false;

@@ -82,6 +82,132 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	if (fs == nullptr)
 		return;
 
+	fs->create_directory("/dev", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/bin", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/etc", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/home", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/lib", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/sbin", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/tmp", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::All,
+			.perm_users = FilePermissionTriad::All
+		}	
+	});
+
+	fs->create_directory("/var/log", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/var/lock", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::All,
+			.perm_users = FilePermissionTriad::All
+		}		
+	});
+
+	fs->create_directory("/var/tmp", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::All,
+			.perm_users = FilePermissionTriad::All
+		}
+	});
+
+	fs->create_directory("/usr/bin", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}	
+	});
+
+	fs->create_directory("/usr/lib", {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}
+	});
+
+	fs->create_directory("/usr/local", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}	
+	});
+
+	fs->create_directory("/usr/share", {
+		.recurse = true,
+		.meta = {
+			.perm_owner	= FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		}		
+	});
+
 	std::vector<std::pair<std::string, ProcessFn>> os_progs = 
 	{
 		{"/bin/..", Programs::CmdGoUp},
@@ -108,25 +234,85 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
 	};
 
+	FileSystem::CreateFileParams all_progs = {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::All,
+			.perm_users = FilePermissionTriad::All
+		}
+	};
+
 	for (auto& fn : os_progs)
 	{
-		if (auto [fid, ptr, err] = fs->create_file(fn.first); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->create_file(fn.first, all_progs); err == FileSystemError::Success)
 		{
 			ptr->write(std::forward<ProcessFn>(fn.second));
-			fs->file_set_flag(fid, FilePermissionCategory::Owner, FilePermissionTriad::All);
-			fs->file_set_flag(fid, FilePermissionCategory::Group, FilePermissionTriad::All);
-			fs->file_set_flag(fid, FilePermissionCategory::Users, FilePermissionTriad::All);
 		}
 	}
 
-	if (auto [fid, ptr, err] = fs->create_file("/etc/passwd"); err == FileSystemError::Success)
+	FileSystem::CreateFileParams passwd_params = {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
+			.perm_group = FilePermissionTriad::Read,
+			.perm_users = FilePermissionTriad::Read
+		}
+	};
+
+	if (auto [fid, ptr, err] = fs->create_file("/etc/passwd", passwd_params); err == FileSystemError::Success)
 	{
-		ptr->write("root:x:0:0::/root:/bin/shell\n");
-		ptr->append("fredr:x:0:0::/home/fredr:/bin/shell");
+		ptr->write(
+			"root:x:0:0::/root:/bin/shell\n"
+			"fredr:x:64000:64000::/home/fredr:/bin/shell");
 	}
 
-	if (auto [fid, ptr, err] = fs->create_file("/etc/shadow"); err == FileSystemError::Success)
+	FileSystem::CreateFileParams shadow_params = {
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::None,
+			.perm_group = FilePermissionTriad::None,
+			.perm_users = FilePermissionTriad::None
+		}
+	};
+
+	if (auto [fid, ptr, err] = fs->create_file("/etc/shadow", shadow_params); err == FileSystemError::Success)
 	{
 		ptr->write("fredr:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824:1:0:99999:7:::");
+	}
+
+	if (auto [fid, ptr, err] = fs->create_file("/etc/groups", passwd_params); err == FileSystemError::Success)
+	{
+		ptr->write(
+			"root:x:0:\n"
+			"daemon:x:1:\n"
+			"bin:x:2:\n"
+			"sys:x:3:\n"
+			"adm:x:4:sysadmin\n"
+			"tty:x:5:\n"
+			"disk:x:6:\n"
+			"lp:x:7:\n"
+			"mem:x:8:\n"
+			"kmem:x:9:\n"
+			"wheel:x:10:sysadmin\n"
+			"mail:x:12:postfix\n"
+			"man:x:15:\n"
+			"users:x:100:\n"
+			"nogroup:x:65534:\n"
+			"systemd-journal:x:101:\n"
+			"systemd-network:x:102:\n"
+			"systemd-resolve:x:103:\n"
+			"systemd-timesync:x:104:\n"
+			"ssh:x:105:\n"
+			"sudo:x:106:fredrik,sysadmin\n"
+			"docker:x:107:fredr\n"
+			"audio:x:108:fredr\n"
+			"video:x:109:fredr\n"
+			"plugdev:x:110:fredr\n"
+			"staff:x:111:\n"
+			"games:x:112:\n"
+			"developers:x:1000:alice,bob,charlie\n"
+			"designers:x:1001:diana,edward\n"
+			"marketing:x:1002:frank,grace");
 	}
 }

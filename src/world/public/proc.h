@@ -17,6 +17,7 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <any>
 #include <typeindex>
 #include <sstream>
@@ -284,6 +285,7 @@ public:
 	int32_t set_sid();
 	bool set_uid(int32_t new_uid);
 	bool set_gid(int32_t new_gid);
+	bool add_groups(std::unordered_set<int32_t>& groups);
 	SessionData get_session() const;
 
 public:

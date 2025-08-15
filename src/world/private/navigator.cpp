@@ -41,7 +41,8 @@ FileOpResult Navigator::create_file(FilePath path) const
 	if (path.is_relative())
 		path.prepend(get_path());
 	
-	return fs_.create_file(path);
+	FileSystem::CreateFileParams p;
+	return fs_.create_file(path, p);
 }
 
 FileOpResult Navigator::create_directory(FilePath path) const
@@ -49,7 +50,8 @@ FileOpResult Navigator::create_directory(FilePath path) const
 	if (path.is_relative())
 		path.prepend(get_path());
 	
-	return fs_.create_directory(path);
+	FileSystem::CreateFileParams p;
+	return fs_.create_directory(path, p);
 }
 
 FileSystemError Navigator::remove_file(FilePath path, bool recurse) const

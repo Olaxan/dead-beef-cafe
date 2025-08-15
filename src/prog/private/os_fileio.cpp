@@ -22,7 +22,18 @@ FileOpResult FileUtils::open(const Proc& proc, const FilePath& path, FileAccessF
 		// if (!fs.check_permission(session, fid, FileAccessFlags::Create))
 		// 	return std::make_tuple(0, nullptr, FileSystemError::InsufficientPermissions);
 
-		return fs.create_file(path);
+		FileSystem::CreateFileParams params = {
+			.recurse = false,
+			.meta = {
+				.owner_uid = session.uid,
+				.owner_gid = session.gid,
+				.perm_owner = FilePermissionTriad::All,
+				.perm_group = FilePermissionTriad::Read,
+				.perm_users = FilePermissionTriad::None
+			}
+		};
+
+		return fs.create_file(path, params);
 	}
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
@@ -53,7 +64,7 @@ bool FileUtils::remove(const Proc& proc, const FilePath& path, FileRemoverFn&& f
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
-		if (!fs.check_permission(session, fid, FileAccessFlags::Read | FileAccessFlags::Execute))
+		if (!fs.check_permission(session, fid, FileAccessFlags::Write | FileAccessFlags::Execute))
 		{
 			func(fs, path, FileSystemError::InsufficientPermissions);
 			return false;

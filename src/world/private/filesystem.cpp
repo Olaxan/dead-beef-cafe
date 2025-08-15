@@ -315,20 +315,20 @@ std::vector<uint64_t> FileSystem::get_root_chain(uint64_t fid) const
 	return chain;
 }
 
-FileOpResult FileSystem::create_file(const FilePath& path, bool recurse)
+FileOpResult FileSystem::create_file(const FilePath& path, const CreateFileParams& params)
 {
 	if (get_fid(path))
 		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
 
-	if (recurse)
-		create_ensure_path(path);
+	if (params.recurse)
+		create_ensure_path(path, params);
 
-	return add_file<File>(path);
+	return add_file<File>(path, params.meta);
 }
 
-FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
+FileOpResult FileSystem::create_directory(const FilePath& path, const CreateFileParams& params)
 {
-	FileOpResult res = create_file(path, recurse);
+	FileOpResult res = create_file(path, params);
 	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
 	{
 		file_set_directory_flag(fid, true);
@@ -336,7 +336,7 @@ FileOpResult FileSystem::create_directory(const FilePath& path, bool recurse)
 	return res;
 }
 
-uint64_t FileSystem::create_ensure_path(const FilePath& path)
+uint64_t FileSystem::create_ensure_path(const FilePath& path, const CreateFileParams& params)
 {
 	FilePath parent = path.get_parent_path();
 	if (uint64_t parent_fid = get_fid(parent))
@@ -345,7 +345,7 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path)
 	}
 	else
 	{
-		auto [new_parent_fid, ptr, err] = create_directory(parent, true);
+		auto [new_parent_fid, ptr, err] = create_directory(parent, params);
 		return new_parent_fid;
 	}
 }
@@ -599,18 +599,14 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 	{
 		FileMeta& meta = it->second;
 
-		bool group_match = (session.gid == meta.owner_gid); // Incorrect match checking here, placeholder for logic.
-		bool owner_match = (session.uid == meta.owner_uid); // Maybe same?
+		bool group_match = (session.gid == meta.owner_gid || session.groups.contains(meta.owner_gid));
+		bool owner_match = (session.uid == meta.owner_uid);
 		bool users_match = true;
-
-		std::println("Owner = {}, gid = {}", meta.owner_gid, session.gid);
 
 		bool read_valid = std::invoke([&]() -> bool
 		{
 			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
 				return true;
-
-			std::println("Needs read permission.");
 
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Read)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Read) && owner_match) return true;
@@ -624,8 +620,6 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Write))
 				return true;
 
-			std::println("Needs write permission.");
-
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Write)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Write) && owner_match) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Write) && group_match) return true;
@@ -638,8 +632,6 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Execute))
 				return true;
 
-			std::println("Needs exec permission.");
-
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Execute)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Execute) && owner_match) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Execute) && group_match) return true;
@@ -647,10 +639,7 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 			return false;
 		});
 
-		std::println("Operation ({}): {} {} {}", static_cast<uint32_t>(mode), read_valid, write_valid, exec_valid);
-
 		return read_valid && write_valid && exec_valid;
-
 	}
 	
 	return false;

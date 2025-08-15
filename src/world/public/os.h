@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <concepts>
 
 class Host;
@@ -142,6 +143,9 @@ public:
 
 	/* Sets the gid of a session. Returns whether successful. */
 	bool set_session_gid(int32_t sid, int32_t new_gid);
+
+	/* Add supplementary groups to a session. Returns whether any groups were added. */
+	bool add_session_groups(int32_t sid, const std::unordered_set<int32_t>& groups);
 
 	/* Get a reference to a active session, if one matches the sid. */
 	std::optional<SessionData> get_session(int32_t sid);

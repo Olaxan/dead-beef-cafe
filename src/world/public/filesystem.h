@@ -240,15 +240,21 @@ public:
 	uint64_t get_root() const { return root_; }
 	std::vector<uint64_t> get_root_chain(uint64_t fid) const;
 
+	struct CreateFileParams
+	{
+		bool recurse{false};
+		FileMeta meta{};
+	};
+
 	/* Create a file at the specified location (and optionally fills in missing directories). */
-	FileOpResult create_file(const FilePath& path, bool recurse = true);
+	FileOpResult create_file(const FilePath& path, const CreateFileParams& params);
 
 	/* Create a directory at the specified location (and optionally fills in missing directories). */
-	FileOpResult create_directory(const FilePath& path, bool recurse = true);
+	FileOpResult create_directory(const FilePath& path, const CreateFileParams& params);
 
 	/* Walks a provided path and creates all the directories that are missing. 
 	Returns the fid of the final folder. */
-	uint64_t create_ensure_path(const FilePath& path);
+	uint64_t create_ensure_path(const FilePath& path, const CreateFileParams& params);
 
 	FileSystemError remove_file(uint64_t fid, bool recurse = false);
 	FileSystemError remove_file(const FilePath& path, bool recurse = false);
@@ -298,7 +304,7 @@ public:
 	bool check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode);
 
 	template<std::derived_from<File> T>
-	FileOpResult add_file(const FilePath& path)
+	FileOpResult add_file(const FilePath& path, const FileMeta& meta)
 	{
 		FilePath parent = path.get_parent_path();
 		uint64_t parent_fid = get_fid(parent);
@@ -314,7 +320,7 @@ public:
 			fid_to_path_[fid] = path;
 			path_to_fid_[path] = fid;
 			roots_[fid] = parent_fid;
-			metadata_[fid] = {};
+			metadata_[fid] = meta;
 			mappings_.insert(std::make_pair(parent_fid, fid));
 
 			return std::make_tuple(fid, it->second, FileSystemError::Success);

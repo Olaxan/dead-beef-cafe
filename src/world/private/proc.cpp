@@ -41,11 +41,16 @@ bool Proc::set_gid(int32_t new_gid)
 	return owning_os->set_session_gid(sid, new_gid);
 }
 
+bool Proc::add_groups(std::unordered_set<int32_t>& groups)
+{
+	return owning_os->add_session_groups(sid, groups);
+}
+
 SessionData Proc::get_session() const
 {
 	if (host)
 		return host->get_session();
-		
+
 	if (std::optional<SessionData> sess = owning_os->get_session(sid); sess.has_value())
 		return *sess;
 	
