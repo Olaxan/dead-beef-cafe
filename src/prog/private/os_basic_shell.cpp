@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "navigator.h"
 #include "os_input.h"
+#include "os_fileio.h"
 
 #include <unicode/utypes.h>
 #include <unicode/ucol.h>
@@ -128,16 +129,9 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			for (auto str : proc.get_var<std::string>("PATH") | std::views::split(';'))
 			{
 				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
-	
-				if (auto [fid, ptr, err] = fs->open(prog_path); err == FileSystemError::Success)
+
+				if (auto [fid, ptr, err] = FileUtils::open(proc, prog_path, FileAccessFlags::Read | FileAccessFlags::Execute); err == FileSystemError::Success)
 				{
-					// TODO: Check permissions here.
-					// if (fs->file_has_flag(fid, FileModeFlags::OwnerExecute))
-					// {
-					// 	proc.warnln("File '{}' is missing 'execute' flag.", prog_path);
-					// 	co_return 1;
-					// }
-	
 					if (auto& prog = ptr->get_executable())
 					{
 						int32_t ret = co_await os.create_process(prog, std::move(args), &proc);
