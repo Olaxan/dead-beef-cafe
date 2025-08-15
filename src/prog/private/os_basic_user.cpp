@@ -175,7 +175,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 			proc.set_var("SHELL", passwd->shell_path);
 			proc.set_var("USER", passwd->username);
 
-			proc.putln("Welcome, {}.", username);
+			proc.putln("Welcome, {} ({}, {}).", username, passwd->uid, passwd->gid);
 			co_return 0;
 		}
 		else

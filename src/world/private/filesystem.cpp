@@ -599,14 +599,18 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 	{
 		FileMeta& meta = it->second;
 
-		bool users_match = true;
 		bool group_match = (session.gid == meta.owner_gid); // Incorrect match checking here, placeholder for logic.
 		bool owner_match = (session.uid == meta.owner_uid); // Maybe same?
+		bool users_match = true;
+
+		std::println("Owner = {}, gid = {}", meta.owner_gid, session.gid);
 
 		bool read_valid = std::invoke([&]() -> bool
 		{
 			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
 				return true;
+
+			std::println("Needs read permission.");
 
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Read)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Read) && owner_match) return true;
@@ -617,8 +621,10 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 
 		bool write_valid = std::invoke([&]() -> bool
 		{
-			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Write))
 				return true;
+
+			std::println("Needs write permission.");
 
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Write)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Write) && owner_match) return true;
@@ -629,8 +635,10 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 
 		bool exec_valid = std::invoke([&]() -> bool
 		{
-			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+			if (!has_flag<FileAccessFlags>(mode, FileAccessFlags::Execute))
 				return true;
+
+			std::println("Needs exec permission.");
 
 			if (file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Execute)) return true;
 			if (file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Execute) && owner_match) return true;
@@ -638,6 +646,8 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 
 			return false;
 		});
+
+		std::println("Operation ({}): {} {} {}", static_cast<uint32_t>(mode), read_valid, write_valid, exec_valid);
 
 		return read_valid && write_valid && exec_valid;
 

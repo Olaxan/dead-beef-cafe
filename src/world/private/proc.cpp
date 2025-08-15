@@ -8,6 +8,12 @@
 #include <sstream>
 #include <string>
 
+const SessionData& Proc::get_session() const
+{
+	if (host) return host->get_session();
+	return sess_;
+}
+
 void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resume)
 {
 	this->args = std::move(args);
@@ -25,18 +31,36 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 
 int32_t Proc::set_sid()
 {
-	sess_.sid = 1;
+	if (host)
+	{
+		sess_.sid = host->set_sid();
+	}
+	else
+	{
+		sess_.sid = 1;
+	}
+
 	return sess_.sid;
 }
 
 int32_t Proc::set_uid(int32_t new_uid)
 {
+	if (host)
+	{
+		sess_.uid = new_uid;
+		return host->set_uid(new_uid);
+	}
 	sess_.uid = new_uid;
 	return 0;
 }
 
 int32_t Proc::set_gid(int32_t new_gid)
 {
+	if (host)
+	{
+		sess_.gid = new_gid;
+		return host->set_gid(new_gid);
+	}
 	sess_.gid = new_gid;
 	return 0;
 }
