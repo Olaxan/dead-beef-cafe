@@ -264,7 +264,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	{
 		ptr->write(
 			"root:x:0:0::/root:/bin/shell\n"
-			"fredr:x:64000:64000::/home/fredr:/bin/shell");
+			"fredr:x:74545:74545::/home/fredr:/bin/shell");
 	}
 
 	FileSystem::CreateFileParams shadow_params = {
