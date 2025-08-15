@@ -8,6 +8,7 @@
 #include "world.h"
 #include "device.h"
 #include "device_state.h"
+#include "session.h"
 
 #include <memory>
 #include <vector>
@@ -128,8 +129,29 @@ public:
 		return sid.has_value();
 	}
 
+	/* --- Sessions ---*/
+
+	/* Creates a new user session and returns the sid. */
+	int32_t create_session(int32_t uid = -1, int32_t gid = -1);
+	
+	/* Ends the specified session. Returns whether successful. */
+	bool end_session(int32_t sid);
+
+	/* Sets the uid of a session. Returns whether successful. */
+	bool set_session_uid(int32_t sid, int32_t new_uid);
+
+	/* Sets the gid of a session. Returns whether successful. */
+	bool set_session_gid(int32_t sid, int32_t new_gid);
+
+	/* Get a reference to a active session, if one matches the sid. */
+	std::optional<SessionData> get_session(int32_t sid);
+
+	/* --- Scheduler --- */
+
 	[[nodiscard]] TimerAwaiter wait(float seconds);
 	void schedule(float seconds, schedule_fn callback);
+
+
 
 protected:
 
@@ -153,6 +175,7 @@ protected:
 	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
+	std::unordered_map<int32_t, SessionData> sessions_{};
 
 	friend Proc;
 };

@@ -67,11 +67,11 @@ class Proc
 public:
 
 	Proc(int32_t pid, OS* owner, std::ostream& out_stream = std::cout)
-		: pid(pid), owning_os(owner), out_stream(out_stream)
+		: owning_os(owner), pid(pid), out_stream(out_stream)
 	{ }
 
-	Proc(int32_t pid, Proc* host)
-		: pid(pid), host(host), owning_os(host->owning_os), out_stream(host->out_stream)
+	Proc(int32_t pid, Proc* fork)
+		: host(fork), owning_os(fork->owning_os), pid(pid), sid(fork->sid), out_stream(fork->out_stream)
 	{ }
 
 	~Proc()
@@ -82,7 +82,6 @@ public:
 
 	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
 	int32_t get_pid() const { return pid; }
-	const SessionData& get_session() const;
 
 
 	/* --- FUNCTIONS THAT RELATE TO ENVIRONMENT VARIABLES ---- */
@@ -283,17 +282,17 @@ public:
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
 
 	int32_t set_sid();
-	int32_t set_uid(int32_t new_uid);
-	int32_t set_gid(int32_t new_gid);
-
+	bool set_uid(int32_t new_uid);
+	bool set_gid(int32_t new_gid);
+	SessionData get_session() const;
 
 public:
 
-	int32_t pid{0};
-	SessionData sess_{};
-	std::ostream& out_stream;
-	OS* owning_os{nullptr};
 	Proc* host{nullptr};
+	OS* owning_os{nullptr};
+	int32_t pid{0};
+	int32_t sid{0};
+	std::ostream& out_stream;
 	ProcCoutBuf buf_out{this};
 	ProcCerrBuf buf_err{this};
 	std::ostream s_out{&buf_out};
