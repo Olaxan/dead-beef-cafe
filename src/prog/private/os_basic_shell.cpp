@@ -62,11 +62,13 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		return {};
 	});
 
+	/* Async socket reader -> CommandQuery. */
 	proc.add_reader<CmdSocketAwaiterServer>([sock]() -> std::any
 	{
 		return sock->async_read();
 	});
 
+	/* Synchronous socket reader -> CommandQuery*/
 	proc.add_reader<com::CommandQuery>([sock]() -> std::any
 	{
 		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
@@ -126,7 +128,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 			const std::string& name = *std::begin(args);
 
-			for (auto str : proc.get_var<std::string>("PATH") | std::views::split(';'))
+			for (auto str : proc.get_var("PATH") | std::views::split(';'))
 			{
 				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
 
