@@ -30,13 +30,11 @@ namespace Programs
 
 	/* File management */
 	ProcessTask CmdList(Proc& proc, std::vector<std::string> args);
-	ProcessTask CmdChangeDir(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdMakeDir(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdMakeFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdOpenFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdRemoveFile(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdCat(Proc& proc, std::vector<std::string> args);
-	ProcessTask CmdGoUp(Proc& proc, std::vector<std::string> args);
 
 	/* Test programs */
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);

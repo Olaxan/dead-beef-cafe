@@ -20,7 +20,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		co_return 2;
 	}
 
-	FilePath wd = proc.get_var("SHELL_PATH");
+	FilePath wd = proc.get_var("PWD");
 
 	CLI::App app{"Utility to show contents and data about files and directories."};
 	app.allow_windows_style_options(false);

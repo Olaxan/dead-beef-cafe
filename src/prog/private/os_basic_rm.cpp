@@ -97,7 +97,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 	for (auto& path : params.paths)
 	{
 		if (path.is_relative())
-			path.prepend(proc.get_var("SHELL_PATH"));
+			path.prepend(proc.get_var("PWD"));
 
 		FileUtils::remove(proc, path, remover);
 	}

@@ -114,7 +114,7 @@ public:
 	}
 
 	/* Default version of get_var, returning a string (no converstion). */
-	std::string get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
+	std::string_view get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
 	{
 		if (auto it = envvars_.find(key); it != envvars_.end())
 			return it->second;
@@ -123,29 +123,6 @@ public:
 			return host->get_var(key, mode);
 		
 		return {};
-	}
-
-
-	/* --- FUNCTIONS THAT RELATE TO PROCESS DATA ---- */
-
-	/* Sets the inter-process data pointer. */
-	template<typename T>
-	void set_data(T* data)
-	{
-		data_ = data;
-	}
-
-	/* Retrieves the single-process data pointer. */
-	template<typename T>
-	T* get_data(EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
-	{
-		if (data_.has_value())
-			return std::any_cast<T*>(data_);
-
-		if (host && mode == EnvVarAccessMode::Inherit)
-			return host->get_data<T>(mode);
-
-		return nullptr;
 	}
 
 

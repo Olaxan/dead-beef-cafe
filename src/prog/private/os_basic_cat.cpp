@@ -44,12 +44,12 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 	for (auto& path : params.paths)
 	{
 		if (path.is_relative())
-			path.prepend(proc.get_var("SHELL_PATH"));
+			path.prepend(proc.get_var("PWD"));
 
 		if (params.paths.size() > 1)
 			proc.putln("{}:", path);
 
-		if (auto [fid, ptr, err] = fs->open(path); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read); err == FileSystemError::Success)
 		{
 			proc.putln("{}", ptr->get_view());
 		}

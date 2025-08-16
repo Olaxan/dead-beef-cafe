@@ -210,7 +210,6 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 
 	std::vector<std::pair<std::string, ProcessFn>> os_progs = 
 	{
-		{"/bin/..", Programs::CmdGoUp},
 		{"/bin/proc", Programs::CmdProc},
 		{"/bin/wait", Programs::CmdWait},
 		{"/bin/shell", Programs::CmdShell},
@@ -218,7 +217,6 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/sbin/boot", Programs::CmdBoot },
 		{"/sbin/login", Programs::CmdLogin},
 		{"/bin/ls", Programs::CmdList},
-		{"/bin/cd", Programs::CmdChangeDir},
 		{"/bin/mkdir", Programs::CmdMakeDir},
 		{"/bin/touch", Programs::CmdMakeFile},
 		{"/bin/open", Programs::CmdOpenFile},

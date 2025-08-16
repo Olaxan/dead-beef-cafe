@@ -143,7 +143,8 @@ enum class FileAccessFlags : uint32_t
 	Read = 1,
 	Write = 2,
 	Execute = 4,
-	Create = 8
+	Create = 8,
+	All = Read | Write | Execute | Create
 };
 
 inline FileAccessFlags operator | (FileAccessFlags a, FileAccessFlags b)
@@ -165,6 +166,7 @@ inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
 /* --- Definitions --- */
 
 using FileOpResult = std::tuple<uint64_t, std::shared_ptr<File>, FileSystemError>;
+using FileQueryResult = std::pair<uint64_t, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 
 
@@ -264,8 +266,8 @@ public:
 	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
-	FileOpResult open(uint64_t fid);
-	FileOpResult open(const FilePath& path);
+	FileOpResult open(uint64_t fid, FileAccessFlags flags = FileAccessFlags::All);
+	FileOpResult open(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);
 
 	void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
 	void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);

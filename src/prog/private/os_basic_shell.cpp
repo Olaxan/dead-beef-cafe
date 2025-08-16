@@ -7,6 +7,8 @@
 #include "os_input.h"
 #include "os_fileio.h"
 
+#include "CLI/CLI.hpp"
+
 #include <unicode/utypes.h>
 #include <unicode/ucol.h>
 #include <unicode/usearch.h>
@@ -19,6 +21,8 @@
 #include <print>
 #include <chrono>
 #include <format>
+#include <ranges>
+#include <functional>
 
 
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
@@ -77,18 +81,59 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		return {};
 	});
 
-	Navigator nav(*fs);
-	proc.set_data(&nav);
+	/* Lambda for handling shell navigation via 'cd'. */
+	auto cd = [&proc, &fs](std::vector<std::string> args) -> int32_t
+	{
+		CLI::App app{"Change present working directory (PWD)"};
+		app.allow_windows_style_options(false);
+
+		struct CdArgs
+		{
+			bool logical_dot_dot{false};
+			bool physical_dot_dot{false};
+			std::string path{};
+		} params{};
+
+		app.add_option("path", params.path, "Directory to move to (full or relative paths)")->required();
+		app.add_flag("-L", params.logical_dot_dot, "Handle the operand dot-dot logically");
+		app.add_flag("-P", params.physical_dot_dot, "Handle the operand dot-dot physically");
+		
+		try
+		{
+			std::ranges::reverse(args);
+			args.pop_back();
+			app.parse(std::move(args));
+		}
+		catch(const CLI::ParseError& e)
+		{
+			int32_t res = app.exit(e, proc.s_out, proc.s_err);
+			return res;
+		}
+
+		/* Filepath resolution */
+		FilePath new_path = FileUtils::resolve(proc, params.path);
+		
+		if (auto [fid, err] = FileUtils::query(proc, new_path, FileAccessFlags::Execute); err == FileSystemError::Success)
+		{
+			proc.set_var("PWD", fs->get_path(fid));
+			return 0;
+		}
+		else
+		{
+			proc.warnln("cd '{}': {}", new_path, FileSystem::get_fserror_name(err));
+			return 1;
+		}
+	};
 
 	icu::UnicodeString buffer;
-
 	CmdInput::CmdReaderParams read_params;
+
+	proc.set_var("PWD", "/");
 
 	while (true)
 	{
-		FilePath path = nav.get_path();
+		FilePath path(proc.get_var("PWD"));
 
-		proc.set_var("SHELL_PATH", path.get_string());
 		proc.set_var("PATH", "/bin;/usr/bin;/sbin");
 
 		std::string usr_str = TermUtils::color(std::format("usr@{}", os.get_hostname()), TermColor::BrightMagenta);
@@ -111,7 +156,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
 
 		/* At this point we have a valid command -- attempt to execute it. */
-		int32_t ret = co_await std::invoke([&proc, &os, &fs](const std::string& cmd) -> EagerTask<int32_t>
+		int32_t ret = co_await std::invoke([&proc, &os, &fs, &cd](const std::string& cmd) -> EagerTask<int32_t>
 		{
 			std::string temp{};
 			std::vector<std::string> args{};
@@ -126,7 +171,10 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			if (args.empty())
 				co_return 1;
 
-			const std::string& name = *std::begin(args);
+			std::string_view name = *std::begin(args);
+
+			if (name == "cd")
+				co_return cd(std::move(args));
 
 			for (auto str : proc.get_var("PATH") | std::views::split(';'))
 			{

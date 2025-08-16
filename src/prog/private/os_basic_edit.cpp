@@ -86,7 +86,7 @@ EagerTask<bool> handle_save_as(EditorState& state, Proc& proc)
 	{
 		FilePath new_path(*name);
 		if (new_path.is_relative())
-			new_path.prepend(proc.get_var("SHELL_PATH"));
+			new_path.prepend(proc.get_var("PWD"));
 
 		state.set_path(new_path);
 
@@ -147,7 +147,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		FilePath path(args[1]);
 
 		if (path.is_relative())
-			path.prepend(proc.get_var("SHELL_PATH"));
+			path.prepend(proc.get_var("PWD"));
 
 		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read | FileAccessFlags::Create); err == FileSystemError::Success)
 		{

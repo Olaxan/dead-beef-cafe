@@ -125,7 +125,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 
 	auto get_passwd_data = [&proc, &fs](std::string_view user) -> std::optional<LoginPasswdData>
 	{
-		if (auto [fid, ptr, err] = fs->open("/etc/passwd"); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open("/etc/passwd", FileAccessFlags::Read); err == FileSystemError::Success)
 		{
 			std::string_view f = ptr->get_view();
 	
@@ -147,7 +147,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 
 	auto get_shadow_data = [&proc, &fs](const std::string_view user) -> std::optional<LoginShadowData>
 	{
-		if (auto [fid, ptr, err] = fs->open("/etc/shadow"); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open("/etc/shadow", FileAccessFlags::Read); err == FileSystemError::Success)
 		{
 			std::string_view f = ptr->get_view();
 	
@@ -170,7 +170,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	auto get_group_data = [&proc, &fs](const std::string_view user) -> std::unordered_set<int32_t>
 	{
 		std::unordered_set<int32_t> out{};
-		if (auto [fid, ptr, err] = fs->open("/etc/groups"); err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = fs->open("/etc/groups", FileAccessFlags::Read); err == FileSystemError::Success)
 		{
 			std::string_view f = ptr->get_view();
 	
@@ -231,6 +231,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 			proc.set_var("HOME", passwd->home_dir);
 			proc.set_var("SHELL", passwd->shell_path);
 			proc.set_var("USER", passwd->username);
+			proc.set_var("PWD", passwd->home_dir);
 
 			proc.putln("Welcome, {} ({}, {}, {}).", username, passwd->uid, passwd->gid, groups);
 			co_return 0;

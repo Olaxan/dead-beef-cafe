@@ -99,7 +99,16 @@ void FilePath::append(const FilePath& other)
 /* --- File System --- */
 
 FileSystem::FileSystem()
-{ }
+{ 
+	metadata_[get_root()] = {
+		.is_directory = true,
+		.owner_uid = 0,
+		.owner_gid = 0,
+		.perm_owner = FilePermissionTriad::All,
+		.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+		.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+	};
+}
 
 const char* FileSystem::get_fserror_name(FileSystemError code)
 {
@@ -501,9 +510,9 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
-FileOpResult FileSystem::open(uint64_t fid)
+FileOpResult FileSystem::open(uint64_t fid, FileAccessFlags flags)
 {
-	if (is_dir(fid))
+	if (is_dir(fid && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write)))
 		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
 	
 	if (auto it = files_.find(fid); it != files_.end())
@@ -512,10 +521,10 @@ FileOpResult FileSystem::open(uint64_t fid)
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
 
-FileOpResult FileSystem::open(const FilePath& path)
+FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 {
 	if (uint64_t fid = get_fid(path); is_file(fid))
-		return open(fid);
+		return open(fid, flags);
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
