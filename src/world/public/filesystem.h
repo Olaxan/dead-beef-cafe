@@ -166,7 +166,6 @@ inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
 
 using FileOpResult = std::tuple<uint64_t, std::shared_ptr<File>, FileSystemError>;
 using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
-using TimePointFile = std::chrono::time_point<std::chrono::seconds>;
 
 
 /* --- File Meta-data --- */
@@ -179,7 +178,7 @@ struct FileMeta
 	FilePermissionTriad perm_owner{7};
 	FilePermissionTriad perm_group{0};
 	FilePermissionTriad perm_users{0};
-	TimePointFile modified{};
+	int64_t modified{};
 };
 
 
@@ -224,8 +223,8 @@ public:
 	/* Returns a string representation of bits set on this file. */
 	std::string get_flags(uint64_t fid);
 
-	/* Returns a string describing the owner of this file. */
-	std::string get_owner(uint64_t fid);
+	/* Returns a pair of strings describing the owner and owning group of this file. */
+	std::pair<std::string, std::string> get_owner(uint64_t fid);
 
 	/* Returns a string describing the last-modified date of this file. */
 	std::string get_mdate(uint64_t fid);
@@ -300,6 +299,7 @@ public:
 	bool file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
 
 	bool file_set_directory_flag(uint64_t fid, bool new_is_dir);
+	bool file_set_modified_now(uint64_t fid);
 
 	bool check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode);
 
@@ -322,6 +322,8 @@ public:
 			roots_[fid] = parent_fid;
 			metadata_[fid] = meta;
 			mappings_.insert(std::make_pair(parent_fid, fid));
+
+			file_set_modified_now(fid);
 
 			return std::make_tuple(fid, it->second, FileSystemError::Success);
 		}

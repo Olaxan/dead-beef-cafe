@@ -233,14 +233,27 @@ std::string FileSystem::get_flags(uint64_t fid)
 	return out;
 }
 
-std::string FileSystem::get_owner(uint64_t fid)
+std::pair<std::string, std::string> FileSystem::get_owner(uint64_t fid)
 {
-	return "system"; //not implemented
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		return std::make_pair(
+			std::format("{}", it->second.owner_uid), 
+			std::format("{}", it->second.owner_gid));
+	}
+	return std::make_pair("-", "-");
 }
 
 std::string FileSystem::get_mdate(uint64_t fid)
 {
-	return "2025-08-23 16:32"; //not implemented
+	
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		std::chrono::system_clock::time_point tp{std::chrono::seconds{it->second.modified}};
+		return std::format("{:%Y-%m-%d %X}", tp);
+	}
+
+	return "-";
 }
 
 std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
@@ -588,6 +601,17 @@ bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
 		it->second.is_directory = new_is_dir;
+		return true;
+	}
+	return false;
+}
+
+bool FileSystem::file_set_modified_now(uint64_t fid)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		auto now = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+		it->second.modified = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
 		return true;
 	}
 	return false;

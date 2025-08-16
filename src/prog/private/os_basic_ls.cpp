@@ -66,6 +66,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		uint64_t bytes{0};
 		std::string flags{};
 		std::string owner{};
+		std::string group{};
 		std::string mdate{};
 		std::string name{};
 		bool is_dir{false};
@@ -78,6 +79,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		std::size_t w_bytes = 1;
 		std::size_t w_flags = 1;
 		std::size_t w_owner = 1;
+		std::size_t w_group = 1;
 		std::size_t w_mdate = 1;
 	};
 
@@ -88,6 +90,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		format.w_bytes = std::max(format.w_bytes, data.bytes != 0 ? static_cast<std::size_t>(std::log10(data.bytes)) + 1 : 0);
 		format.w_flags = std::max(format.w_flags, data.flags.size());
 		format.w_owner = std::max(format.w_owner, data.owner.size());
+		format.w_group = std::max(format.w_group, data.group.size());
 		format.w_mdate = std::max(format.w_mdate, data.mdate.size());
 	};
 
@@ -100,7 +103,9 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 			data.links = fs->get_links(fid);
 			data.bytes = fs->get_bytes(fid);
 			data.flags = fs->get_flags(fid);
-			data.owner = fs->get_owner(fid);
+			auto owner = fs->get_owner(fid);
+			data.owner = owner.first;
+			data.group = owner.second;
 			data.mdate = fs->get_mdate(fid);
 			data.is_dir = fs->is_dir(fid);
 			data.name = path.get_name();
@@ -118,6 +123,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 			ss << std::setw(f.w_flags) << item.flags << " ";
 			ss << std::setw(f.w_links) << item.links << " ";
 			ss << std::setw(f.w_owner) << item.owner << " ";
+			ss << std::setw(f.w_group) << item.group << " ";
 			ss << std::setw(f.w_mdate) << item.mdate << " ";
 			ss << (item.is_dir ? CSI_CODE(1) CSI_CODE(34) : CSI_RESET);
 			ss << item.name << "\n";
