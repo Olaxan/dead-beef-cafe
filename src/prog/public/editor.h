@@ -83,7 +83,7 @@ public:
 	void set_path(FilePath new_path) { path_ = std::move(new_path); }
 
 	/* Open a file and load some text from it. */
-	bool set_file(FilePath path, File* f);
+	bool set_file(FilePath path, std::string_view str);
 
 	/* Initialise the state of the editor after it has been constructed,
 	or a new file has been loaded. Ensures the editor is in a valid state,

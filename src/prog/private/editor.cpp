@@ -1,12 +1,8 @@
 #include "editor.h"
 
 
-bool EditorState::set_file(FilePath path, File* f)
+bool EditorState::set_file(FilePath path, std::string_view view)
 {
-	if (f == nullptr)
-		return false;
-
-	std::string_view view = f->get_view();
 	rows_.clear();
 	std::ranges::transform(std::views::split(view, '\n'), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
 	std::println("Loaded {} row(s).", rows_.size());

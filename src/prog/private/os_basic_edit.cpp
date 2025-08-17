@@ -111,7 +111,7 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 		}
 		else
 		{
-			state.set_status(std::format("Save failed: {}", FileSystem::get_fserror_name(err)));
+			state.set_status(std::format("Save failed: {}.", FileSystem::get_fserror_name(err)));
 			co_return false;
 		}
 	}
@@ -151,8 +151,11 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read | FileAccessFlags::Create); err == FileSystemError::Success)
 		{
-			//state.set_file(path, ptr);
-			co_return true;
+			state.set_file(path, ptr->get_view());
+		}
+		else
+		{
+			state.set_status(std::format("Failed to open '{}': {}.", path, FileSystem::get_fserror_name(err)));
 		}
 	}
 
