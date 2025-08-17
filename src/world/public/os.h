@@ -9,6 +9,8 @@
 #include "device.h"
 #include "device_state.h"
 #include "session.h"
+#include "session_mgr.h"
+#include "users_mgr.h"
 
 #include <memory>
 #include <vector>
@@ -33,7 +35,7 @@ public:
 		register_devices(); 
 	}
 
-	virtual ~OS() { }
+	virtual ~OS() = default;
 
 	virtual std::size_t register_devices();
 
@@ -53,7 +55,18 @@ public:
 	/* Gets the world from the owning Host. */
 	[[nodiscard]] World& get_world();
 
+	/* Gets the filesystem, if one exists (otherwise nullptr). */
+	[[nodiscard]] FileSystem* get_filesystem() const;
+
+	/* Gets the users/auth manager. */
+	[[nodiscard]] UsersManager* get_users_manager();
+
+	/* Gets the session manager. */
+	[[nodiscard]] SessionManager* get_session_manager();
+
+	/* Starts a shell session. */
 	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
+
 	Proc* create_process(std::ostream& os = std::cout);
 	Proc* create_process(Proc* host);
 	EagerTask<int32_t> create_process(ProcessFn program, std::vector<std::string> args, std::ostream& os = std::cout);
@@ -89,8 +102,6 @@ public:
 
 		return out;
 	}
-
-	FileSystem* get_filesystem() const;
 
 	/* Sockets */
 	template<std::derived_from<ISocket> T>
@@ -180,6 +191,9 @@ protected:
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
 	std::unordered_map<int32_t, SessionData> sessions_{};
+
+	UsersManager users_{this};
+	SessionManager sess_{this};
 
 	friend Proc;
 };

@@ -122,6 +122,16 @@ FileSystem* OS::get_filesystem() const
     return nullptr;
 }
 
+UsersManager* OS::get_users_manager()
+{
+	return &users_;
+}
+
+SessionManager* OS::get_session_manager()
+{
+	return &sess_;
+}
+
 Address6 OS::get_global_ip()
 {
 	if (NIC* nic = get_device<NIC>())

@@ -292,6 +292,14 @@ std::string FileSystem::get_mdate(uint64_t fid)
 	return "-";
 }
 
+uint64_t FileSystem::get_last_modified(uint64_t fid)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+		return it->second.modified;
+		
+	return 0;
+}
+
 std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
 {
 	if (!is_dir(dir))

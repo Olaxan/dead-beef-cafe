@@ -184,7 +184,7 @@ struct FileMeta
 	FilePermissionTriad perm_owner{7};
 	FilePermissionTriad perm_group{0};
 	FilePermissionTriad perm_users{0};
-	int64_t modified{};
+	uint64_t modified{0};
 };
 
 
@@ -234,6 +234,9 @@ public:
 
 	/* Returns a string describing the last-modified date of this file. */
 	std::string get_mdate(uint64_t fid);
+
+	/* Returns the last-modified date (seconds since epoch). */
+	uint64_t get_last_modified(uint64_t fid);
 
 	std::vector<uint64_t> get_files(uint64_t fid, bool recurse = false) const;
 	std::vector<uint64_t> get_files(const FilePath& path, bool recurse = false) const;
