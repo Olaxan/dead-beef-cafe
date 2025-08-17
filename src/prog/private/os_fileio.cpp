@@ -8,16 +8,44 @@ std::string replace(std::string_view input, std::string_view from, std::string_v
 	return input | std::views::split(from) | std::views::join_with(to) | std::ranges::to<std::string>();
 }
 
-FilePath FileUtils::resolve(const Proc& proc, const FilePath& path)
+FilePath FileUtils::resolve(const Proc& proc, FilePath path)
 {
 	FilePath pwd(proc.get_var("PWD"));
-	std::string_view home = proc.get_var("HOME");
+	std::string_view home = proc.get_var_or("HOME", "/");
+
+	/* cd ~/../hello */
+	path.substitute("~", home);
+	/* cd /usr/home/fredr/../hello */
 	
-	std::string a = replace(path.get_string(), "..", pwd.get_parent_view()); // Not great but for now...
-	std::string b = replace(a, ".", pwd.get_view());
-	std::string c = replace(b, "~", home);
-	FilePath out{c};
-	if (out.is_relative()) { out.prepend(pwd); }
+	/* cd ../../hello */
+	if (path.is_relative())
+		path.make_absolute(pwd);
+	/* cd /usr/home/fredr/../../hello */
+
+	/* Split the path into segments, removing delimitors, filtering out empty segments. */
+	auto&& split_range = path.get_view() | std::views::split('/') | std::views::filter([](const auto& f){ return !std::string_view(f).empty(); });
+	/* usr, home, fredr, .., .., hello */
+
+	std::deque<std::string_view> path_stack{};
+
+	for (auto&& part : split_range)
+	{
+		std::string_view dir(part);
+
+		if (dir == "..")
+		{
+			path_stack.pop_back();
+			continue;
+		}
+		
+		if (dir == ".")
+			continue;
+
+		path_stack.push_back(dir);
+	}
+	
+	FilePath out{ path_stack | std::views::join_with('/') | std::ranges::to<std::string>() };
+	out.make_absolute();
 	return out;
 }
 

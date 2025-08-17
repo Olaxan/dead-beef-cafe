@@ -33,6 +33,7 @@ public:
     }
 
 	bool is_relative() const { return relative_; }
+	bool is_absolute() const { return !relative_; }
 	bool is_valid_path() const { return valid_; }
 	bool is_root_or_empty() const { return path_.empty() || path_ == "/"; }
 	bool is_backup() const;
@@ -41,11 +42,14 @@ public:
 	std::string_view get_parent_view() const;
 	FilePath get_parent_path() const;
 	std::string_view get_name() const;
-	std::string_view get_view() const { return path_.empty() ? "/" : path_; }
+	std::string_view get_view() const { return path_.empty() ? "/" : std::string_view(path_); }
 	std::string get_string() const { return path_.empty() ? "/" : path_; }
 
 	void prepend(const FilePath& path);
 	void append(const FilePath& path);
+	void substitute(std::string_view from, std::string_view to);
+	void make_absolute(std::string_view from_dir = {});
+	void make_absolute(const FilePath& from_dir);
 
 private:
 

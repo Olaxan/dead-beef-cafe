@@ -89,9 +89,12 @@ public:
 
 	/* Sets an environment variable in the process. */
 	template<typename T>
-	void set_var(std::string key, T val)
+	void set_var(std::string key, T val, EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
 	{
 		envvars_[key] = std::format("{}", val);
+		
+		if (host && mode == EnvVarAccessMode::Inherit)
+			host->set_var(key, val, mode);
 	}
 
 	/* Reads the value of an environment variable in the process, or empty if not found. */
@@ -123,6 +126,12 @@ public:
 			return host->get_var(key, mode);
 		
 		return {};
+	}
+
+	std::string_view get_var_or(std::string key, std::string_view or_value, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
+	{
+		std::string_view get = get_var(key, mode);
+		return !get.empty() ? get : or_value;
 	}
 
 

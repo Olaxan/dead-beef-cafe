@@ -95,6 +95,30 @@ void FilePath::append(const FilePath& other)
 	make();
 }
 
+void FilePath::substitute(std::string_view from, std::string_view to)
+{
+	path_ = (path_ | std::views::split(from) | std::views::join_with(to) | std::ranges::to<std::string>());
+	make();
+}
+
+void FilePath::make_absolute(std::string_view from_dir)
+{
+	if (from_dir.length() > 0)
+	{
+		path_ = std::format("{}/{}", from_dir, path_);
+	}
+
+	if (is_relative())
+		path_.insert(0, "/");
+
+	make();
+}
+
+void FilePath::make_absolute(const FilePath& from_dir)
+{
+	make_absolute(from_dir.get_view());
+}
+
 
 /* --- File System --- */
 
