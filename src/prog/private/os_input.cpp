@@ -45,6 +45,15 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 		if (str_in[0] == '\x1b')
 			continue;
 
+		if (str_in[0] == '\t')
+			continue;
+
+		if (str_in[0] == '\r' || str_in[0] == '\n')
+		{
+			proc.put("\r\n");
+			break;
+		}
+
 		if (str_in[0] == '\x08' || str_in[0] == '\x7f')
 		{
 			UErrorCode status = U_ZERO_ERROR;
@@ -66,12 +75,6 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 			}
 
 			continue;
-		}
-
-		if (str_in[0] == '\r')
-		{
-			proc.put("\r\n");
-			break;
 		}
 
 		if (str_in.back() == '\0')

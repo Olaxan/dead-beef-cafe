@@ -111,7 +111,7 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 		}
 		else
 		{
-			state.set_status(std::format("Save failed: {}.", FileSystem::get_fserror_name(err)));
+			state.set_status(std::format("Save failed ({}): {}.", *opt_path, FileSystem::get_fserror_name(err)));
 			co_return false;
 		}
 	}

@@ -95,7 +95,6 @@ void UsersManager::prepare()
 		{
 			get_passwd_data();
 			passwd_mod_ = mod;
-			std::println("Refreshed password database.");
 		}
 	}
 
@@ -106,7 +105,6 @@ void UsersManager::prepare()
 		{
 			get_shadow_data();
 			shadow_mod_ = mod;
-			std::println("Refreshed shadow database.");
 		}
 	}
 
@@ -117,7 +115,6 @@ void UsersManager::prepare()
 		{
 			get_group_data();
 			groups_mod_ = mod;
-			std::println("Refreshed groups database.");
 		}
 	}
 }
@@ -132,8 +129,6 @@ std::optional<std::string_view> UsersManager::get_password_hash(std::string user
 		if (auto&& s = shadow_.find(user); s != shadow_.end())
 			return std::string_view(s->second.password);
 	}
-
-	std::println("Failed to lookup password hash.");
 
 	return std::nullopt;
 }
@@ -150,8 +145,6 @@ std::optional<LoginPasswdData> UsersManager::authenticate(std::string user, std:
 		 if (opt_hash->compare(digest_str) == 0)
 		 	return passwd_.at(user);
 	}
-
-	std::println("Failed to authenticate.");
 
 	return std::nullopt;
 }

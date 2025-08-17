@@ -547,7 +547,7 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 
 FileOpResult FileSystem::open(uint64_t fid, FileAccessFlags flags)
 {
-	if (is_dir(fid && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write)))
+	if (is_dir(fid) && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write))
 		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
 	
 	if (auto it = files_.find(fid); it != files_.end())
