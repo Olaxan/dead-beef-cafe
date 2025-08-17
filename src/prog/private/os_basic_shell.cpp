@@ -120,7 +120,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.warnln("cd '{}': {}", new_path, FileSystem::get_fserror_name(err));
+			proc.warnln("cd '{}': {}.", new_path, FileSystem::get_fserror_name(err));
 			return 1;
 		}
 	};
@@ -134,12 +134,17 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	while (true)
 	{
 		FilePath path(proc.get_var("PWD"));
+		std::string_view home_dir = proc.get_var("HOME");
 
 		if (auto [fid, err] = FileUtils::query(proc, path, FileAccessFlags::Read | FileAccessFlags::Execute); err != FileSystemError::Success)
 		{
 			path = "/";
 			proc.set_var("PWD", "/");
 		}
+
+		/* A little dirty but the path variable is only used to print the command line,
+		so just modify it directly. */
+		path.substitute(home_dir, "~");
 
 		std::string usr_str = TermUtils::color(std::format("usr@{}", os.get_hostname()), TermColor::BrightMagenta);
 		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);

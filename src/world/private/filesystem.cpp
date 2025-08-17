@@ -97,6 +97,9 @@ void FilePath::append(const FilePath& other)
 
 void FilePath::substitute(std::string_view from, std::string_view to)
 {
+	if (from.empty())
+		return;
+
 	path_ = (path_ | std::views::split(from) | std::views::join_with(to) | std::ranges::to<std::string>());
 	make();
 }
@@ -648,6 +651,26 @@ bool FileSystem::file_set_modified_now(uint64_t fid)
 		return true;
 	}
 	return false;
+}
+
+bool FileSystem::file_set_permissions(uint64_t fid, FilePermissionTriad owner, FilePermissionTriad group, FilePermissionTriad users)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+	{
+		it->second.perm_owner = owner;
+		it->second.perm_group = group;
+		it->second.perm_users = users;
+		return true;
+	}
+	return false;
+}
+
+bool FileSystem::file_set_permissions(uint64_t fid, int32_t owner, int32_t group, int32_t users)
+{
+	return file_set_permissions(fid, 
+		static_cast<FilePermissionTriad>(owner),
+		static_cast<FilePermissionTriad>(group),
+		static_cast<FilePermissionTriad>(users));
 }
 
 bool FileSystem::check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode)

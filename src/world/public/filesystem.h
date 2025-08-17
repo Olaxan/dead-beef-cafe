@@ -306,6 +306,8 @@ public:
 
 	bool file_set_directory_flag(uint64_t fid, bool new_is_dir);
 	bool file_set_modified_now(uint64_t fid);
+	bool file_set_permissions(uint64_t fid, FilePermissionTriad owner, FilePermissionTriad group, FilePermissionTriad users);
+	bool file_set_permissions(uint64_t fid, int32_t owner, int32_t group, int32_t users);
 
 	bool check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode);
 

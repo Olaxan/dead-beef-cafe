@@ -60,6 +60,7 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 		if (auto [fid, ptr, err] = FileUtils::open(proc, path, flags); err == FileSystemError::Success)
 		{
 			fs->file_set_directory_flag(fid, true);
+			fs->file_set_permissions(fid, 7, 7, 7);
 			++num_updated;
 		}
 	}

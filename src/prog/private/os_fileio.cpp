@@ -95,9 +95,9 @@ FileOpResult FileUtils::open(const Proc& proc, const FilePath& path, FileAccessF
 			.meta = {
 				.owner_uid = session.uid,
 				.owner_gid = session.gid,
-				.perm_owner = FilePermissionTriad::All,
-				.perm_group = FilePermissionTriad::Read,
-				.perm_users = FilePermissionTriad::None
+				.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
+				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Write,
+				.perm_users = FilePermissionTriad::Read
 			}
 		};
 
