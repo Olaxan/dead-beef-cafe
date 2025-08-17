@@ -129,12 +129,17 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	CmdInput::CmdReaderParams read_params;
 
 	proc.set_var("PWD", "/");
+	proc.set_var("PATH", "/bin;/usr/bin;/sbin");
 
 	while (true)
 	{
 		FilePath path(proc.get_var("PWD"));
 
-		proc.set_var("PATH", "/bin;/usr/bin;/sbin");
+		if (auto [fid, err] = FileUtils::query(proc, path, FileAccessFlags::Read | FileAccessFlags::Execute); err != FileSystemError::Success)
+		{
+			path = "/";
+			proc.set_var("PWD", "/");
+		}
 
 		std::string usr_str = TermUtils::color(std::format("usr@{}", os.get_hostname()), TermColor::BrightMagenta);
 		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);
