@@ -175,15 +175,35 @@ void UsersManager::commit()
 	write_group_data();
 }
 
-std::optional<std::string_view> UsersManager::get_password_hash(std::string user) const
+std::optional<std::string_view> UsersManager::get_password_hash(int32_t uid) const
 {
-	if (auto&& p = passwd_.find(user); p != passwd_.end())
+	if (auto&& p = passwd_.find(uid); p != passwd_.end())
 	{
 		if (p->second.password != "x")
 			return std::string_view(p->second.password);
 
-		if (auto&& s = shadow_.find(user); s != shadow_.end())
+		if (auto&& s = shadow_.find(uid); s != shadow_.end())
 			return std::string_view(s->second.password);
+	}
+
+	return std::nullopt;
+}
+
+std::optional<std::string_view> UsersManager::get_username(int32_t uid) const
+{
+	if (auto&& it = passwd_.find(uid); it != passwd_.end())
+	{
+		return std::string_view(it->second.username);
+	}
+
+	return std::nullopt;
+}
+
+std::optional<std::string_view> UsersManager::get_group_name(int32_t gid) const
+{
+	if (auto&& it = groups_.find(gid); it != groups_.end())
+	{
+		return std::string_view(it->second.group_name);
 	}
 
 	return std::nullopt;
@@ -191,16 +211,20 @@ std::optional<std::string_view> UsersManager::get_password_hash(std::string user
 
 std::optional<LoginPasswdData> UsersManager::authenticate(std::string user, std::string password) const
 {
-	if (std::optional<std::string_view> opt_hash = get_password_hash(user); opt_hash.has_value())
+	if (auto it = name_to_uid_.find(std::move(user)); it != name_to_uid_.end())
 	{
-		SHA256 sha{};
-		sha.update(std::move(password));
-		std::array<uint8_t, 32> digest = sha.digest();
-		std::string digest_str = SHA256::to_string(digest);
-	
-		 if (opt_hash->compare(digest_str) == 0)
-		 	return passwd_.at(user);
-	}
+		int32_t uid = it->second;
+		if (std::optional<std::string_view> opt_hash = get_password_hash(uid); opt_hash.has_value())
+		{
+			SHA256 sha{};
+			sha.update(std::move(password));
+			std::array<uint8_t, 32> digest = sha.digest();
+			std::string digest_str = SHA256::to_string(digest);
+		
+			if (opt_hash->compare(digest_str) == 0)
+				return passwd_.at(uid);
+		}
+	}	
 
 	return std::nullopt;
 }
@@ -210,18 +234,17 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (passwd_.contains(username))
+	if (name_to_uid_.contains(username))
 		return false;
 
-	if (params.uid == -1)
-		params.uid = ++uid_counter_;
+	int32_t new_uid = (params.uid == -1) ? ++uid_counter_ : params.uid;
+	int32_t new_gid = (params.gid == -1) ? ++gid_counter_ : params.gid;
 
-	if (params.gid == -1)
-		params.gid = ++gid_counter_;
+	name_to_uid_[username] = new_uid;
 
-	passwd_[username] = LoginPasswdData{
-		.uid = params.uid,
-		.gid = params.gid,
+	passwd_[new_uid] = LoginPasswdData{
+		.uid = new_uid,
+		.gid = new_gid,
 		.username = username,
 		.password = "x",
 		.home_path = std::move(params.home_path),
@@ -238,7 +261,7 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 		return digest_str;
 	}, std::move(password)); // Password invalid state after this.
 
-	shadow_[username] = LoginShadowData{
+	shadow_[new_uid] = LoginShadowData{
 		.username = username,
 		.password = std::move(crypt),
 		.last_pass_change = 0,
@@ -251,10 +274,7 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 
 	for (auto&& group : params.groups)
 	{
-		if (auto it = groups_.find(group); it != groups_.end())
-		{
-			it->second.members.push_back(username);
-		}
+		add_user_to_group(username, group);
 	}
 
 	if (params.create_home)
@@ -270,12 +290,12 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 		fs->create_directory(home, {
 			.recurse = true,
 			.meta = {
-				.is_directory = true,
-				.owner_uid = params.uid,
-				.owner_gid = params.gid,
+				.owner_uid = new_uid,
+				.owner_gid = new_gid,
 				.perm_owner = FilePermissionTriad::All,
 				.perm_group = FilePermissionTriad::None,
-				.perm_users = FilePermissionTriad::None
+				.perm_users = FilePermissionTriad::None,
+				.extra = ExtraFileFlags::Directory
 			}
 		});
 	}
@@ -295,10 +315,14 @@ bool UsersManager::add_group(std::string group_name, CreateGroupParams&& params,
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (groups_.contains(group_name))
+	if (name_to_gid_.contains(group_name))
 		return false;
 
-	groups_[group_name] = LoginGroupData{
+	int32_t new_gid = (params.gid == -1) ? ++gid_counter_ : params.gid;
+	
+	name_to_gid_[group_name] = new_gid;
+
+	groups_[new_gid] = LoginGroupData{
 		.gid = params.gid,
 		.group_name = group_name,
 		.password = "x",
@@ -311,6 +335,38 @@ bool UsersManager::add_group(std::string group_name, CreateGroupParams&& params,
 	}
 
 	return true;
+}
+
+bool UsersManager::add_user_to_group(std::string user, std::string group)
+{
+	if (auto it_gid = name_to_gid_.find(std::move(group)); it_gid != name_to_gid_.end())
+	{
+		if (auto it_grp = groups_.find(it_gid->second); it_grp != groups_.end())
+		{
+			it_grp->second.members.push_back(std::move(user));
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UsersManager::check_belongs(int32_t uid, int32_t gid)
+{
+	if (auto group_it = groups_.find(gid); group_it != groups_.end())
+	{
+		/* Not ideal, we have to loop through and do a bunch of hash lookups, 
+		but will have to suffice until we can cache this stuff somewhere. */
+		for (auto&& member : group_it->second.members)
+		{
+			if (auto uid_it = name_to_uid_.find(member); uid_it != name_to_uid_.end() && uid_it->second == uid)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 void UsersManager::get_passwd_data()
@@ -329,7 +385,7 @@ void UsersManager::get_passwd_data()
 			std::string_view line(rline);
 			if (std::optional<LoginPasswdData> opt_data = parse_passwd_row(line); opt_data.has_value())
 			{
-				passwd_[opt_data->username] = std::move(*opt_data);
+				passwd_[opt_data->uid] = std::move(*opt_data);
 			}
 		}
 	}
@@ -351,7 +407,10 @@ void UsersManager::get_shadow_data()
 			std::string_view line(rline);
 			if (std::optional<LoginShadowData> opt_data = parse_shadow_row(line); opt_data.has_value())
 			{
-				shadow_[opt_data->username] = std::move(*opt_data);
+				if (auto it = name_to_uid_.find(opt_data->username); it != name_to_uid_.end())
+				{
+					shadow_[it->second] = std::move(*opt_data);
+				}
 			}
 		}
 	}
@@ -373,7 +432,7 @@ void UsersManager::get_group_data()
 			std::string_view line(rline);
 			if (std::optional<LoginGroupData> opt_data = parse_group_row(line); opt_data.has_value())
 			{
-				groups_[opt_data->group_name] = std::move(*opt_data);
+				groups_[opt_data->gid] = std::move(*opt_data);
 			}
 		}
 	}
@@ -399,7 +458,7 @@ void UsersManager::write_passwd_data()
 			in_gecos.other);
 
 			std::string passwd = std::format("{}:{}:{}:{}:{}:{}:{}\n",
-			username,
+			entry.username,
 			"x",
 			entry.uid,
 			entry.gid,
@@ -424,7 +483,7 @@ void UsersManager::write_shadow_data()
 		for (auto&& [username, entry] : shadow_)
 		{
 			std::string shadow = std::format("{}:{}:{}:{}:{}:{}:{}:{}:\n",
-			username,
+			entry.username,
 			entry.password,
 			entry.last_pass_change,
 			entry.min_pass_age,

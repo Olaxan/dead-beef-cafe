@@ -26,35 +26,33 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 
 int32_t Proc::set_sid()
 {
-	sid = (host) ? host->set_sid() : owning_os->create_session();
-	std::println("Process {} sid = {}.", pid, sid);
+	if (host)
+	{
+		sid = host->set_sid();	
+	}
+	else
+	{
+		SessionManager* sess = owning_os->get_session_manager();
+		sid = sess->create_session();
+	}
+	
 	return sid;
 }
 
-bool Proc::set_uid(int32_t new_uid)
+int32_t Proc::get_uid() const
 {
-	return owning_os->set_session_uid(sid, new_uid);
+	if (host) { return host->get_uid(); }
+
+	SessionManager* sess = owning_os->get_session_manager();
+	return sess->get_session_uid(sid);
 }
 
-bool Proc::set_gid(int32_t new_gid)
+int32_t Proc::get_gid() const
 {
-	return owning_os->set_session_gid(sid, new_gid);
-}
+	if (host) { return host->get_gid(); }
 
-bool Proc::add_groups(std::unordered_set<int32_t>& groups)
-{
-	return owning_os->add_session_groups(sid, groups);
-}
-
-SessionData Proc::get_session() const
-{
-	if (host)
-		return host->get_session();
-
-	if (std::optional<SessionData> sess = owning_os->get_session(sid); sess.has_value())
-		return *sess;
-	
-	return SessionData();
+	SessionManager* sess = owning_os->get_session_manager();
+	return sess->get_session_gid(sid);
 }
 
 int ProcCoutBuf::sync()

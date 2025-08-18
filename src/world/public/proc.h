@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.h"
-#include "msg_queue.h"
+//#include "msg_queue.h"
 #include "term_utils.h"
 #include "session.h"
 
@@ -81,7 +81,7 @@ public:
 		s_out << std::flush;
 	}
 
-	std::string get_name() const { return args.empty() ?  "?" : args[0]; }
+	std::string_view get_name() const { return args.empty() ?  "?" : std::string_view(args[0]); }
 	int32_t get_pid() const { return pid; }
 
 
@@ -269,10 +269,8 @@ public:
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
 
 	int32_t set_sid();
-	bool set_uid(int32_t new_uid);
-	bool set_gid(int32_t new_gid);
-	bool add_groups(std::unordered_set<int32_t>& groups);
-	SessionData get_session() const;
+	int32_t get_uid() const;
+	int32_t get_gid() const;
 
 public:
 

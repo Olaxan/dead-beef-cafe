@@ -53,12 +53,11 @@ FileQueryResult FileUtils::query(const Proc& proc, const FilePath& path, FileAcc
 {
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
-	const SessionData& session = proc.get_session();
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
 		/* The file exists -- check if we can read it. */
-		if (!fs.check_permission(session, fid, flags))
+		if (!FileUtils::check_permission(proc, fid, flags))
 			return std::make_pair(0, FileSystemError::InsufficientPermissions);
 
 		return std::make_pair(fid, FileSystemError::Success);
@@ -77,12 +76,11 @@ FileOpResult FileUtils::open(const Proc& proc, const FilePath& path, FileAccessF
 
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
-	const SessionData& session = proc.get_session();
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
 		/* The file exists -- check if we can read it. */
-		if (!fs.check_permission(session, fid, flags))
+		if (!FileUtils::check_permission(proc, fid, flags))
 			return std::make_tuple(0, nullptr, FileSystemError::InsufficientPermissions);
 
 		return fs.open(fid, flags);
@@ -93,8 +91,8 @@ FileOpResult FileUtils::open(const Proc& proc, const FilePath& path, FileAccessF
 		FileSystem::CreateFileParams params = {
 			.recurse = false,
 			.meta = {
-				.owner_uid = session.uid,
-				.owner_gid = session.gid,
+				.owner_uid = proc.get_uid(),
+				.owner_gid = proc.get_gid(),
 				.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
 				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Write,
 				.perm_users = FilePermissionTriad::Read
@@ -112,11 +110,10 @@ FileSystemError FileUtils::remove(const Proc& proc, const FilePath& path, bool r
 {
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
-	const SessionData& session = proc.get_session();
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
-		if (!fs.check_permission(session, fid, FileAccessFlags::Read | FileAccessFlags::Execute))
+		if (!FileUtils::check_permission(proc, fid, FileAccessFlags::Read | FileAccessFlags::Execute))
 			return FileSystemError::InsufficientPermissions;
 
 		return fs.remove_file(path, recurse);
@@ -129,11 +126,10 @@ bool FileUtils::remove(const Proc& proc, const FilePath& path, FileRemoverFn&& f
 {
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
-	const SessionData& session = proc.get_session();
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
-		if (!fs.check_permission(session, fid, FileAccessFlags::Write | FileAccessFlags::Execute))
+		if (!FileUtils::check_permission(proc, fid, FileAccessFlags::Write | FileAccessFlags::Execute))
 		{
 			func(fs, path, FileSystemError::InsufficientPermissions);
 			return false;
@@ -145,3 +141,64 @@ bool FileUtils::remove(const Proc& proc, const FilePath& path, FileRemoverFn&& f
 	func(fs, path, FileSystemError::FileNotFound);
 	return false;
 }
+
+bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags mode)
+{
+	OS& os = *proc.owning_os;
+	FileSystem& fs = *os.get_filesystem();
+	SessionManager& sess = *os.get_session_manager();
+	UsersManager& users = *os.get_users_manager();
+
+	int32_t uid = proc.get_uid();
+	int32_t gid = proc.get_gid();
+
+	if (FileMeta* meta_ptr = fs.get_metadata(fid))
+	{
+		FileMeta& meta = *meta_ptr;
+
+		bool group_match = (gid == meta.owner_gid || users.check_belongs(uid, gid));
+		bool owner_match = (uid == meta.owner_uid);
+		bool users_match = true;
+
+		bool read_valid = std::invoke([&]() -> bool
+		{
+			if (!FileSystem::has_flag<FileAccessFlags>(mode, FileAccessFlags::Read))
+				return true;
+
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Read)) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Read) && owner_match) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Read) && group_match) return true;
+
+			return false;
+		});
+
+		bool write_valid = std::invoke([&]() -> bool
+		{
+			if (!FileSystem::has_flag<FileAccessFlags>(mode, FileAccessFlags::Write))
+				return true;
+
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Write)) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Write) && owner_match) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Write) && group_match) return true;
+
+			return false;
+		});
+
+		bool exec_valid = std::invoke([&]() -> bool
+		{
+			if (!FileSystem::has_flag<FileAccessFlags>(mode, FileAccessFlags::Execute))
+				return true;
+
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Users, FilePermissionTriad::Execute)) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Owner, FilePermissionTriad::Execute) && owner_match) return true;
+			if (FileSystem::file_has_flag(meta, FilePermissionCategory::Group, FilePermissionTriad::Execute) && group_match) return true;
+
+			return false;
+		});
+
+		return read_valid && write_valid && exec_valid;
+	}
+	
+	return false;
+}
+

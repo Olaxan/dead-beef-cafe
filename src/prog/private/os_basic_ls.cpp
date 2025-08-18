@@ -1,6 +1,7 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
+#include "users_mgr.h"
 
 #include "CLI/CLI.hpp"
 
@@ -12,7 +13,9 @@
 ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 {
 
-	FileSystem* fs = proc.owning_os->get_filesystem();
+	OS& os = *proc.owning_os;
+	FileSystem* fs = os.get_filesystem();
+	UsersManager* users = os.get_users_manager();
 
 	if (fs == nullptr)
 	{
@@ -94,7 +97,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		format.w_mdate = std::max(format.w_mdate, data.mdate.size());
 	};
 
-	auto get_list_data = [&fs](uint64_t fid, const FilePath& path) -> LsListData
+	auto get_list_data = [&fs, &users](uint64_t fid, const FilePath& path) -> LsListData
 	{
 		LsListData data{};
 		if (fid != 0)
@@ -103,9 +106,11 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 			data.links = fs->get_links(fid);
 			data.bytes = fs->get_bytes(fid);
 			data.flags = fs->get_flags(fid);
-			auto owner = fs->get_owner(fid);
-			data.owner = owner.first;
-			data.group = owner.second;
+
+			auto [uid, gid] = fs->get_owner(fid);
+			data.owner = users->get_username(uid).value_or("-");
+			data.group = users->get_group_name(gid).value_or("-");
+
 			data.mdate = fs->get_mdate(fid);
 			data.is_dir = fs->is_dir(fid);
 			data.name = path.get_name();
@@ -124,6 +129,7 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 			ss << std::setw(f.w_links) << item.links << " ";
 			ss << std::setw(f.w_owner) << item.owner << " ";
 			ss << std::setw(f.w_group) << item.group << " ";
+			ss << std::setw(f.w_bytes) << item.bytes << " ";
 			ss << std::setw(f.w_mdate) << item.mdate << " ";
 			ss << (item.is_dir ? CSI_CODE(1) CSI_CODE(34) : CSI_RESET);
 			ss << item.name << "\n";

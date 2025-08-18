@@ -11,4 +11,5 @@ namespace FileUtils
 	FileOpResult open(const Proc& proc, const FilePath& path, FileAccessFlags flags);
 	FileSystemError remove(const Proc& proc, const FilePath& path, bool recurse = false);
 	bool remove(const Proc& proc, const FilePath& path, FileRemoverFn&& func);
+	bool check_permission(const Proc& proc, uint64_t fid, FileAccessFlags mode);
 };

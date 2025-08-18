@@ -118,6 +118,15 @@ enum class FilePermissionTriad : uint8_t
 	All 		= Read | Write | Execute
 };
 
+enum class ExtraFileFlags : uint8_t
+{
+	None 		= 0,
+	Directory 	= 1 << 0,
+	SetSid 		= 1 << 0,
+	SetUid 		= 1 << 1,
+	Sticky 		= 1 << 2,
+};
+
 inline FilePermissionTriad operator | (FilePermissionTriad a, FilePermissionTriad b)
 {
     return static_cast<FilePermissionTriad>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
@@ -178,13 +187,13 @@ using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, Fil
 
 struct FileMeta
 {
-	bool is_directory{false};
+	uint64_t modified{0};
 	int32_t owner_uid{0};
 	int32_t owner_gid{0};
 	FilePermissionTriad perm_owner{7};
 	FilePermissionTriad perm_group{0};
 	FilePermissionTriad perm_users{0};
-	uint64_t modified{0};
+	ExtraFileFlags extra{};
 };
 
 
@@ -229,14 +238,17 @@ public:
 	/* Returns a string representation of bits set on this file. */
 	std::string get_flags(uint64_t fid);
 
-	/* Returns a pair of strings describing the owner and owning group of this file. */
-	std::pair<std::string, std::string> get_owner(uint64_t fid);
+	/* Returns a pair containing the owning UID and GID of this file. */
+	std::pair<int32_t, int32_t> get_owner(uint64_t fid);
 
 	/* Returns a string describing the last-modified date of this file. */
 	std::string get_mdate(uint64_t fid);
 
 	/* Returns the last-modified date (seconds since epoch). */
 	uint64_t get_last_modified(uint64_t fid);
+
+	/* Returns metadata for a file id, or nullptr if the file does not exist. */
+	FileMeta* get_metadata(uint64_t fid);
 
 	std::vector<uint64_t> get_files(uint64_t fid, bool recurse = false) const;
 	std::vector<uint64_t> get_files(const FilePath& path, bool recurse = false) const;
@@ -276,26 +288,26 @@ public:
 	FileOpResult open(uint64_t fid, FileAccessFlags flags = FileAccessFlags::All);
 	FileOpResult open(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);
 
-	void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
-	void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);
-	bool has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags) const;
+	static void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
+	static void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);
+	static bool has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags);
 
-	template <typename T>
+	template <typename T, typename Base = uint32_t>
 	static void set_flag(T& base, T set_flags)
 	{
-		static_cast<T>(static_cast<uint32_t>(base) |= static_cast<uint32_t>(set_flags));
+		base = static_cast<T>(static_cast<Base>(base) | static_cast<Base>(set_flags));
 	}
 
-	template <typename T>
+	template <typename T, typename Base = uint32_t>
 	static void clear_flag(T& base, T clear_flags)
 	{
-		base = static_cast<T>(static_cast<uint32_t>(base) & ~static_cast<uint32_t>(clear_flags));
+		base = static_cast<T>(static_cast<Base>(base) & ~static_cast<Base>(clear_flags));
 	}
 
-	template <typename T>
-	static bool has_flag(T& base, T test_flags)
+	template <typename T, typename Base = uint32_t>
+	static bool has_flag(const T& base, T test_flags)
 	{
-		return static_cast<T>(static_cast<uint32_t>(base) & static_cast<uint32_t>(test_flags)) == test_flags;
+		return static_cast<T>(static_cast<Base>(base) & static_cast<Base>(test_flags)) == test_flags;
 	}
 	
 
@@ -303,9 +315,9 @@ public:
 	bool file_clear_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad clear_flags);
 	bool file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
 
-	void file_set_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad set_flags);
-	void file_clear_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad clear_flags);
-	bool file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags) const;
+	static void file_set_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad set_flags);
+	static void file_clear_flag(FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad clear_flags);
+	static bool file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags);
 
 	bool file_set_directory_flag(uint64_t fid, bool new_is_dir);
 	bool file_set_modified_now(uint64_t fid);

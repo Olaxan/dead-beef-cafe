@@ -40,17 +40,16 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	if (std::optional<LoginPasswdData> passwd = users->authenticate(username, password); passwd.has_value())
 	{
 		/* Auth successful. */
-		proc.set_sid();
-		proc.set_uid(passwd->uid);
-		proc.set_gid(passwd->gid);
-		//proc.add_groups(groups);
+		int32_t sid = proc.set_sid();
+		sess->set_session_uid(sid, passwd->uid);
+		sess->set_session_gid(sid, passwd->gid);
 
 		proc.set_var("HOME", passwd->home_path);
 		proc.set_var("SHELL", passwd->shell_path);
 		proc.set_var("USER", passwd->username);
 		proc.set_var("PWD", passwd->home_path);
 
-		proc.putln("Welcome, {}.", username);
+		proc.putln("Welcome, {} (session {}).", username, sid);
 		
 		co_return 0;
 	}
@@ -132,5 +131,44 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 
 ProcessTask Programs::CmdGroupAdd(Proc& proc, std::vector<std::string> args)
 {
+	co_return 1;
+}
+
+ProcessTask Programs::CmdUser(Proc& proc, std::vector<std::string> args)
+{
+	OS& os = *proc.owning_os;
+
+	CLI::App app{"View information about a user."};
+	app.allow_windows_style_options(false);
+	app.require_subcommand(1);
+
+	std::string user{};
+
+	app.add_option("-u,--user", user, "View information about a specific user. By default the session UID is used");
+	
+	auto group = app.add_subcommand("groups", "List groups");
+
+
+	
+	group->callback([&]
+	{
+
+	});
+
+	try
+	{
+		std::ranges::reverse(args);
+		args.pop_back();
+        app.parse(std::move(args));
+    }
+	catch(const CLI::ParseError& e)
+	{
+		int res = app.exit(e, proc.s_out, proc.s_err);
+        co_return res;
+    }
+
+	UsersManager* users = os.get_users_manager();
+	assert(users);
+
 	co_return 1;
 }

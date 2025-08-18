@@ -128,12 +128,12 @@ void FilePath::make_absolute(const FilePath& from_dir)
 FileSystem::FileSystem()
 { 
 	metadata_[get_root()] = {
-		.is_directory = true,
 		.owner_uid = 0,
 		.owner_gid = 0,
 		.perm_owner = FilePermissionTriad::All,
 		.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
 		.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+		.extra = ExtraFileFlags::Directory
 	};
 }
 
@@ -170,7 +170,7 @@ bool FileSystem::is_dir(uint64_t fid) const
 		return true;
 
 	if (auto it = metadata_.find(fid); it != metadata_.end())
-		return it->second.is_directory;
+		return has_flag<ExtraFileFlags, uint8_t>(it->second.extra, ExtraFileFlags::Directory);
 
 	return false;
 }
@@ -269,15 +269,13 @@ std::string FileSystem::get_flags(uint64_t fid)
 	return out;
 }
 
-std::pair<std::string, std::string> FileSystem::get_owner(uint64_t fid)
+std::pair<int32_t, int32_t> FileSystem::get_owner(uint64_t fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		return std::make_pair(
-			std::format("{}", it->second.owner_uid), 
-			std::format("{}", it->second.owner_gid));
+		return std::make_pair(it->second.owner_uid, it->second.owner_gid);
 	}
-	return std::make_pair("-", "-");
+	return std::make_pair(0, 0);
 }
 
 std::string FileSystem::get_mdate(uint64_t fid)
@@ -298,6 +296,14 @@ uint64_t FileSystem::get_last_modified(uint64_t fid)
 		return it->second.modified;
 		
 	return 0;
+}
+
+FileMeta* FileSystem::get_metadata(uint64_t fid)
+{
+	if (auto it = metadata_.find(fid); it != metadata_.end())
+		return &it->second;
+		
+	return nullptr;
 }
 
 std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
@@ -574,7 +580,7 @@ void FileSystem::clear_flag(FilePermissionTriad& base, FilePermissionTriad clear
 	base = base & ~clear_flags;
 }
 
-bool FileSystem::has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags) const
+bool FileSystem::has_flag(const FilePermissionTriad& base, FilePermissionTriad test_flags)
 {
 	return (base & test_flags) == test_flags;
 }
@@ -629,7 +635,7 @@ void FileSystem::file_clear_flag(FileMeta& meta, FilePermissionCategory cat, Fil
 	}
 }
 
-bool FileSystem::file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags) const
+bool FileSystem::file_has_flag(const FileMeta& meta, FilePermissionCategory cat, FilePermissionTriad test_flags)
 {
 	switch (cat)
 	{
@@ -644,7 +650,14 @@ bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
-		it->second.is_directory = new_is_dir;
+		if (new_is_dir) 
+		{ 
+			set_flag<ExtraFileFlags, uint8_t>(it->second.extra, ExtraFileFlags::Directory); 
+		}
+		else 
+		{ 
+			clear_flag<ExtraFileFlags, uint8_t>(it->second.extra, ExtraFileFlags::Directory); 
+		}
 		return true;
 	}
 	return false;

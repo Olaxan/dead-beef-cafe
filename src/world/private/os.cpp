@@ -140,56 +140,6 @@ Address6 OS::get_global_ip()
     return Address6();
 }
 
-int32_t OS::create_session(int32_t uid, int32_t gid)
-{
-    int32_t sid = ++sid_counter_;
-	sessions_.emplace(std::make_pair(sid, SessionData{sid, uid, gid}));
-    return sid;
-}
-
-bool OS::end_session(int32_t sid)
-{
-    return sessions_.erase(sid);
-}
-
-bool OS::set_session_uid(int32_t sid, int32_t new_uid)
-{
-	if (auto it = sessions_.find(sid); it != sessions_.end())
-    {
-        it->second.uid = new_uid;
-        return true;
-    }
-    return false;
-}
-
-bool OS::set_session_gid(int32_t sid, int32_t new_gid)
-{
-	if (auto it = sessions_.find(sid); it != sessions_.end())
-    {
-        it->second.gid = new_gid;
-        return true;
-    }
-    return false;
-}
-
-bool OS::add_session_groups(int32_t sid, const std::unordered_set<int32_t>& groups)
-{
-	if (auto it = sessions_.find(sid); it != sessions_.end())
-    {
-        it->second.groups.insert(groups.begin(), groups.end());
-        return true;
-    }
-    return false;
-}
-
-std::optional<SessionData> OS::get_session(int32_t sid)
-{
-	if (auto it = sessions_.find(sid); it != sessions_.end())
-        return it->second;
-    
-    return std::nullopt;
-}
-
 TimerAwaiter OS::wait(float seconds)
 {
 	return get_world().get_timer_manager().wait(seconds);

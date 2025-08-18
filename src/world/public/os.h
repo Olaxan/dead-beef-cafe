@@ -141,26 +141,6 @@ public:
 		return sid.has_value();
 	}
 
-	/* --- Sessions ---*/
-
-	/* Creates a new user session and returns the sid. */
-	int32_t create_session(int32_t uid = -1, int32_t gid = -1);
-	
-	/* Ends the specified session. Returns whether successful. */
-	bool end_session(int32_t sid);
-
-	/* Sets the uid of a session. Returns whether successful. */
-	bool set_session_uid(int32_t sid, int32_t new_uid);
-
-	/* Sets the gid of a session. Returns whether successful. */
-	bool set_session_gid(int32_t sid, int32_t new_gid);
-
-	/* Add supplementary groups to a session. Returns whether any groups were added. */
-	bool add_session_groups(int32_t sid, const std::unordered_set<int32_t>& groups);
-
-	/* Get a reference to a active session, if one matches the sid. */
-	std::optional<SessionData> get_session(int32_t sid);
-
 	/* --- Scheduler --- */
 
 	[[nodiscard]] TimerAwaiter wait(float seconds);
@@ -183,14 +163,12 @@ protected:
 
 	Host& owner_;
 	int32_t pid_counter_{0};
-	int32_t sid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
 	DeviceState state_{DeviceState::PoweredOff};
 	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
-	std::unordered_map<int32_t, SessionData> sessions_{};
 
 	UsersManager users_{this};
 	SessionManager sess_{this};

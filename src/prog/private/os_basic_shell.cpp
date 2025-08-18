@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
+#include "session_mgr.h"
 
 #include "CLI/CLI.hpp"
 
@@ -28,10 +29,18 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
+	SessionManager* sess = os.get_session_manager();
+	UsersManager* users = os.get_users_manager();
 
 	if (fs == nullptr)
 	{
 		proc.errln("No file system!");
+		co_return 1;
+	}
+
+	if (sess == nullptr)
+	{
+		proc.errln("No session manager!");
 		co_return 1;
 	}
 
@@ -145,7 +154,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		so just modify it directly. */
 		path.substitute(home_dir, "~");
 
-		std::string usr_str = TermUtils::color(std::format("usr@{}", os.get_hostname()), TermColor::BrightMagenta);
+		int32_t uid = proc.get_uid();
+		int32_t gid = proc.get_gid();
+
+		std::optional<std::string_view> username = users->get_username(uid);
+
+		std::string usr_str = TermUtils::color(std::format("{}@{}", username.value_or("-"), os.get_hostname()), TermColor::BrightMagenta);
 		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);
 		std::string net_str = (os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 

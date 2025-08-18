@@ -23,7 +23,7 @@ ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 
 	float delay = 1.f;
 	int32_t count = 5;
-	app.add_option("-c", count, "The number to count to");
+	app.add_option("COUNT", count, "The number to count to")->default_val(5);
 	app.add_option("-d", delay, "The time to wait per count");
 
 	try
@@ -274,9 +274,10 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	fs->create_file("/etc/shadow", shadow_params);
 
 	users_.add_user("root", "gong", {
+		.create_home = false,
 		.uid = 0,
 		.gid = 0,
-		.shell_path = "/bin/shell"
+		.shell_path = "/bin/shell",
 	}, false);
 
 	users_.add_user("fredr", "hello", {
@@ -306,20 +307,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 			"man:x:15:\n"
 			"users:x:100:\n"
 			"nogroup:x:65534:\n"
-			"systemd-journal:x:101:\n"
-			"systemd-network:x:102:\n"
-			"systemd-resolve:x:103:\n"
-			"systemd-timesync:x:104:\n"
 			"ssh:x:105:\n"
-			"sudo:x:106:fredrik,sysadmin\n"
-			"docker:x:107:fredr\n"
-			"audio:x:108:fredr\n"
-			"video:x:109:fredr\n"
-			"plugdev:x:110:fredr\n"
-			"staff:x:111:\n"
-			"games:x:112:\n"
-			"developers:x:1000:alice,bob,charlie\n"
-			"designers:x:1001:diana,edward\n"
-			"marketing:x:1002:frank,grace");
+			"sudo:x:106:fredr,sysadmin");
 	}
 }
