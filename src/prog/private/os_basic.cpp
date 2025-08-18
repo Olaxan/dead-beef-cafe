@@ -216,6 +216,8 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/sbin/shutdown", Programs::CmdShutdown},
 		{"/sbin/boot", Programs::CmdBoot },
 		{"/sbin/login", Programs::CmdLogin},
+		{"/sbin/useradd", Programs::CmdUserAdd},
+		{"/sbin/groupadd", Programs::CmdGroupAdd},
 		{"/bin/ls", Programs::CmdList},
 		{"/bin/mkdir", Programs::CmdMakeDir},
 		{"/bin/touch", Programs::CmdMakeFile},
@@ -258,12 +260,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		}
 	};
 
-	if (auto [fid, ptr, err] = fs->create_file("/etc/passwd", passwd_params); err == FileSystemError::Success)
-	{
-		ptr->write(
-			"root:x:0:0::/root:/bin/shell\n"
-			"fredr:x:74545:74545::/home/fredr:/bin/shell");
-	}
+	fs->create_file("/etc/passwd", passwd_params);
 
 	FileSystem::CreateFileParams shadow_params = {
 		.recurse = true,
@@ -274,10 +271,22 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		}
 	};
 
-	if (auto [fid, ptr, err] = fs->create_file("/etc/shadow", shadow_params); err == FileSystemError::Success)
-	{
-		ptr->write("fredr:2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824:1:0:99999:7:::");
-	}
+	fs->create_file("/etc/shadow", shadow_params);
+
+	users_.add_user("root", "gong", {
+		.uid = 0,
+		.gid = 0,
+		.shell_path = "/bin/shell"
+	}, false);
+
+	users_.add_user("fredr", "hello", {
+		.uid = 1000,
+		.gid = 1000,
+		.shell_path = "/bin/shell",
+		.home_path = "/home/fredr"
+	}, false);
+
+	users_.commit();
 
 	if (auto [fid, ptr, err] = fs->create_file("/etc/groups", passwd_params); err == FileSystemError::Success)
 	{

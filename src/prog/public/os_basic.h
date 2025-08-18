@@ -21,6 +21,8 @@ namespace Programs
 
 	/* User management task */
 	ProcessTask CmdLogin(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdUserAdd(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdGroupAdd(Proc& proc, std::vector<std::string> args);
 
 	/* Drivers */
 	ProcessTask InitCpu(Proc& proc, std::vector<std::string> args);
