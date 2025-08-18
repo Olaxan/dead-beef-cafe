@@ -259,12 +259,13 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 
 	if (params.create_home)
 	{
-		FilePath home = [&username, &params]{
+		FilePath home = [&params](std::string_view name)
+		{
 			if (params.home_path.empty())
-				return std::format("/home/{}", username);
+				return std::format("/home/{}", name);
 
 			return params.home_path;
-		}();
+		}(username);
 
 		fs->create_directory(home, {
 			.recurse = true,
@@ -415,8 +416,6 @@ void UsersManager::write_shadow_data()
 {
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
-
-	
 
 	if (auto [fid, ptr, err] = fs->open("/etc/shadow", FileAccessFlags::Write); err == FileSystemError::Success)
 	{

@@ -77,7 +77,7 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 		std::string exp_date{};
 		int32_t inactive{0};
 		std::vector<std::string> groups{};
-		bool create_home{true};
+		bool no_create_home{false};
 	} params{};
 
 	app.add_option("LOGIN", params.username, "Login name of the new user")->required();
@@ -88,7 +88,7 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 	app.add_option("-f,--inactive", params.inactive, "The number of days after a password expires until the account is permanently suspended");
 	app.add_option("-G,--groups", params.groups, "A list of supplementary groups which the user is also a member of");
 
-	app.add_flag("-m,--create-home", params.create_home, "Create the user's home directory if it does not exist")->default_val(true);
+	app.add_flag("--no-create-home", params.no_create_home, "Do not create a home directory for the user");
 
 	try
 	{
@@ -108,7 +108,7 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 	GecosData gecos{ .full_name = params.comment };
 
 	bool success = users->add_user(params.username, params.password, {
-		.create_home = params.create_home,
+		.create_home = !params.no_create_home,
 		.create_usergroup = true,
 		.expiration_date = 0,
 		.home_path = params.home_path,

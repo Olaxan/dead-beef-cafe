@@ -1,7 +1,6 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
-#include "navigator.h"
 #include "os_input.h"
 #include "os_fileio.h"
 #include "editor.h"

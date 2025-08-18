@@ -3,7 +3,6 @@
 #include "device.h"
 #include "netw.h"
 #include "filesystem.h"
-#include "navigator.h"
 
 #include <unicode/utypes.h>
 #include <unicode/ucol.h>

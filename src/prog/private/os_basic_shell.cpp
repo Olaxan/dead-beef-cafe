@@ -3,7 +3,6 @@
 #include "device.h"
 #include "netw.h"
 #include "filesystem.h"
-#include "navigator.h"
 #include "os_input.h"
 #include "os_fileio.h"
 
