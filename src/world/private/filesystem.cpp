@@ -144,7 +144,7 @@ const char* FileSystem::get_fserror_name(FileSystemError code)
 		case FileSystemError::FileNotFound: return "File not found";
 		case FileSystemError::FileExists: return "The file already exists";
 		case FileSystemError::FolderNotEmpty: return "Folder not empty";
-		case FileSystemError::InsufficientPermissions: return "Insufficient permissions";
+		case FileSystemError::InsufficientPermissions: return "Access denied";
 		case FileSystemError::InvalidFlags: return "Invalid file flags";
 		case FileSystemError::IOError: return "I/O error";
 		case FileSystemError::PreserveRoot: return "The operation can't be performed on the root directory";

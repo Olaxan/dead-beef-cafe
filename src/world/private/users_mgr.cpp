@@ -158,7 +158,7 @@ void UsersManager::prepare()
 	}
 
 	/* Refresh groups database. */
-	if (uint64_t fid = fs->get_fid("/etc/groups"); fid != 0)
+	if (uint64_t fid = fs->get_fid("/etc/group"); fid != 0)
 	{
 		if (uint64_t mod = fs->get_last_modified(fid); mod != groups_mod_)
 		{
@@ -274,7 +274,8 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 
 	for (auto&& group : params.groups)
 	{
-		add_user_to_group(username, group);
+		bool success = add_user_to_group(username, group);
+		std::println("Added '{}' to '{}': {}", username, group, success);
 	}
 
 	if (params.create_home)
@@ -287,7 +288,8 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 			return params.home_path;
 		}(username);
 
-		fs->create_directory(home, {
+		fs->create_directory(home, 
+		{
 			.recurse = true,
 			.meta = {
 				.owner_uid = new_uid,
@@ -298,6 +300,15 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 				.extra = ExtraFileFlags::Directory
 			}
 		});
+	}
+
+	if (params.create_usergroup)
+	{
+		add_group(username, 
+		{
+			.gid = new_gid,
+			.users = { username }
+		}, false);
 	}
 
 	if (auto_commit)
@@ -385,6 +396,7 @@ void UsersManager::get_passwd_data()
 			std::string_view line(rline);
 			if (std::optional<LoginPasswdData> opt_data = parse_passwd_row(line); opt_data.has_value())
 			{
+				name_to_uid_[opt_data->username] = opt_data->uid;
 				passwd_[opt_data->uid] = std::move(*opt_data);
 			}
 		}
@@ -423,7 +435,7 @@ void UsersManager::get_group_data()
 
 	groups_.clear();
 
-	if (auto [fid, ptr, err] = fs->open("/etc/groups", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->open("/etc/group", FileAccessFlags::Read); err == FileSystemError::Success)
 	{
 		std::string_view f = ptr->get_view();
 
@@ -432,6 +444,7 @@ void UsersManager::get_group_data()
 			std::string_view line(rline);
 			if (std::optional<LoginGroupData> opt_data = parse_group_row(line); opt_data.has_value())
 			{
+				name_to_gid_[opt_data->group_name] = opt_data->gid;
 				groups_[opt_data->gid] = std::move(*opt_data);
 			}
 		}
@@ -502,14 +515,14 @@ void UsersManager::write_group_data()
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (auto [fid, ptr, err] = fs->open("/etc/groups", FileAccessFlags::Write); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->open("/etc/group", FileAccessFlags::Write); err == FileSystemError::Success)
 	{
 		ptr->write("");
 
 		for (auto&& [group_name, entry] : groups_)
 		{
 			std::string group = std::format("{}:{}:{}:{}\n",
-			group_name,
+			entry.group_name,
 			entry.password,
 			entry.gid,
 			entry.members | std::views::join_with(',') | std::ranges::to<std::string>());

@@ -238,8 +238,8 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		.recurse = true,
 		.meta = {
 			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::All,
-			.perm_users = FilePermissionTriad::All
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
 		}
 	};
 
@@ -273,23 +273,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 
 	fs->create_file("/etc/shadow", shadow_params);
 
-	users_.add_user("root", "gong", {
-		.create_home = false,
-		.uid = 0,
-		.gid = 0,
-		.shell_path = "/bin/shell",
-	}, false);
-
-	users_.add_user("fredr", "hello", {
-		.uid = 1000,
-		.gid = 1000,
-		.shell_path = "/bin/shell",
-		.home_path = "/home/fredr"
-	}, false);
-
-	users_.commit();
-
-	if (auto [fid, ptr, err] = fs->create_file("/etc/groups", passwd_params); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->create_file("/etc/group", passwd_params); err == FileSystemError::Success)
 	{
 		ptr->write(
 			"root:x:0:\n"
@@ -310,4 +294,22 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 			"ssh:x:105:\n"
 			"sudo:x:106:fredr,sysadmin");
 	}
+
+	users_.prepare();
+	
+	users_.add_user("root", "gong", {
+		.create_home = false,
+		.uid = 0,
+		.gid = 0,
+		.shell_path = "/bin/shell",
+	}, false);
+
+	users_.add_user("fredr", "hello", {
+		.uid = 1000,
+		.gid = 1000,
+		.shell_path = "/bin/shell",
+		.home_path = "/home/fredr"
+	}, false);
+
+	users_.commit();
 }
