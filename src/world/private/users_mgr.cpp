@@ -213,6 +213,12 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 	if (passwd_.contains(username))
 		return false;
 
+	if (params.uid == -1)
+		params.uid = ++uid_counter_;
+
+	if (params.gid == -1)
+		params.gid = ++gid_counter_;
+
 	passwd_[username] = LoginPasswdData{
 		.uid = params.uid,
 		.gid = params.gid,
@@ -249,6 +255,28 @@ bool UsersManager::add_user(std::string username, std::string password, CreateUs
 		{
 			it->second.members.push_back(username);
 		}
+	}
+
+	if (params.create_home)
+	{
+		FilePath home = [&username, &params]{
+			if (params.home_path.empty())
+				return std::format("/home/{}", username);
+
+			return params.home_path;
+		}();
+
+		fs->create_directory(home, {
+			.recurse = true,
+			.meta = {
+				.is_directory = true,
+				.owner_uid = params.uid,
+				.owner_gid = params.gid,
+				.perm_owner = FilePermissionTriad::All,
+				.perm_group = FilePermissionTriad::None,
+				.perm_users = FilePermissionTriad::None
+			}
+		});
 	}
 
 	if (auto_commit)

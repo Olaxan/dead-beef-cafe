@@ -53,8 +53,8 @@ struct CreateUserParams
 {
 	bool create_home{true};
 	bool create_usergroup{true};
-	int32_t uid{0};
-	int32_t gid{0};
+	int32_t uid{-1};
+	int32_t gid{-1};
 	int32_t warning_period{};
 	int32_t inactivity_period{};
 	uint64_t expiration_date{};
@@ -80,8 +80,10 @@ public:
 	void prepare();
 	void commit();
 
+	/* Get the password hash for the provided user (from passwd/shadow cache). */
 	std::optional<std::string_view> get_password_hash(std::string user) const;
 
+	/* Retrieve user data for a valid username/password pair. */
 	std::optional<LoginPasswdData> authenticate(std::string user, std::string password) const;
 
 	/* Adds a new user to memory. If auto-commit is set, the passwd/shadow/group db's will also be updated.*/
@@ -103,6 +105,9 @@ protected:
 protected:
 
 	OS& os_;
+
+	int32_t uid_counter_{1000};
+	int32_t gid_counter_{1000};
 
 	int64_t passwd_mod_{0};
 	int64_t shadow_mod_{0};
