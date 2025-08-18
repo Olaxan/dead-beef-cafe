@@ -39,6 +39,11 @@ int32_t Proc::set_sid()
 	return sid;
 }
 
+int32_t Proc::get_sid() const
+{
+	return sid;
+}
+
 int32_t Proc::get_uid() const
 {
 	if (host) { return host->get_uid(); }

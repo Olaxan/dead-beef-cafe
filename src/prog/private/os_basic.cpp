@@ -225,6 +225,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/bin/echo", Programs::CmdEcho},
 		{"/bin/rm", Programs::CmdRemoveFile},
 		{"/bin/cat", Programs::CmdCat},
+		{"/bin/sudo", Programs::CmdSudo},
 		{"/usr/bin/count", Programs::CmdCount},
 		{"/usr/bin/snake", Programs::CmdSnake},
 		{"/usr/bin/dogs", Programs::CmdDogs},
@@ -296,7 +297,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	}
 
 	users_.prepare();
-	
+
 	users_.add_user("root", "gong", {
 		.create_home = false,
 		.uid = 0,

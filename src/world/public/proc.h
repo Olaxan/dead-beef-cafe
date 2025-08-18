@@ -269,6 +269,7 @@ public:
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
 
 	int32_t set_sid();
+	int32_t get_sid() const;
 	int32_t get_uid() const;
 	int32_t get_gid() const;
 
