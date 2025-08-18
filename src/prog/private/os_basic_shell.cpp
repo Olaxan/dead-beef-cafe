@@ -185,6 +185,13 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			if (name == "cd")
 				co_return cd(std::move(args));
 
+			bool run_in_background{false};
+			if (std::string_view(args.back()) == "&")
+			{
+				args.pop_back();
+				run_in_background = true;
+			}
+
 			for (auto str : proc.get_var("PATH") | std::views::split(';'))
 			{
 				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
@@ -193,8 +200,16 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 				{
 					if (auto& prog = ptr->get_executable())
 					{
-						int32_t ret = co_await os.create_process(prog, std::move(args), &proc);
-						co_return ret;
+						if (run_in_background)
+						{
+							os.create_process(prog, std::move(args));
+							co_return 0;
+						}
+						else
+						{
+							int32_t ret = co_await os.create_process(prog, std::move(args), &proc);
+							co_return ret;
+						}
 					}
 					else
 					{
