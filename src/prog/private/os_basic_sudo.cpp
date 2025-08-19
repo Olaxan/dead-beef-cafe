@@ -72,6 +72,21 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		}
 	}
 
+	if (auto [fid, ptr, err] = fs->open("/etc/sudoers", FileAccessFlags::Read); err == FileSystemError::Success)
+	{
+		std::string_view view = ptr->get_view();
+		if (!view.contains(username))
+		{
+			proc.warnln("sudo: user is not in the sudoers file. This incident will be reported");
+			co_return 1;
+		}
+	}
+	else
+	{
+		proc.errln("sudo: fatal: cannot open sudoers file: {}", FileSystem::get_fserror_name(err));
+		co_return 2;
+	}
+
 	auto subargs = args 
 	| std::views::drop(1) 
 	| std::ranges::to<std::vector<std::string>>();

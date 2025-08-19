@@ -152,8 +152,8 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		std::optional<std::string_view> username = users->get_username(uid);
 
-		std::string usr_str = TermUtils::color(std::format("{}@{}", username.value_or("-"), os.get_hostname()), TermColor::BrightMagenta);
-		std::string path_str = TermUtils::color(path.get_string(), TermColor::BrightBlue);
+		std::string usr_str = std::format(CSI_CODE(95) "{}@{}" CSI_RESET, username.value_or("-"), os.get_hostname());
+		std::string path_str = std::format(CSI_CODE(94) "{}" CSI_RESET, path.get_string());
 		std::string net_str = (os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);

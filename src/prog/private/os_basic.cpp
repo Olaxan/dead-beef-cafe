@@ -49,6 +49,9 @@ ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 
 ProcessTask Programs::CmdProc(Proc& proc, std::vector<std::string> args)
 {
+	proc.putln("PID: {}, SID: {}, UID: {}, GID: {}",
+		proc.get_pid(), proc.get_sid(), proc.get_uid(), proc.get_gid());
+
 	proc.putln("Processes on {0}:", proc.owning_os->get_hostname());
 	proc.owning_os->get_processes([&proc](const Proc& process)
 	{
@@ -259,31 +262,35 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		.executable = std::forward<ProcessFn>(Programs::CmdSudo)
 	});
 
-	FileSystem::CreateFileParams passwd_params = {
+	fs->create_file("/etc/passwd", 
+	{
 		.recurse = true,
 		.meta = {
 			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
 			.perm_group = FilePermissionTriad::Read,
 			.perm_users = FilePermissionTriad::Read
 		}
-	};
+	});
 
-	fs->create_file("/etc/passwd", passwd_params);
-
-	FileSystem::CreateFileParams shadow_params = {
+	fs->create_file("/etc/shadow", 
+	{
 		.recurse = true,
 		.meta = {
 			.perm_owner = FilePermissionTriad::None,
 			.perm_group = FilePermissionTriad::None,
 			.perm_users = FilePermissionTriad::None
 		}
-	};
+	});
 
-	fs->create_file("/etc/shadow", shadow_params);
-
-	if (auto [fid, ptr, err] = fs->create_file("/etc/group", passwd_params); err == FileSystemError::Success)
+	fs->create_file("/etc/group", 
 	{
-		ptr->write(
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
+			.perm_group = FilePermissionTriad::Read,
+			.perm_users = FilePermissionTriad::Read
+		},
+		.content = {
 			"root:x:0:\n"
 			"daemon:x:1:\n"
 			"bin:x:2:\n"
@@ -300,8 +307,20 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 			"users:x:100:\n"
 			"nogroup:x:65534:\n"
 			"ssh:x:105:\n"
-			"sudo:x:106:fredr,sysadmin");
-	}
+			"sudo:x:106:sysadmin"
+		}
+	});
+
+	fs->create_file("/etc/sudoers", 
+	{
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::Read,
+			.perm_group = FilePermissionTriad::Read,
+			.perm_users = FilePermissionTriad::None
+		},
+		.content = "fredr"
+	});
 
 	users_.prepare();
 

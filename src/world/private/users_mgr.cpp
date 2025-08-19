@@ -364,14 +364,17 @@ bool UsersManager::add_user_to_group(std::string user, std::string group)
 
 bool UsersManager::check_belongs(int32_t uid, int32_t gid)
 {
-	if (auto group_it = groups_.find(gid); group_it != groups_.end())
+	if (auto igroup = groups_.find(gid); igroup != groups_.end())
 	{
 		/* Not ideal, we have to loop through and do a bunch of hash lookups, 
 		but will have to suffice until we can cache this stuff somewhere. */
-		for (auto&& member : group_it->second.members)
+		for (auto&& member : igroup->second.members)
 		{
-			if (auto uid_it = name_to_uid_.find(member); uid_it != name_to_uid_.end() && uid_it->second == uid)
+			if (auto iuid = name_to_uid_.find(member); iuid != name_to_uid_.end() && iuid->second == uid)
 			{
+				std::println("Access: User '{}'({}) is a member of '{}'({}).", 
+					member, uid, igroup->second.group_name, gid);
+					
 				return true;
 			}
 		}

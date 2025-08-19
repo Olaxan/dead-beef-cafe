@@ -146,7 +146,6 @@ bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags
 {
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
-	SessionManager& sess = *os.get_session_manager();
 	UsersManager& users = *os.get_users_manager();
 
 	int32_t uid = proc.get_uid();
@@ -156,7 +155,7 @@ bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags
 	{
 		FileMeta& meta = *meta_ptr;
 
-		bool group_match = (gid == meta.owner_gid || users.check_belongs(uid, gid));
+		bool group_match = (gid == meta.owner_gid || users.check_belongs(uid, meta.owner_gid));
 		bool owner_match = (uid == meta.owner_uid);
 		bool users_match = true;
 
@@ -195,6 +194,17 @@ bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags
 
 			return false;
 		});
+
+		std::println("Access '{}' by ({}, {}): {}{}{}+{}{}{}.",
+			fid,
+			uid, gid,
+			owner_match ? "O" : "-",
+			group_match ? "G" : "-",
+			users_match ? "U" : "-",
+			read_valid 	? "R" : "-",
+			write_valid ? "W" : "-",
+			exec_valid 	? "X" : "-"
+		);
 
 		return read_valid && write_valid && exec_valid;
 	}
