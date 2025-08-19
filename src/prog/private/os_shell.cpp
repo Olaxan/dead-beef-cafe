@@ -1,5 +1,6 @@
 #include "os_basic.h"
 #include "os_fileio.h"
+#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -10,7 +11,7 @@
 #include <ranges>
 #include <functional>
 
-EagerTask<int32_t> Programs::Exec(Proc& proc, std::vector<std::string>&& args)
+EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 {
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();

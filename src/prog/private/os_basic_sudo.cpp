@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
+#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -94,7 +95,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	if (subargs.empty())
 		co_return 1;
 
-	int32_t ret = co_await Programs::Exec(proc, std::move(subargs));
+	int32_t ret = co_await ShellUtils::Exec(proc, std::move(subargs));
 
 	co_return 0;
 }

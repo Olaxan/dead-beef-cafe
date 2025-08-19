@@ -6,6 +6,7 @@
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
+#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -192,7 +193,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			if (name == "cd")
 				co_return cd(std::move(args));
 
-			int32_t ret = co_await Programs::Exec(proc, std::move(args));
+			int32_t ret = co_await ShellUtils::Exec(proc, std::move(args));
 			co_return ret;
 			
 		}, out_cmd);
