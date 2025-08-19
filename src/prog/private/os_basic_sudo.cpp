@@ -44,7 +44,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 
 	if (!opt_user)
 	{
-		proc.warnln("sudo: no session");
+		proc.warnln("sudo: no session!");
 		co_return 1;
 	}
 
@@ -68,7 +68,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			proc.warnln("sudo: {} incorrect password attempts", sudo_max_tries);
+			proc.warnln("sudo: {} incorrect password attempts.", sudo_max_tries);
 			co_return 1;
 		}
 	}
@@ -78,13 +78,13 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		std::string_view view = ptr->get_view();
 		if (!view.contains(username))
 		{
-			proc.warnln("sudo: user is not in the sudoers file. This incident will be reported");
+			proc.warnln("sudo: user is not in the sudoers file. This incident will be reported.");
 			co_return 1;
 		}
 	}
 	else
 	{
-		proc.errln("sudo: fatal: cannot open sudoers file: {}", FileSystem::get_fserror_name(err));
+		proc.errln("sudo: fatal: cannot open sudoers file: {}.", FileSystem::get_fserror_name(err));
 		co_return 2;
 	}
 
@@ -96,6 +96,5 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 
 	int32_t ret = co_await ShellUtils::Exec(proc, std::move(subargs));
-
-	co_return 0;
+	co_return ret;
 }

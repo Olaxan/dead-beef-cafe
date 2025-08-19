@@ -23,20 +23,31 @@ void FilePath::make()
 
 	relative_ = (path_[0] != '/');
 
-	if (path_.back() == '/')
-		path_.pop_back();
+	path_ = path_
+	| std::views::split('/') 
+	| std::views::filter([](auto&& elem) { return !elem.empty(); })
+	| std::views::join_with('/')
+	| std::ranges::to<std::string>();
 
-	valid_ = true;
+	if (!relative_)
+		path_.insert(0, "/");
+
+	// if (path_.back() == '/')
+	// 	path_.pop_back();
+
+	valid_ = !path_.empty();
 }
 
 bool FilePath::is_backup() const
 {
+	if (path_.empty()) return false;
 	std::string_view name = get_name();
 	return name.back() == '~';
 }
 
 bool FilePath::is_config() const
 {
+	if (path_.empty()) return false;
 	std::string_view name = get_name();
 	return name.front() == '.';
 }

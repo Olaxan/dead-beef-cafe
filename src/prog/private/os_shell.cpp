@@ -18,6 +18,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 	std::string_view name{*std::begin(args)};
 
+	/* If the last argument is &, run this process in the background. */
 	bool run_in_background = std::invoke([&]
 	{
 		if (std::string_view(args.back()) == "&")
@@ -27,6 +28,42 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 		}
 		return false;
 	});
+
+	/* If >> FILENAME is in the arguments, try to open the file as a output redirector. */
+	WriterFn redirect_writer = std::invoke([&]
+	{
+		WriterFn out{nullptr};
+
+		auto begin_find = std::ranges::find(args, ">>");		
+
+		if (begin_find == args.end())
+			return out;
+
+		auto end_find = std::ranges::next(begin_find);
+
+		if (end_find != args.end())
+		{
+			FilePath where{*end_find};
+
+			if (where.is_relative())
+				where.make_absolute(proc.get_var("PWD"));
+
+			if (auto [fid, ptr, err] = FileUtils::open(proc, std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); 
+			err == FileSystemError::Success)
+			{
+				std::println("Redirecting to '{}'", *end_find);
+				out = [file = std::move(ptr)](const std::string& line)
+				{
+					file->append(line);
+				};
+			}
+		}
+
+		args.erase(begin_find, std::ranges::next(end_find));
+
+		return out;
+	});
+	
 
 	for (auto str : proc.get_var("PATH") | std::views::split(';'))
 	{
@@ -54,29 +91,27 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 			OS::CreateProcessParams params
 			{
+				.writer = std::move(redirect_writer),
 				.leader_id = proc.get_pid(),
 				.uid = exec_uid,
 				.gid = exec_gid
 			};
 
-			/* Get the executable from the file, if one exists. */
-			if (auto& prog = ptr->get_executable())
-			{
-				if (run_in_background)
-				{
-					os.run_process(prog, std::move(args), std::move(params));
-					co_return 0;
-				}
-				else
-				{
-					int32_t ret = co_await os.run_process(prog, std::move(args), std::move(params));
-					co_return ret;
-				}
-			}
-			else
+			auto&& prog = ptr->get_executable();
+			if (!prog)
 			{
 				proc.errln("No program entry point detected!");
 				co_return 1;
+			}
+
+			if (run_in_background)
+			{
+				os.run_process(prog, std::move(args), std::move(params));
+				co_return 0;
+			}
+			else
+			{
+				co_return (co_await os.run_process(prog, std::move(args), std::move(params)));
 			}
 		}
 	}

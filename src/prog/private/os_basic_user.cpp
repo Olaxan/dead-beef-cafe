@@ -1,5 +1,6 @@
 #include "os_basic.h"
 #include "os_input.h"
+#include "os_fileio.h"
 
 #include "os.h"
 #include "filesystem.h"
@@ -62,6 +63,8 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
+	UsersManager* users = os.get_users_manager();
+	assert(users);
 
 	CLI::App app{"Add users to the system. Requires root/su access."};
 	app.allow_windows_style_options(false);
@@ -100,28 +103,33 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	UsersManager* users = os.get_users_manager();
-	assert(users);
-
-	GecosData gecos{ .full_name = params.comment };
-
-	bool success = users->add_user(params.username, params.password, {
-		.create_home = !params.no_create_home,
-		.create_usergroup = true,
-		.expiration_date = 0,
-		.home_path = params.home_path,
-		.gecos = std::move(gecos),
-		.groups = std::move(params.groups)
-	});
-
-	if (success)
+	if (auto [fid, ptr, err] = FileUtils::open(proc, "/etc/passwd", FileAccessFlags::Read | FileAccessFlags::Write); err == FileSystemError::Success)
 	{
-		proc.putln("Successfully created user '{}'.", params.username);
-		co_return 0;
+		GecosData gecos{ .full_name = params.comment };
+	
+		bool success = users->add_user(params.username, params.password, {
+			.create_home = !params.no_create_home,
+			.create_usergroup = true,
+			.expiration_date = 0,
+			.home_path = params.home_path,
+			.gecos = std::move(gecos),
+			.groups = std::move(params.groups)
+		});
+	
+		if (success)
+		{
+			proc.putln("Successfully created user '{}'.", params.username);
+			co_return 0;
+		}
+		else
+		{
+			proc.warnln("Failed to create user '{}'.", params.username);
+			co_return 1;
+		}
 	}
 	else
 	{
-		proc.warnln("Failed to create user '{}'.", params.username);
+		proc.warnln("useradd: cannot lock '/etc/passwd': {}.", FileSystem::get_fserror_name(err));
 		co_return 1;
 	}
 

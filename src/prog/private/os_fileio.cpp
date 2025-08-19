@@ -71,11 +71,16 @@ FileQueryResult FileUtils::query(const Proc& proc, const FilePath& path, FileAcc
 	return std::make_pair(0, FileSystemError::FileNotFound);
 }
 
-FileOpResult FileUtils::open(const Proc& proc, const FilePath& path, FileAccessFlags flags)
+FileOpResult FileUtils::open(const Proc& proc, FilePath path, FileAccessFlags flags)
 {
 
 	OS& os = *proc.owning_os;
 	FileSystem& fs = *os.get_filesystem();
+
+	if (path.is_relative())
+		path.make_absolute();
+
+	std::println("Opening '{}': mode {}.", path, static_cast<uint32_t>(flags));
 
 	if (uint64_t fid = fs.get_fid(path))
 	{
@@ -150,6 +155,9 @@ bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags
 
 	int32_t uid = proc.get_uid();
 	int32_t gid = proc.get_gid();
+
+	if (uid == 0 || gid == 0)
+		return true;
 
 	if (FileMeta* meta_ptr = fs.get_metadata(fid))
 	{

@@ -41,6 +41,8 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
+	int32_t success_count{0};
+
 	for (auto& path : params.paths)
 	{
 		if (path.is_relative())
@@ -52,6 +54,7 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read); err == FileSystemError::Success)
 		{
 			proc.putln("{}", ptr->get_view());
+			++success_count;
 		}
 		else
 		{
@@ -59,5 +62,5 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 		}
 	}
 
-	co_return 0;
+	co_return success_count == 0;
 }

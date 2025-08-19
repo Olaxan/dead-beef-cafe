@@ -311,20 +311,26 @@ int main(int argc, char* argv[])
 {
 	try
 	{
+		std::vector<unsigned short> ports{};
+		
 		if (argc < 2)
 		{
-			std::cerr << "Usage: dbc_server <port> [<port> ...]\n";
-			return 1;
+			std::println("Running on default port (666).");
+			ports.push_back(666);
+		}
+		else
+		{
+			for (int i = 1; i < argc; ++i)
+			{
+				ports.push_back(std::atoi(argv[i]));
+			}
 		}
 
 		asio::io_context io_context(1);
 
-		for (int i = 1; i < argc; ++i)
+		for (unsigned short port : ports)
 		{
-			unsigned short port = std::atoi(argv[i]);
-			co_spawn(io_context,
-				listener(tcp::acceptor(io_context, {tcp::v4(), port})),
-				detached);
+			co_spawn(io_context, listener(tcp::acceptor(io_context, {tcp::v4(), port})), detached);
 		}
 
 		asio::signal_set signals(io_context, SIGINT, SIGTERM);

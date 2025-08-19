@@ -25,7 +25,7 @@ class OS
 {
 public:
 
-	using schedule_fn = std::function<void()>;
+	using SchedulerFn = std::function<void()>;
 
 	OS() = delete;
 
@@ -69,13 +69,13 @@ public:
 
 	struct CreateProcessParams
 	{
-		std::ostream& std_out{std::cout};
+		WriterFn writer{nullptr};
 		int32_t leader_id{-1};
 		int32_t uid{0};
 		int32_t gid{0};
 	};
 
-	Proc* create_process(CreateProcessParams&& params);
+	Proc* create_process(CreateProcessParams&& params = {});
 	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params);
 	void get_processes(std::function<void(const Proc&)> reader) const;
 
@@ -152,8 +152,7 @@ public:
 	/* --- Scheduler --- */
 
 	[[nodiscard]] TimerAwaiter wait(float seconds);
-	void schedule(float seconds, schedule_fn callback);
-
+	void schedule(float seconds, SchedulerFn callback);
 
 
 protected:

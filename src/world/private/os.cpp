@@ -41,7 +41,7 @@ World& OS::get_world()
 
 Proc* OS::get_shell(std::ostream& out_stream)
 {
-    Proc* proc = create_process({ .std_out = out_stream });
+    Proc* proc = create_process();
 
     if (proc == nullptr)
     {
@@ -70,6 +70,11 @@ Proc* OS::create_process(CreateProcessParams&& params)
 
     proc->set_uid(params.uid);
     proc->set_gid(params.gid);
+
+    if (params.writer)
+    {
+        proc->add_writer(std::move(params.writer));
+    }
 
     if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())
     {
@@ -144,7 +149,7 @@ TimerAwaiter OS::wait(float seconds)
 	return get_world().get_timer_manager().wait(seconds);
 }
 
-void OS::schedule(float seconds, schedule_fn callback)
+void OS::schedule(float seconds, SchedulerFn callback)
 {
     get_world().get_timer_manager().set_timer(seconds, callback);
 }

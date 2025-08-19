@@ -19,8 +19,6 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	}
 
 	com::CommandReply begin_msg;
-	begin_msg.set_con_mode(com::ConsoleMode::Raw);
-	begin_msg.set_configure(true);
 	begin_msg.set_reply(
 		BEGIN_ALT_SCREEN_BUFFER 
 		CLEAR_CURSOR 
@@ -143,8 +141,6 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	}
 	
 	com::CommandReply end_msg;
-	end_msg.set_con_mode(com::ConsoleMode::Cooked);
-	end_msg.set_configure(true);
 	end_msg.set_reply(
 		END_ALT_SCREEN_BUFFER
 		SHOW_CURSOR 

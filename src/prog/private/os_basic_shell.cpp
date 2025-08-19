@@ -191,11 +191,14 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			std::string_view name = *std::begin(args);
 
 			if (name == "cd")
+			{
 				co_return cd(std::move(args));
+			}
+			else
+			{
+				co_return (co_await ShellUtils::Exec(proc, std::move(args)));
+			}
 
-			int32_t ret = co_await ShellUtils::Exec(proc, std::move(args));
-			co_return ret;
-			
 		}, out_cmd);
 
 		if (int32_t term_w = proc.get_var<int32_t>("TERM_W"))
