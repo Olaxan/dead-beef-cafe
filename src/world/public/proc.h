@@ -66,8 +66,8 @@ class Proc
 {
 public:
 
-	Proc(int32_t pid, OS* owner, std::ostream& out_stream = std::cout)
-		: owning_os(owner), pid(pid), out_stream(out_stream) {}
+	Proc(int32_t pid, OS* owner)
+		: owning_os(owner), pid(pid) {}
 
 	~Proc()
 	{
@@ -205,20 +205,14 @@ public:
 	template<typename ...Args>
 	void put(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		if (write(std::format(fmt, std::forward<Args>(args)...)))
-			return;
-
-		std::print(out_stream, fmt, std::forward<Args>(args)...);
+		write(std::format(fmt, std::forward<Args>(args)...));
 	}
 
 	/* Write to the process 'standard output', with  a \n at the end. */
 	template<typename ...Args>
 	void putln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		if (write(std::format(fmt, std::forward<Args>(args)...).append("\n")))
-			return;
-
-		std::println(out_stream, fmt, std::forward<Args>(args)...);
+		write(std::format(fmt, std::forward<Args>(args)...).append("\n"));
 	}
 
 	/* Write to the process 'standard output', only with yellow ANSI colours. */
@@ -285,7 +279,6 @@ public:
 	int32_t uid{0};
 	int32_t gid{0};
 
-	std::ostream& out_stream;
 	ProcCoutBuf buf_out{this};
 	ProcCerrBuf buf_err{this};
 	std::ostream s_out{&buf_out};
