@@ -51,7 +51,6 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 			if (auto [fid, ptr, err] = FileUtils::open(proc, std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); 
 			err == FileSystemError::Success)
 			{
-				std::println("Redirecting to '{}'", *end_find);
 				out = [file = std::move(ptr)](const std::string& line)
 				{
 					file->append(line);
@@ -63,59 +62,74 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 		return out;
 	});
-	
 
-	for (auto str : proc.get_var("PATH") | std::views::split(';'))
+	/* Try to find a file that matches on the PATH (or directly specified) */
+	auto match = [&] -> std::optional<FilePath>
 	{
-		FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
+		std::vector<std::string> candidates = proc.get_var("PATH")
+		| std::views::split(';')
+		| std::views::transform([&name](auto&& path) { return std::format("{}/{}", std::string_view(path), name); })
+		| std::ranges::to<std::vector>();
 
-		if (auto [fid, ptr, err] = FileUtils::open(proc, prog_path, FileAccessFlags::Execute); err == FileSystemError::Success)
+		candidates.emplace_back(name);
+
+		for (auto&& path : candidates)
 		{
-			/* Get setuid, setgid bits from file system. */
-			auto [exec_uid, exec_gid] = std::invoke([&fs, &fid, &proc]
+			if (auto [fid, err] = FileUtils::query(proc, path, FileAccessFlags::Execute); fid != 0)
 			{
-				if (FileMeta* meta = fs->get_metadata(fid))
-				{
-					bool setuid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetUid);
-					bool setgid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetGid);
-					return std::make_pair(
-						setuid ? meta->owner_uid : proc.get_uid(),
-						setgid ? meta->owner_gid : proc.get_gid()
-					);
-				}
-				else 
-				{
-					return std::make_pair(proc.get_uid(), proc.get_gid());
-				}
-			});
-
-			OS::CreateProcessParams params
-			{
-				.writer = std::move(redirect_writer),
-				.leader_id = proc.get_pid(),
-				.uid = exec_uid,
-				.gid = exec_gid
-			};
-
-			auto&& prog = ptr->get_executable();
-			if (!prog)
-			{
-				proc.errln("No program entry point detected!");
-				co_return 1;
-			}
-
-			if (run_in_background)
-			{
-				os.run_process(prog, std::move(args), std::move(params));
-				co_return 0;
-			}
-			else
-			{
-				co_return (co_await os.run_process(prog, std::move(args), std::move(params)));
+				return fs->get_path(fid);
 			}
 		}
+
+		return std::nullopt;
+	}();
+	
+	if (!match)
+	{
+		proc.warnln("'{}': No such file or directory.", name);
+		co_return 1;
 	}
 
-	proc.warnln("'{}': No such file or directory.", name);
+	if (auto [fid, ptr, err] = FileUtils::open(proc, *match, FileAccessFlags::Execute); err == FileSystemError::Success)
+	{
+		FileMeta* meta = fs->get_metadata(fid);
+		assert(meta);
+
+		bool setuid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetUid);
+		bool setgid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetGid);
+		int32_t exec_uid = setuid ? meta->owner_uid : proc.get_uid();
+		int32_t exec_gid = setgid ? meta->owner_gid : proc.get_gid();
+
+		OS::CreateProcessParams params
+		{
+			.writer = std::move(redirect_writer),
+			.leader_id = proc.get_pid(),
+			.uid = exec_uid,
+			.gid = exec_gid
+		};
+
+		auto&& prog = ptr->get_executable();
+		if (!prog)
+		{
+			proc.errln("exec: no program entry point detected.");
+			co_return 1;
+		}
+
+		if (run_in_background)
+		{
+			os.run_process(prog, std::move(args), std::move(params));
+			co_return 0;
+		}
+		else
+		{
+			co_return (co_await os.run_process(prog, std::move(args), std::move(params)));
+		}
+	}
+	else
+	{
+		proc.warnln("exec: failed to open '{}': {}.", *match, FileSystem::get_fserror_name(err));
+		co_return 1;
+	}
+	
 	co_return 1;
 }

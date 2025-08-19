@@ -64,9 +64,6 @@ public:
 	/* Gets the session manager. */
 	[[nodiscard]] SessionManager* get_session_manager();
 
-	/* Starts a shell session. */
-	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
-
 	struct CreateProcessParams
 	{
 		WriterFn writer{nullptr};
@@ -76,7 +73,7 @@ public:
 	};
 
 	Proc* create_process(CreateProcessParams&& params = {});
-	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params);
+	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params = {});
 	void get_processes(std::function<void(const Proc&)> reader) const;
 
 	int32_t create_sid();
@@ -154,17 +151,6 @@ public:
 	[[nodiscard]] TimerAwaiter wait(float seconds);
 	void schedule(float seconds, SchedulerFn callback);
 
-
-protected:
-
-	[[nodiscard]] virtual ProcessFn get_default_shell() const
-	{
-		return [](Proc& proc, std::vector<std::string> args) -> ProcessTask 
-		{ 
-			proc.putln("No shell installed!");
-			co_return 1; 
-		};
-	}
 
 protected:
 

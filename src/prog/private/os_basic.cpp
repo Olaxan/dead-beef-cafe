@@ -213,14 +213,14 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 
 	std::vector<std::pair<std::string, ProcessFn>> os_progs = 
 	{
-		{"/bin/proc", Programs::CmdProc},
-		{"/bin/wait", Programs::CmdWait},
-		{"/bin/shell", Programs::CmdShell},
 		{"/sbin/shutdown", Programs::CmdShutdown},
 		{"/sbin/boot", Programs::CmdBoot },
 		{"/sbin/login", Programs::CmdLogin},
 		{"/sbin/useradd", Programs::CmdUserAdd},
 		{"/sbin/groupadd", Programs::CmdGroupAdd},
+		{"/bin/proc", Programs::CmdProc},
+		{"/bin/wait", Programs::CmdWait},
+		{"/bin/shell", Programs::CmdShell},
 		{"/bin/ls", Programs::CmdList},
 		{"/bin/mkdir", Programs::CmdMakeDir},
 		{"/bin/touch", Programs::CmdMakeFile},

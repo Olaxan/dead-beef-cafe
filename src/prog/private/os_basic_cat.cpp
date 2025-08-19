@@ -53,8 +53,8 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 
 		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read); err == FileSystemError::Success)
 		{
-			proc.putln("{}", ptr->get_view());
 			++success_count;
+			proc.putln("{}", ptr->get_view());
 		}
 		else
 		{

@@ -39,22 +39,6 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
-Proc* OS::get_shell(std::ostream& out_stream)
-{
-    Proc* proc = create_process();
-
-    if (proc == nullptr)
-    {
-        std::println(out_stream, "Failed to create shell process.");
-        return nullptr;
-    }
-
-    auto sh = get_default_shell();
-    proc->dispatch(sh, {});
-
-    return proc;
-}
-
 Proc* OS::create_process(CreateProcessParams&& params)
 {
     /* Here, we create the process object, which will hold data for the running process. 

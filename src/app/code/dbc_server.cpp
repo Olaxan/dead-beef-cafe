@@ -148,7 +148,7 @@ public:
 		std::cout << "Client joined from " << socket_.remote_endpoint() << ".\n";
 		
 		OS& local_os = local_->get_os();
-		shell_ = local_os.get_shell(out_stream_);
+		local_os.run_process(Programs::CmdSSH, {"ssh"});
 		sock_ = local_os.create_socket<CmdSocketClient>();
 		local_os.connect_socket<CmdSocketServer>(sock_, local_os.get_global_ip(), 22);
 
@@ -281,7 +281,6 @@ private:
 
 	std::deque<com::CommandReply> replies_{};
 
-	Proc* shell_;
 	std::shared_ptr<CmdSocketClient> sock_{nullptr};
 
 	asio::streambuf in_buf_{};

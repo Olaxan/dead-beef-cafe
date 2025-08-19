@@ -34,7 +34,6 @@ int main(int argc, char* argv[])
 	Host* our_host = HostUtils::create_host<BasicOS>(our_world, "MyComputer");
 	OS& our_os = our_host->get_os();
 
-	Proc* our_shell = our_os.get_shell(); // shell proc starts a acceptor socket at 22
 	auto our_sock = our_os.create_socket<CmdSocketClient>(); 
 	our_os.connect_socket<CmdSocketServer>(our_sock, our_os.get_global_ip(), 22);
 

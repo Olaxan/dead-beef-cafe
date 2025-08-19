@@ -29,10 +29,10 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	CmdInput::CmdReaderParams usr_params{};
 	CmdInput::CmdReaderParams pwd_params{.password = true};
 
-	proc.put("Username: ");
+	proc.put(" | Username: ");
 	std::string username = co_await CmdInput::read_cmd_utf8(proc, usr_params);
 
-	proc.put("Password: ");
+	proc.put(" | Password: ");
 	std::string password = co_await CmdInput::read_cmd_utf8(proc, pwd_params);
 
 	users->prepare();

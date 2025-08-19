@@ -18,6 +18,7 @@ namespace Programs
 	ProcessTask CmdBoot(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdShutdown(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdShell(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdSSH(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdSudo(Proc& proc, std::vector<std::string> args);
 
 	/* User management task */
@@ -52,11 +53,5 @@ public:
 
 	BasicOS() = delete;
 	BasicOS(Host& owner);
-
-	EagerTask<int32_t> exec(Proc& proc, std::vector<std::string>&& args);
-
-protected:
-
-	[[nodiscard]] ProcessFn get_default_shell() const override { return Programs::CmdShell; }
 	
 };

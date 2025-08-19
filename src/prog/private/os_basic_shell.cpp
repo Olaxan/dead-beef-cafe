@@ -38,51 +38,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	auto sock = os.create_socket<CmdSocketServer>();
-	if (!os.bind_socket(sock, 22))
-	{
-		proc.errln("Failed to bind socket 22 for reading.");
-		co_return 1;
-	}
-
-	/* Register writer functors in the process so that output
-	is delivered in the form of command objects via the socket. */
-	proc.add_writer<std::string>([sock](const std::string& out_str)
-	{
-		com::CommandReply reply{};
-		reply.set_reply(out_str);
-		sock->write(std::move(reply));
-	});
-
-	proc.add_writer<com::CommandReply>([sock](const com::CommandReply& out_reply)
-	{
-		sock->write(out_reply);
-	});
-
-	/* Add reader functors so that child processes can listen to our traffic. */
-	proc.add_reader<std::string>([sock]() -> std::any
-	{
-		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
-			return opt->command();
-		
-		return {};
-	});
-
-	/* Async socket reader -> CommandQuery. */
-	proc.add_reader<CmdSocketAwaiterServer>([sock]() -> std::any
-	{
-		return sock->async_read();
-	});
-
-	/* Synchronous socket reader -> CommandQuery*/
-	proc.add_reader<com::CommandQuery>([sock]() -> std::any
-	{
-		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
-			return *opt;
-		
-		return {};
-	});
-
 	/* Lambda for handling shell navigation via 'cd'. */
 	auto cd = [&proc, &fs](std::vector<std::string> args) -> int32_t
 	{
