@@ -14,7 +14,8 @@ public:
 	
 	File(uint64_t fid) : fid_(fid) {};
 
-	void write(ProcessFn&& exec);
+	void write(ProcessFn exec);
+	//void write(ProcessFn&& exec);
 	void write(std::string content);
 	void append(std::string content);
 

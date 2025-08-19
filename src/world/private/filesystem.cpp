@@ -251,15 +251,22 @@ std::string FileSystem::get_flags(uint64_t fid)
 		const FilePermissionTriad& o = it->second.perm_owner;
 		const FilePermissionTriad& g = it->second.perm_group;
 		const FilePermissionTriad& u = it->second.perm_users;
-		out[0] = is_dir(fid) ? 'd' : '-';
+		const ExtraFileFlags& e = it->second.extra;
 
+		bool dir = has_flag<ExtraFileFlags, uint8_t>(e, ExtraFileFlags::Directory);
+		out[0] = dir ? 'd' : '-';
+
+		bool setuid = has_flag<ExtraFileFlags, uint8_t>(e, ExtraFileFlags::SetUid);
+		char uxs = setuid ? 's' : 'x';
 		out[1] = has_flag(o, FilePermissionTriad::Read) 	? 'r' : '-';
 		out[2] = has_flag(o, FilePermissionTriad::Write) 	? 'w' : '-';
-		out[3] = has_flag(o, FilePermissionTriad::Execute) 	? 'x' : '-';
+		out[3] = has_flag(o, FilePermissionTriad::Execute) 	? uxs : '-';
 
+		bool setgid = has_flag<ExtraFileFlags, uint8_t>(e, ExtraFileFlags::SetGid);
+		char gxs = setgid ? 's' : 'x';
 		out[4] = has_flag(g, FilePermissionTriad::Read) 	? 'r' : '-';
 		out[5] = has_flag(g, FilePermissionTriad::Write) 	? 'w' : '-';
-		out[6] = has_flag(g, FilePermissionTriad::Execute) 	? 'x' : '-';
+		out[6] = has_flag(g, FilePermissionTriad::Execute) 	? gxs : '-';
 
 		out[7] = has_flag(u, FilePermissionTriad::Read) 	? 'r' : '-';
 		out[8] = has_flag(u, FilePermissionTriad::Write) 	? 'w' : '-';
@@ -386,7 +393,16 @@ FileOpResult FileSystem::create_file(const FilePath& path, const CreateFileParam
 	if (params.recurse)
 		create_ensure_path(path, params);
 
-	return add_file<File>(path, params.meta);
+	auto res = add_file<File>(path, params.meta);
+	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
+	{
+		if (!params.content.empty()) 
+			ptr->write(params.content);
+			
+		if (params.executable)
+			ptr->write(params.executable);
+	}
+	return res;
 }
 
 FileOpResult FileSystem::create_directory(const FilePath& path, const CreateFileParams& params)

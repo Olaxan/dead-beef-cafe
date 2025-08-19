@@ -5,11 +5,17 @@ std::size_t File::size() const
 	return content_.size();
 }
 
-void File::write(ProcessFn&& exec)
+void File::write(ProcessFn exec)
 {
-	executable_ = exec;
+	executable_ = std::move(exec);
 	content_ = "BIN64::";
 }
+
+// void File::write(ProcessFn&& exec)
+// {
+// 	executable_ = exec;
+// 	content_ = "BIN64::";
+// }
 
 void File::write(std::string content)
 {

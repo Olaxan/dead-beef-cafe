@@ -18,7 +18,6 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
-	SessionManager* sess = os.get_session_manager();
 
 	if (fs == nullptr)
 	{
@@ -40,16 +39,16 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	if (std::optional<LoginPasswdData> passwd = users->authenticate(username, password); passwd.has_value())
 	{
 		/* Auth successful. */
-		int32_t sid = proc.set_sid();
-		sess->set_session_uid(sid, passwd->uid);
-		sess->set_session_gid(sid, passwd->gid);
+		Proc* leader = proc.get_session_leader();
+		leader->set_uid(passwd->uid);
+		leader->set_gid(passwd->gid);
 
 		proc.set_var("HOME", passwd->home_path);
 		proc.set_var("SHELL", passwd->shell_path);
 		proc.set_var("USER", passwd->username);
 		proc.set_var("PWD", passwd->home_path);
 
-		proc.putln("Welcome, {} (session {}).", username, sid);
+		proc.putln("Welcome, {} ({}, {}).", username, passwd->uid, passwd->gid);
 		
 		co_return 0;
 	}

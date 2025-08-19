@@ -63,16 +63,17 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 
 			if (auto [fid, ptr, err] = fs->open(driver_path); err == FileSystemError::Success)
 			{
-				if (auto& prog = ptr->get_executable())
-				{
-					int32_t ret = co_await os.create_process(prog, {}, &proc);
-					co_return ret;
-				}
-				else
-				{
-					proc.errln("Access violation.");
-					co_return 1;
-				}
+				// if (auto& prog = ptr->get_executable())
+				// {
+				// 	int32_t ret = co_await os.create_process(prog, {}, &proc);
+				// 	co_return ret;
+				// }
+				// else
+				// {
+				// 	proc.errln("Access violation.");
+				// 	co_return 1;
+				// }
+				co_return 0;
 			}
 			else
 			{

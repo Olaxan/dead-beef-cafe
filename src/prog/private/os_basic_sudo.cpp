@@ -5,7 +5,6 @@
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
-#include "session_mgr.h"
 
 #include "CLI/CLI.hpp"
 
@@ -29,7 +28,6 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
-	SessionManager* sess = os.get_session_manager();
 
 	if (fs == nullptr)
 	{
@@ -39,8 +37,9 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 
 	CmdInput::CmdReaderParams pwd_params{.password = true};
 
-	int32_t sid = proc.get_uid();
-	std::optional<std::string_view> opt_user = users->get_username(sid);
+	Proc* session = proc.get_session_leader();
+	int32_t uid = session->get_uid();
+	std::optional<std::string_view> opt_user = users->get_username(uid);
 
 	if (!opt_user)
 	{
@@ -72,6 +71,15 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 	}
+
+	auto subargs = args 
+	| std::views::drop(1) 
+	| std::ranges::to<std::vector<std::string>>();
+
+	if (subargs.empty())
+		co_return 1;
+
+	int32_t ret = co_await Programs::Exec(proc, std::move(subargs));
 
 	co_return 0;
 }

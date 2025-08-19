@@ -1,11 +1,11 @@
 #include "os_basic.h"
 
+#include "os.h"
 #include "device.h"
 #include "netw.h"
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
-#include "session_mgr.h"
 
 #include "CLI/CLI.hpp"
 
@@ -29,18 +29,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
-	SessionManager* sess = os.get_session_manager();
 	UsersManager* users = os.get_users_manager();
 
 	if (fs == nullptr)
 	{
 		proc.errln("No file system!");
-		co_return 1;
-	}
-
-	if (sess == nullptr)
-	{
-		proc.errln("No session manager!");
 		co_return 1;
 	}
 
@@ -199,43 +192,9 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			if (name == "cd")
 				co_return cd(std::move(args));
 
-			bool run_in_background{false};
-			if (std::string_view(args.back()) == "&")
-			{
-				args.pop_back();
-				run_in_background = true;
-			}
-
-			for (auto str : proc.get_var("PATH") | std::views::split(';'))
-			{
-				FilePath prog_path(std::format("{}/{}", std::string_view(str), name));
-
-				if (auto [fid, ptr, err] = FileUtils::open(proc, prog_path, FileAccessFlags::Read | FileAccessFlags::Execute); err == FileSystemError::Success)
-				{
-					if (auto& prog = ptr->get_executable())
-					{
-						if (run_in_background)
-						{
-							os.create_process(prog, std::move(args));
-							co_return 0;
-						}
-						else
-						{
-							int32_t ret = co_await os.create_process(prog, std::move(args), &proc);
-							co_return ret;
-						}
-					}
-					else
-					{
-						proc.errln("No program entry point detected!");
-						co_return 1;
-					}
-				}
-			}
-
-			proc.warnln("'{0}': No such file or directory.", name);
-			co_return 1;
-
+			int32_t ret = co_await Programs::Exec(proc, std::move(args));
+			co_return ret;
+			
 		}, out_cmd);
 
 		if (int32_t term_w = proc.get_var<int32_t>("TERM_W"))

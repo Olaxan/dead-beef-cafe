@@ -9,6 +9,12 @@
 #include <string>
 
 
+void Proc::set_leader(Proc* leader)
+{
+	host = leader;
+	sid = leader->get_sid();
+}
+
 void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resume)
 {
 	this->args = std::move(args);
@@ -26,16 +32,7 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 
 int32_t Proc::set_sid()
 {
-	if (host)
-	{
-		sid = host->set_sid();	
-	}
-	else
-	{
-		SessionManager* sess = owning_os->get_session_manager();
-		sid = sess->create_session();
-	}
-	
+	sid = owning_os->create_sid();
 	return sid;
 }
 
@@ -44,20 +41,29 @@ int32_t Proc::get_sid() const
 	return sid;
 }
 
+void Proc::set_uid(int32_t new_uid)
+{
+	uid = new_uid;
+}
+
 int32_t Proc::get_uid() const
 {
-	if (host) { return host->get_uid(); }
+	return uid;
+}
 
-	SessionManager* sess = owning_os->get_session_manager();
-	return sess->get_session_uid(sid);
+void Proc::set_gid(int32_t new_gid)
+{
+	gid = new_gid;
 }
 
 int32_t Proc::get_gid() const
 {
-	if (host) { return host->get_gid(); }
+	return gid;
+}
 
-	SessionManager* sess = owning_os->get_session_manager();
-	return sess->get_session_gid(sid);
+Proc* Proc::get_session_leader()
+{
+	return (host) ? host->get_session_leader() : this;
 }
 
 int ProcCoutBuf::sync()

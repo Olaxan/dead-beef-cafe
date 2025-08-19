@@ -225,7 +225,6 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/bin/echo", Programs::CmdEcho},
 		{"/bin/rm", Programs::CmdRemoveFile},
 		{"/bin/cat", Programs::CmdCat},
-		{"/bin/sudo", Programs::CmdSudo},
 		{"/usr/bin/count", Programs::CmdCount},
 		{"/usr/bin/snake", Programs::CmdSnake},
 		{"/usr/bin/dogs", Programs::CmdDogs},
@@ -235,22 +234,30 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
 	};
 
-	FileSystem::CreateFileParams all_progs = {
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		}
-	};
-
 	for (auto& fn : os_progs)
 	{
-		if (auto [fid, ptr, err] = fs->create_file(fn.first, all_progs); err == FileSystemError::Success)
+		fs->create_file(fn.first, 
 		{
-			ptr->write(std::forward<ProcessFn>(fn.second));
-		}
+			.recurse = true,
+			.meta = {
+				.perm_owner = FilePermissionTriad::All,
+				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+				.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+			},
+			.executable = std::forward<ProcessFn>(fn.second)
+		});
 	}
+
+	fs->create_file("/bin/sudo", 
+	{
+		.meta = {
+			.perm_owner = FilePermissionTriad::Execute,
+			.perm_group = FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Execute,
+			.extra = ExtraFileFlags::SetUid
+		},
+		.executable = std::forward<ProcessFn>(Programs::CmdSudo)
+	});
 
 	FileSystem::CreateFileParams passwd_params = {
 		.recurse = true,

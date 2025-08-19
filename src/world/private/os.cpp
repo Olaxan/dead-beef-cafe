@@ -41,7 +41,7 @@ World& OS::get_world()
 
 Proc* OS::get_shell(std::ostream& out_stream)
 {
-    Proc* proc = create_process(out_stream);
+    Proc* proc = create_process({ .std_out = out_stream });
 
     if (proc == nullptr)
     {
@@ -55,29 +55,41 @@ Proc* OS::get_shell(std::ostream& out_stream)
     return proc;
 }
 
-Proc* OS::create_process(std::ostream& os)
+Proc* OS::create_process(CreateProcessParams&& params)
 {
     /* Here, we create the process object, which will hold data for the running process. 
     The process function itself, however, is not run yet. */
-    int32_t pid = pid_counter_++;
-    std::println("Created process (pid = {0}) on {1}.", pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(std::make_pair(pid, std::make_unique<Proc>(pid, this, os)));
+    int32_t pid = ++pid_counter_;
 
-    return success ? it->second.get() : nullptr;
+    auto [iproc, success] = processes_.emplace(std::make_pair(pid, std::make_unique<Proc>(pid, this)));
+
+    if (!success)
+        return nullptr;
+
+    Proc* proc = iproc->second.get();
+
+    proc->set_uid(params.uid);
+    proc->set_gid(params.gid);
+
+    if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())
+    {
+        Proc* leader = ihost->second.get();
+        proc->set_leader(leader);
+        std::println("Created process {} (uid {}, gid {}) under {} on {}.", 
+            pid, proc->get_uid(), proc->get_gid(), ihost->first, (int64_t)this);
+    }
+    else
+    {
+        std::println("Created process {} (uid {}, gid {}) on {}.", 
+            pid, proc->get_uid(), proc->get_gid(), (int64_t)this);
+    }
+
+    return proc;
 }
 
-Proc* OS::create_process(Proc* host)
+EagerTask<int32_t> OS::run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params)
 {
-    int32_t pid = pid_counter_++;
-    std::println("Created child process (pid = {0}) under {1} on {2}.", pid, host->pid, (int64_t)this);
-    auto [it, success] = processes_.emplace(std::make_pair(pid, std::make_unique<Proc>(pid, host)));
-
-    return success ? it->second.get() : nullptr;
-}
-
-EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string> args, std::ostream &os)
-{
-    Proc* proc = create_process(os);
+    Proc* proc = create_process(std::forward<CreateProcessParams>(params));
     int32_t pid = proc->get_pid();
 
     if (proc == nullptr)
@@ -90,18 +102,9 @@ EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string
     co_return ret;
 }
 
-EagerTask<int32_t> OS::create_process(ProcessFn program, std::vector<std::string> args, Proc* host)
+int32_t OS::create_sid()
 {
-	Proc* proc = create_process(host);
-    int32_t pid = proc->get_pid();
-
-    if (proc == nullptr)
-        co_return 1;
-
-    int32_t ret = co_await proc->await_dispatch(program, std::move(args));
-    
-    processes_.erase(pid);
-    co_return ret;
+    return ++pid_counter_;
 }
 
 void OS::get_processes(std::function<void(const Proc&)> reader) const
@@ -114,8 +117,6 @@ FileSystem* OS::get_filesystem() const
 {
 	if (Disk* disk = get_device<Disk>())
         return disk->get_fs();
-
-    std::println("Did not find disk!");
 
     return nullptr;
 }

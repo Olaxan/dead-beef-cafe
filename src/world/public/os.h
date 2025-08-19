@@ -67,11 +67,19 @@ public:
 	/* Starts a shell session. */
 	[[nodiscard]] Proc* get_shell(std::ostream& out_stream = std::cout);
 
-	Proc* create_process(std::ostream& os = std::cout);
-	Proc* create_process(Proc* host);
-	EagerTask<int32_t> create_process(ProcessFn program, std::vector<std::string> args, std::ostream& os = std::cout);
-	EagerTask<int32_t> create_process(ProcessFn program, std::vector<std::string> args, Proc* proc);
+	struct CreateProcessParams
+	{
+		std::ostream& std_out{std::cout};
+		int32_t leader_id{-1};
+		int32_t uid{0};
+		int32_t gid{0};
+	};
+
+	Proc* create_process(CreateProcessParams&& params);
+	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params);
 	void get_processes(std::function<void(const Proc&)> reader) const;
+
+	int32_t create_sid();
 
 
 	/* Device management */

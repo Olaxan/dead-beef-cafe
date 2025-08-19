@@ -99,7 +99,7 @@ enum class FileSystemError : uint32_t
 
 /* --- File Permission Category --- */
 
-enum class FilePermissionCategory
+enum class FilePermissionCategory : uint8_t
 {
 	Owner,
 	Group,
@@ -122,9 +122,9 @@ enum class ExtraFileFlags : uint8_t
 {
 	None 		= 0,
 	Directory 	= 1 << 0,
-	SetSid 		= 1 << 0,
 	SetUid 		= 1 << 1,
-	Sticky 		= 1 << 2,
+	SetGid 		= 1 << 2,
+	Sticky 		= 1 << 3,
 };
 
 inline FilePermissionTriad operator | (FilePermissionTriad a, FilePermissionTriad b)
@@ -264,6 +264,8 @@ public:
 	{
 		bool recurse{false};
 		FileMeta meta{};
+		std::string content{};
+		ProcessFn executable{nullptr};
 	};
 
 	/* Create a file at the specified location (and optionally fills in missing directories). */

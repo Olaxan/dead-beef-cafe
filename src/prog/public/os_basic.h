@@ -44,6 +44,8 @@ namespace Programs
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdDogs(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdEdit(Proc& proc, std::vector<std::string> args);
+
+	EagerTask<int32_t> Exec(Proc& proc, std::vector<std::string>&& args);
 }
 
 class BasicOS : public OS
@@ -52,6 +54,8 @@ public:
 
 	BasicOS() = delete;
 	BasicOS(Host& owner);
+
+	EagerTask<int32_t> exec(Proc& proc, std::vector<std::string>&& args);
 
 protected:
 
