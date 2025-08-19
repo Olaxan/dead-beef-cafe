@@ -195,17 +195,6 @@ bool FileUtils::check_permission(const Proc& proc, uint64_t fid, FileAccessFlags
 			return false;
 		});
 
-		std::println("Access '{}' by ({}, {}): {}{}{}+{}{}{}.",
-			fid,
-			uid, gid,
-			owner_match ? "O" : "-",
-			group_match ? "G" : "-",
-			users_match ? "U" : "-",
-			read_valid 	? "R" : "-",
-			write_valid ? "W" : "-",
-			exec_valid 	? "X" : "-"
-		);
-
 		return read_valid && write_valid && exec_valid;
 	}
 	

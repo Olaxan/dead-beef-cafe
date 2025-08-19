@@ -366,18 +366,11 @@ bool UsersManager::check_belongs(int32_t uid, int32_t gid)
 {
 	if (auto igroup = groups_.find(gid); igroup != groups_.end())
 	{
-		/* Not ideal, we have to loop through and do a bunch of hash lookups, 
-		but will have to suffice until we can cache this stuff somewhere. */
-		for (auto&& member : igroup->second.members)
+		return std::ranges::any_of(igroup->second.members, [this, uid](const std::string& name)
 		{
-			if (auto iuid = name_to_uid_.find(member); iuid != name_to_uid_.end() && iuid->second == uid)
-			{
-				std::println("Access: User '{}'({}) is a member of '{}'({}).", 
-					member, uid, igroup->second.group_name, gid);
-					
-				return true;
-			}
-		}
+			auto it = name_to_uid_.find(name);
+			return it != name_to_uid_.end() && it->second == uid;
+		});
 	}
 
 	return false;
