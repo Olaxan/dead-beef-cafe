@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ip;
+
+enum Protocol
+{
+	TCP = 0;
+	UDP = 1;
+	ICMP = 2;
+}
+
+message IpPackage
+{
+	bytes src_ip = 1;
+	bytes dest_ip = 2;
+	string payload = 3;
+	Protocol protocol = 4;
+}

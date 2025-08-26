@@ -15,12 +15,14 @@
 #include <iomanip>
 #include <array>
 #include <string>
+#include <string_view>
 
 class Address6 {
 public:
 
 	union
 	{
+        char raw[16];
 		std::array<uint8_t, 16> bytes{};
 		struct
 		{
@@ -49,6 +51,11 @@ public:
     bool operator==(const Address6& other) const 
 	{
         return this->head == other.head && this->tail == other.tail;
+    }
+
+    std::string_view view() const
+    {
+        return std::string_view{raw};
     }
 
 private:

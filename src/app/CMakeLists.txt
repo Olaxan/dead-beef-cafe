@@ -19,12 +19,12 @@ FIND_PACKAGE(Threads REQUIRED)
 
 ADD_EXECUTABLE(dbc_test ${files_test_app})
 ADD_DEPENDENCIES(dbc_test prog)
-TARGET_LINK_LIBRARIES(dbc_test PRIVATE world prog proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads)
+TARGET_LINK_LIBRARIES(dbc_test PRIVATE world prog abstr proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
 ADD_DEPENDENCIES(dbc_client prog)
-TARGET_LINK_LIBRARIES(dbc_client PRIVATE world prog proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)
+TARGET_LINK_LIBRARIES(dbc_client PRIVATE world prog abstr proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)
 
 ADD_EXECUTABLE(dbc_server ${files_server_app})
 ADD_DEPENDENCIES(dbc_server prog)
-TARGET_LINK_LIBRARIES(dbc_server PRIVATE world prog proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)
+TARGET_LINK_LIBRARIES(dbc_server PRIVATE world prog abstr proto protobuf::libprotoc protobuf::libprotobuf Threads::Threads asio::asio)

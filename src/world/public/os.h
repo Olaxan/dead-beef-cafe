@@ -4,13 +4,15 @@
 #include "proc.h"
 #include "timer_mgr.h"
 #include "netw.h"
-#include "ip_mgr.h"
+#include "net_mgr.h"
 #include "world.h"
 #include "device.h"
 #include "device_state.h"
 #include "session.h"
 #include "session_mgr.h"
 #include "users_mgr.h"
+#include "str_sock.h"
+#include "net_srv.h"
 
 #include <memory>
 #include <vector>
@@ -165,6 +167,7 @@ protected:
 
 	UsersManager users_{this};
 	SessionManager sess_{this};
+	NetManager net_{this};
 
 	friend Proc;
 };

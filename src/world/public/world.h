@@ -1,7 +1,7 @@
 #pragma once
 
 #include "timer_mgr.h"
-#include "ip_mgr.h"
+#include "net_srv.h"
 #include "msg_queue.h"
 
 #include <memory>

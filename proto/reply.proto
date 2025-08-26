@@ -2,15 +2,7 @@ syntax = "proto3";
 
 package com;
 
-enum ConsoleMode
-{
-	Cooked = 0;
-	Raw = 1;
-}
-
 message CommandReply
 {
 	string reply = 1;
-	bool configure = 2;
-	optional ConsoleMode con_mode = 3;
 };
