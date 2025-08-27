@@ -30,6 +30,8 @@ bool Host::start_host()
     for (auto& device : devices_)
         device->start_device(this);
 
+    os_->start_os();
+
     state_ = DeviceState::PoweredOn;
 
     return true;

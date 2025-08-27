@@ -41,8 +41,11 @@ public:
 
 	virtual std::size_t register_devices();
 
+	/* Start the host environment (and then the host). */
+	virtual void start_os();
+
 	/* Shut down the host environment (and then the host). */
-	void shutdown_os();
+	virtual void shutdown_os();
 
 	/* Get the hostname from the owning Host. */
 	[[nodiscard]] const std::string& get_hostname() const;

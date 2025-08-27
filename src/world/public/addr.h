@@ -44,9 +44,14 @@ public:
         return this->head == other.head && this->tail == other.tail;
     }
 
-    std::string_view view() const
+    std::string_view data_view() const
     {
-        return std::string_view{raw};
+        return std::string_view{raw, 16};
+    }
+
+    std::string data_str() const
+    {
+        return std::string{raw, 16};
     }
 
     static std::expected<Address6, std::invalid_argument> from_string(const std::string& address) noexcept;

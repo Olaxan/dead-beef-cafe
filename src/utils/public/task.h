@@ -24,6 +24,10 @@ struct TaskPromiseType
     // we need to store it in order to resume it later when value of this coroutine will be computed
     std::coroutine_handle<> awaiting_coroutine;
 
+    /* Possible exception raised during coroutine execution,
+    to be rethrown at return. */
+    std::optional<std::exception_ptr> opt_except{};
+
     // task is async result of our coroutine
     // it is created before execution of the coroutine body
     // it can be either co_awaited inside another coroutine
@@ -36,12 +40,15 @@ struct TaskPromiseType
     void return_value(T val)
     {
         value = std::move(val);
+
+        if (opt_except) { std::rethrow_exception(*opt_except); }
     }
 
     void unhandled_exception()
     {
         // alternatively we can store current exeption in std::exception_ptr to rethrow it later
-        std::terminate();
+        //std::terminate();
+        opt_except = std::current_exception();
     }
 
     // when final suspend is executed 'value' is already set

@@ -50,7 +50,10 @@ std::expected<Address6, std::invalid_argument> Address6::from_string(const std::
 std::expected<Address6, std::invalid_argument> Address6::from_bytes(std::string_view str) noexcept
 {
 	if (str.size() != 16)
-		return std::unexpected(std::invalid_argument("Address6 bytes constructor takes 16 bytes."));
+	{
+		return std::unexpected(std::invalid_argument(
+			std::format("Address6 bytes constructor takes 16 bytes, got {}", str.size())));
+	}
 
 	std::array<uint8_t, 16> out_bytes{0};
 	std::memcpy(out_bytes.data(), str.data(), 16);

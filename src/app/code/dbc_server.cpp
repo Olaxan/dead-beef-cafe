@@ -142,6 +142,7 @@ public:
 	: socket_(std::move(socket)), timer_(socket_.get_executor()), room_(room), world_(room_.get_world())
 	{
 		local_ = HostUtils::create_host<BasicOS>(world_, "Participant");
+		local_->start_host();
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
 
 		Host* remote = room_.get_server();

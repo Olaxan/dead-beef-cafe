@@ -24,6 +24,11 @@ std::size_t OS::register_devices()
     return devices_.size();
 }
 
+void OS::start_os()
+{
+    state_ = DeviceState::PoweredOn;
+}
+
 void OS::shutdown_os()
 {
     owner_.shutdown_host();

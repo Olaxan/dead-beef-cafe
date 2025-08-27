@@ -3,22 +3,14 @@
 
 #include "proto/ip_packet.pb.h"
 
-bool NetManager::test_reach(Address6 remote)
+#include <print>
+
+std::expected<SocketDescriptor, std::runtime_error> NetManager::create_socket()
 {
-	// Address6&& src = get_local_address();
+	return SocketDescriptor{1};
+}
 
-	// if (remote == src)
-	// 	return true;
-
-	// ip::IpPackage pack{};
-	// pack.set_dest_ip(remote);
-	// pack.set_src_ip(src);
-	// pack.set_protocol(ip::Protocol::ICMP);
-
-	// std::optional<UUID> mac = arp_query();
-
-	// if (!mac)
-	// 	return false;
-	
-	return false;
+void NetManager::send(const SocketDescriptor& sock, ip::IpPackage&& package)
+{
+	tx_queue_.push(std::move(package));
 }

@@ -59,5 +59,7 @@ public:
 
 	BasicOS() = delete;
 	BasicOS(Host& owner);
+
+	virtual void start_os() override;
 	
 };

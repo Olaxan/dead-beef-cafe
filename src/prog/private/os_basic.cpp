@@ -274,3 +274,10 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 
 	users_.commit();
 }
+
+void BasicOS::start_os()
+{
+	state_ = DeviceState::PoweredOn;
+	run_process(Programs::SrvNetTx, {}, {});
+	run_process(Programs::SrvNetRx, {}, {});
+}

@@ -52,29 +52,44 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	if (auto res = Address6::from_string(params.addr))
+	auto parse_res = Address6::from_string(params.addr);
+	
+	if (!parse_res)
 	{
-		Address6 src = os.get_global_ip();
-		const Address6& dest = res.value();
-		proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
-		ip::IpPackage package;
-		package.set_dest_ip(dest.raw);
-		package.set_src_ip(src.raw);
-		package.set_protocol(ip::Protocol::ICMP);
-		co_await os.wait(1.f);
-
-		//auto [conn, err] = NetUtils::connect(proc, dest, 22);
-
-		bool success = net->test_reach(dest);
-		proc.putln("Host {}.", success ? "reachable" : "unreachable");
-
-		co_return 0;
-	}
-	else
-	{
-		proc.warnln("ping: {}", res.error().what());
+		proc.warnln("ping: {}.", parse_res.error().what());
 		co_return 1;
 	}
+
+	const Address6& dest = parse_res.value();
+	Address6 src = os.get_global_ip();
+
+	proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
+
+	ip::IpPackage package;
+	package.set_src_ip(src.data_str());
+	package.set_dest_ip(dest.data_str());
+	package.set_protocol(ip::Protocol::ICMP);
+
+	auto sock_res = net->create_socket();
+	if (!sock_res)
+	{
+		proc.errln("ping: {}.", sock_res.error().what());
+		co_return 1;
+	}
+
+	co_await os.wait(1.f);
+
+	SocketDescriptor sock = sock_res.value();
+
+	net->send(sock, std::move(package));
+
+	//auto [conn, err] = NetUtils::connect(proc, dest, 22);
+
+	bool success = false;
+	proc.putln("Host {}.", success ? "reachable" : "unreachable");
+
+	co_return 0;
+	
 
 	co_return 1;
 }
