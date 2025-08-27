@@ -66,6 +66,9 @@ public:
 	/* Gets the session manager. */
 	[[nodiscard]] SessionManager* get_session_manager();
 
+	/* Gets the network manager. */
+	[[nodiscard]] NetManager* get_network_manager();
+
 	struct CreateProcessParams
 	{
 		WriterFn writer{nullptr};

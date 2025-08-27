@@ -103,11 +103,11 @@ struct std::formatter<UUID> : std::formatter<std::string>
     auto format(const UUID& addr, auto& ctx) const
 	{
         std::ostringstream oss;
-        for (size_t i = 0; i < 16; i += 2) 
+        for (size_t i = 0; i < 8; i += 2) 
 		{
             uint16_t segment = (addr.bytes[i] << 8) | addr.bytes[i + 1];
             oss << std::hex << std::setw(4) << std::setfill('0') << segment;
-            if (i < 14) oss << ":";
+            if (i < 6) oss << ":";
         }
 
         return std::formatter<std::string>::format(oss.str(), ctx);

@@ -32,6 +32,9 @@ namespace Programs
 	ProcessTask InitNet(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitDisk(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitProg(Proc& proc, std::vector<std::string> args);
+	
+	ProcessTask SrvNetRx(Proc& proc, std::vector<std::string> args);
+	ProcessTask SrvNetTx(Proc& proc, std::vector<std::string> args);
 
 	/* File management */
 	ProcessTask CmdList(Proc& proc, std::vector<std::string> args);

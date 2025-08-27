@@ -5,6 +5,7 @@
 #include "task.h"
 
 #include <set>
+#include <print>
 #include <coroutine>
 #include <vector>
 #include <unordered_map>
@@ -35,11 +36,12 @@ using NetServerDataTypes = NetServerData<
 using NetServerContainer = BaseContainer<NetServerContainerBase, DataLayout::SoA, NetServerDataTypes>;
 
 template <typename T>
-class NetServer
+class LinkServer
 {
 public:
 
-	NetServer() = default;
+	LinkServer() = default;
+	LinkServer(LinkServer&) = delete;
 
 	/* Adds a link between two nodes. */
 	void link(T first, T second)

@@ -15,6 +15,7 @@
 #include "os_basic.h"
 #include "os_input.h"
 #include "host_utils.h"
+#include "uuid.h"
 
 #include "proto/test.pb.h"
 #include "proto/query.pb.h"
@@ -101,6 +102,7 @@ public:
 	}
 
 	World& get_world() { return world_; }
+	Host* get_server() { return server_host_; }
 
 private:
 
@@ -141,6 +143,17 @@ public:
 	{
 		local_ = HostUtils::create_host<BasicOS>(world_, "Participant");
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
+
+		Host* remote = room_.get_server();
+		HostLinkServer& links = world_.get_link_server();
+		links.link(local_, remote);
+		std::println("Linked {} to {}.", UUID{(uint64_t)local_}, UUID{(uint64_t)remote});
+	}
+
+	~ShellSession()
+	{
+		HostLinkServer& links = world_.get_link_server();
+		links.purge(local_);
 	}
 
 	void start()

@@ -1,6 +1,5 @@
 #include "os_basic.h"
 
-
 #include "os.h"
 #include "device.h"
 #include "netw.h"
@@ -81,7 +80,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("SecureShell version 5:");
 
-	co_await ShellUtils::Exec(proc, {"/sbin/login"});
+	//co_await ShellUtils::Exec(proc, {"/sbin/login"});
 
 	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD::BEEF::CAFE " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
 

@@ -2,7 +2,12 @@
 
 #include "world.h"
 #include "host.h"
-#include "ip_mgr.h"
+#include "net_srv.h"
+
+void NIC::set_ip(const std::string& new_ip)
+{
+	address_ = Address6::from_string(new_ip).value_or(Address6{});
+}
 
 void NIC::on_start(Host* owner)
 {

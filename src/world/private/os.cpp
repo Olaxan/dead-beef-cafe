@@ -2,7 +2,7 @@
 #include "host.h"
 #include "world.h"
 #include "proc.h"
-#include "ip_mgr.h"
+#include "net_srv.h"
 #include "nic.h"
 #include "disk.h"
 
@@ -118,6 +118,11 @@ UsersManager* OS::get_users_manager()
 SessionManager* OS::get_session_manager()
 {
 	return &sess_;
+}
+
+NetManager* OS::get_network_manager()
+{
+	return &net_;
 }
 
 Address6 OS::get_global_ip()

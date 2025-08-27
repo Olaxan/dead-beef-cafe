@@ -7,6 +7,7 @@
 #include "os_fileio.h"
 #include "os_netio.h"
 #include "addr.h"
+#include "net_mgr.h"
 
 #include "CLI/CLI.hpp"
 
@@ -23,6 +24,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
+	NetManager* net = os.get_network_manager();
 	assert(fs);
 
 	CLI::App app{"Network utility to test connectivity and analyze routing."};
@@ -31,10 +33,12 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 	struct PingArgs
 	{
 		std::string addr;
+		int32_t payload{0};
 	} params{};
 
 
 	app.add_option("TARGET", params.addr, "Target address for ping");
+	app.add_option("-p,--payload-size", params.payload, "Size of ping payload")->default_val(32);
 
 	try
 	{
@@ -48,11 +52,11 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	try
+	if (auto res = Address6::from_string(params.addr))
 	{
 		Address6 src = os.get_global_ip();
-		Address6 dest{params.addr};
-		proc.putln("Pinging {} with 32 bytes of data...", dest);
+		const Address6& dest = res.value();
+		proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
 		ip::IpPackage package;
 		package.set_dest_ip(dest.raw);
 		package.set_src_ip(src.raw);
@@ -61,12 +65,14 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 		//auto [conn, err] = NetUtils::connect(proc, dest, 22);
 
+		bool success = net->test_reach(dest);
+		proc.putln("Host {}.", success ? "reachable" : "unreachable");
 
 		co_return 0;
 	}
-	catch (const std::invalid_argument& e)
+	else
 	{
-		proc.warnln("ping: {}", e.what());
+		proc.warnln("ping: {}", res.error().what());
 		co_return 1;
 	}
 

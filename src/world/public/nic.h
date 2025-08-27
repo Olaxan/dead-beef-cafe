@@ -26,7 +26,7 @@ public:
 	void set_physical_bandwidth(float gbps) { bandwidth_ = gbps; }
 
 	/* Endpoint IF */
-	void set_ip(const std::string& new_ip) override { address_ = Address6(new_ip); }
+	void set_ip(const std::string& new_ip) override;
 	void set_ip(const Address6& new_ip) override { address_ = new_ip; }
 	const Address6& get_ip() const override { return address_; }
 	/* Endpoint IF */

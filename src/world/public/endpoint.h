@@ -3,6 +3,7 @@
 #include "addr.h"
 
 #include <string>
+#include <string_view>
 
 class IEndpoint
 {
