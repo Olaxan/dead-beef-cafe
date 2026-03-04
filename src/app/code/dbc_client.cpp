@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
 		
 		if (SetConsoleOutputCP(CP_UTF8) == false)
 		{
-			std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as indended.");
+			std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as intended.");
 		}
 
 		while (true)

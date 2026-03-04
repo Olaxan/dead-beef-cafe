@@ -4,13 +4,15 @@
 #include "proc.h"
 #include "timer_mgr.h"
 #include "netw.h"
-#include "ip_mgr.h"
+#include "net_mgr.h"
 #include "world.h"
 #include "device.h"
 #include "device_state.h"
 #include "session.h"
 #include "session_mgr.h"
 #include "users_mgr.h"
+#include "str_sock.h"
+#include "net_srv.h"
 
 #include <memory>
 #include <vector>
@@ -39,8 +41,11 @@ public:
 
 	virtual std::size_t register_devices();
 
+	/* Start the host environment (and then the host). */
+	virtual void start_os();
+
 	/* Shut down the host environment (and then the host). */
-	void shutdown_os();
+	virtual void shutdown_os();
 
 	/* Get the hostname from the owning Host. */
 	[[nodiscard]] const std::string& get_hostname() const;
@@ -64,6 +69,9 @@ public:
 	/* Gets the session manager. */
 	[[nodiscard]] SessionManager* get_session_manager();
 
+	/* Gets the network manager. */
+	[[nodiscard]] NetManager* get_network_manager();
+
 	struct CreateProcessParams
 	{
 		WriterFn writer{nullptr};
@@ -85,65 +93,14 @@ public:
 	template <std::derived_from<Device> T>
 	T* get_device() const
 	{
-		for (auto& [uuid, dev] : devices_)
-		{
-			if (T* cast = dynamic_cast<T*>(dev))
-				return cast;
-		}
-
-		return nullptr;
+		return owner_.get_device<T>();
 	}
 
 	/* Gets a list of devices matching the specified type. */
 	template <std::derived_from<Device> T>
 	std::vector<T*> get_devices_of_type() const
 	{
-		std::vector<T*> out;
-		for (auto& [uuid, dev] : devices_)
-		{
-			if (T* cast = dynamic_cast<T*>(dev))
-				out.push_back(cast);
-		}
-
-		return out;
-	}
-
-	/* Sockets */
-	template<std::derived_from<ISocket> T>
-	std::shared_ptr<T> create_socket()
-	{
-		int32_t fd = ++fd_counter_;
-		std::shared_ptr<T> new_ptr = std::make_shared<T>();
-		sockets_[fd] = new_ptr;
-		return new_ptr;
-	}
-
-	template<typename T_Tx, typename T_Rx>
-	std::shared_ptr<Socket<T_Tx, T_Rx>> create_socket()
-	{
-		return create_socket<Socket<T_Tx, T_Rx>>();
-	}
-	
-	bool close_socket(int32_t fd)
-	{
-		return sockets_.erase(fd);
-	}
-
-	/* Placeholder */
-	Address6 get_global_ip();
-
-	bool bind_socket(const std::shared_ptr<ISocket>& sock, int32_t listen_port)
-	{
-		IpManager& internet = get_world().get_ip_manager();
-		return internet.bind(sock, get_global_ip(), listen_port);
-	}
-
-	template<std::derived_from<ISocket> TargetT>
-	bool connect_socket(const std::shared_ptr<ISocket>& sock, Address6 dest_ip, int32_t dest_port)
-	{
-		IpManager& internet = get_world().get_ip_manager();
-    	std::optional<SessionId> sid = internet.connect<TargetT>(sock, dest_ip, dest_port);
-		return sid.has_value();
+		return owner_.get_devices_of_type<T>();
 	}
 
 	/* --- Scheduler --- */
@@ -161,10 +118,10 @@ protected:
 	DeviceState state_{DeviceState::PoweredOff};
 	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
-	std::unordered_map<int32_t, std::shared_ptr<ISocket>> sockets_;
 
 	UsersManager users_{this};
 	SessionManager sess_{this};
+	NetManager net_{this};
 
 	friend Proc;
 };

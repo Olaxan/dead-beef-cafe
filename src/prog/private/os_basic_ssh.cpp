@@ -1,6 +1,5 @@
 #include "os_basic.h"
 
-
 #include "os.h"
 #include "device.h"
 #include "netw.h"
@@ -32,31 +31,57 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
+	NetManager* net = os.get_network_manager();
+	Address6 local_ip = net->get_primary_ip();
 
-	auto sock = os.create_socket<CmdSocketServer>();
-	if (!os.bind_socket(sock, 22))
+	struct SSHNetSock
+	{
+		SocketDescriptor fd{0};
+		NetManager* netmgr{nullptr};
+	};
+
+	auto exp_sock = net->create_socket();
+
+	if (!exp_sock)
+	{
+		co_return 2;
+	}
+
+	if (!net->bind_socket(*exp_sock, {local_ip, 22}))
 	{
 		proc.errln("Failed to bind socket 22 for reading.");
 		co_return 1;
 	}
 
-	/* Register writer functors in the process so that output
+	SSHNetSock ssh_sock{ .fd = *exp_sock, .netmgr = net };
+
+	/* --- WRITER FUNCTORS  ---
+	Register writer functors in the process so that output
 	is delivered in the form of command objects via the socket. */
-	proc.add_writer<std::string>([sock](const std::string& out_str)
+
+	/* Writer for regular strings. */
+	proc.add_writer<std::string>([ws = ssh_sock](const std::string& out_str)
 	{
 		com::CommandReply reply{};
 		reply.set_reply(out_str);
-		sock->write(std::move(reply));
+		ws.netmgr->async_write_socket(ws.fd, out_str);
 	});
 
-	/* Add writer for CommandReply so we can send such directly. */
-	proc.add_writer<com::CommandReply>([sock](const com::CommandReply& out_reply)
+	/* Writer for the common 'CommandReply' struct. */
+	proc.add_writer<com::CommandReply>([ws = ssh_sock](const com::CommandReply& out_reply)
 	{
-		sock->write(out_reply);
+		std::string coded_str;
+		if (bool success = out_reply.SerializeToString(&coded_str))
+			ws.netmgr->async_write_socket(ws.fd, coded_str);
 	});
 
-	/* Add reader functors so that child processes can listen to our traffic. */
-	proc.add_reader<std::string>([sock]() -> std::any
+
+
+	/* --- READER FUNCTORS ---
+	Add reader functors so that child processes can listen to our traffic. */
+
+	/* Synchronous reader for common strings -- returns default if nothing in buffer. */
+	proc.add_reader<std::string>([rs = ssh_sock]() -> std::any
 	{
 		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
 			return opt->command();
@@ -64,14 +89,8 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		return {};
 	});
 
-	/* Async socket reader -> CommandQuery. */
-	proc.add_reader<CmdSocketAwaiterServer>([sock]() -> std::any
-	{
-		return sock->async_read();
-	});
-
-	/* Synchronous socket reader -> CommandQuery*/
-	proc.add_reader<com::CommandQuery>([sock]() -> std::any
+	/* Synchronous reader for 'CommandQuery' struct -- returns default if nothing in buffer. */
+	proc.add_reader<com::CommandQuery>([ssh_sock]() -> std::any
 	{
 		if (std::optional<com::CommandQuery> opt = sock->read(); opt.has_value())
 			return *opt;
@@ -79,9 +98,24 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		return {};
 	});
 
+	/* Async socket reader -> CommandQuery. */
+	proc.add_reader<CmdSocketAwaiterServer>([ssh_sock]() -> std::any
+	{
+		return sock->async_read();
+	});
+
+	
+
+
 	proc.putln("SecureShell version 5:");
 
-	co_await ShellUtils::Exec(proc, {"/sbin/login"});
+	int32_t login_ret = co_await ShellUtils::Exec(proc, {"/sbin/login"});
+	
+	if (login_ret != 0)
+	{
+		proc.putln("Authentication failure.");
+		co_return 1;
+	}
 
 	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD::BEEF::CAFE " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
 

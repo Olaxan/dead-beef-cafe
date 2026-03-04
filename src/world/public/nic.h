@@ -3,6 +3,9 @@
 #include "device.h"
 #include "endpoint.h"
 #include "addr.h"
+#include "netw.h"
+
+#include "proto/ip_packet.pb.h"
 
 #include <print>
 
@@ -13,7 +16,7 @@ public:
 	NIC() = default;
 
 	NIC(float bandwidth) 
-		: bandwidth_(bandwidth) 
+		: bandwidth_(bandwidth)
 	{
 		set_ip(IPv6Generator::generate());	
 	}
@@ -26,7 +29,7 @@ public:
 	void set_physical_bandwidth(float gbps) { bandwidth_ = gbps; }
 
 	/* Endpoint IF */
-	void set_ip(const std::string& new_ip) override { address_ = Address6(new_ip); }
+	void set_ip(const std::string& new_ip) override;
 	void set_ip(const Address6& new_ip) override { address_ = new_ip; }
 	const Address6& get_ip() const override { return address_; }
 	/* Endpoint IF */
@@ -34,9 +37,23 @@ public:
 	virtual void on_start(Host* owner) override;
 	virtual void on_shutdown(Host* owner) override;
 
+	void transfer_one(NIC* other);
+
+	template <typename Params>
+	void send(NIC* other, Params&& data)
+	{
+		other->rx_queue_.push(std::forward<Params>(data));
+	}
+
+	NetQueue& get_rx_queue() { return rx_queue_; }
+	NetQueue& get_tx_queue() { return tx_queue_; }
+
 private:
 
 	Address6 address_{};
 	float bandwidth_ = 0.f;
+
+	NetQueue rx_queue_{};
+	NetQueue tx_queue_{};
 
 };

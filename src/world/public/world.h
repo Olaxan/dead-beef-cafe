@@ -1,23 +1,28 @@
 #pragma once
 
 #include "timer_mgr.h"
-#include "ip_mgr.h"
+#include "net_srv.h"
 #include "msg_queue.h"
+#include "link_srv.h"
 
 #include <memory>
 #include <vector>
 #include <thread>
 
-using msg_func_t = std::function<void(void)>;
-using WorldUpdateQueue = MessageQueue<msg_func_t>;
-
+class NIC;
 class Host;
+
+using MessageFn = std::function<void(void)>;
+using WorldUpdateQueue = MessageQueue<MessageFn>;
+using IpLinkServer = LinkServer<NIC*>;
+
 
 class World
 {
 public:
 
     World() = default;
+    World(World&) = delete;
 
 public:
 
@@ -25,6 +30,7 @@ public:
 
     void launch();
 
+    IpLinkServer& get_link_server() { return net_; }
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
     IpManager& get_ip_manager() { return ip_; }
@@ -44,5 +50,7 @@ private:
     IpManager ip_{};
 
     WorldUpdateQueue queue_{};
+
+    IpLinkServer net_{};
 
 };

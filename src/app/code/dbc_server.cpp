@@ -15,6 +15,7 @@
 #include "os_basic.h"
 #include "os_input.h"
 #include "host_utils.h"
+#include "uuid.h"
 
 #include "proto/test.pb.h"
 #include "proto/query.pb.h"
@@ -101,6 +102,7 @@ public:
 	}
 
 	World& get_world() { return world_; }
+	Host* get_server() { return server_host_; }
 
 private:
 
@@ -140,7 +142,24 @@ public:
 	: socket_(std::move(socket)), timer_(socket_.get_executor()), room_(room), world_(room_.get_world())
 	{
 		local_ = HostUtils::create_host<BasicOS>(world_, "Participant");
+		local_->start_host();
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
+
+		Host* remote = room_.get_server();
+		
+		local_nic_ = local_->get_device<NIC>();
+		NIC* remote_nic = remote->get_device<NIC>();
+		assert(local_nic_ && remote_nic);
+
+		IpLinkServer& links = world_.get_link_server();
+		links.link(local_nic_, remote_nic);
+		std::println("Linked {} to {}.", UUID{(uint64_t)local_nic_}, UUID{(uint64_t)remote_nic});
+	}
+
+	~ShellSession()
+	{
+		IpLinkServer& links = world_.get_link_server();
+		links.purge(local_nic_);
 	}
 
 	void start()
@@ -278,6 +297,7 @@ private:
 	ChatRoom& room_;
 	World& world_;
 	Host* local_{nullptr};
+	NIC* local_nic_{nullptr};
 
 	std::deque<com::CommandReply> replies_{};
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "task.h"
+#include "proc_io.h"
 #include "term_utils.h"
 #include "session.h"
 

@@ -35,6 +35,33 @@ public:
 		return static_cast<T&>(*devices_.emplace_back(std::make_unique<T>(std::forward<Args>(args)...)));
 	}
 
+	/* Gets the first registered device that matches the specified type. */
+	template <std::derived_from<Device> T>
+	T* get_device() const
+	{
+		for (auto& dev : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev.get()))
+				return cast;
+		}
+
+		return nullptr;
+	}
+
+	/* Gets a list of devices matching the specified type. */
+	template <std::derived_from<Device> T>
+	std::vector<T*> get_devices_of_type() const
+	{
+		std::vector<T*> out;
+		for (auto& [uuid, dev] : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev.get()))
+				out.push_back(cast);
+		}
+
+		return out;
+	}
+
 	template<std::derived_from<OS> T, typename ...Args>
 	T& create_os(Args&& ...args)
 	{

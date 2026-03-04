@@ -2,7 +2,7 @@
 #include "host.h"
 #include "world.h"
 #include "proc.h"
-#include "ip_mgr.h"
+#include "net_srv.h"
 #include "nic.h"
 #include "disk.h"
 
@@ -22,6 +22,11 @@ std::size_t OS::register_devices()
         devices_.emplace(++uuid, dev.get());
     
     return devices_.size();
+}
+
+void OS::start_os()
+{
+    state_ = DeviceState::PoweredOn;
 }
 
 void OS::shutdown_os()
@@ -120,12 +125,9 @@ SessionManager* OS::get_session_manager()
 	return &sess_;
 }
 
-Address6 OS::get_global_ip()
+NetManager* OS::get_network_manager()
 {
-	if (NIC* nic = get_device<NIC>())
-        return nic->get_ip();
-
-    return Address6();
+	return &net_;
 }
 
 TimerAwaiter OS::wait(float seconds)

@@ -2,10 +2,6 @@
   "dependencies": [
     "asio",
     "protobuf",
-    "freetype",
-    "glfw3",
-    "lunasvg",
-    "stb",
     "icu",
     "cli11"
   ]
