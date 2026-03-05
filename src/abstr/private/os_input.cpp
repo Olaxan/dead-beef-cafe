@@ -8,6 +8,34 @@
 #include <print>
 #include <optional>
 
+EagerTask<com::CommandQuery> CmdInput::read_query(Proc& proc)
+{
+	while (true)
+	{
+		std::string str = co_await proc.read();
+	
+		com::CommandQuery query;
+		if (query.ParseFromString(str))
+			co_return query;
+	}
+
+	co_return {};
+}
+
+EagerTask<com::CommandReply> CmdInput::read_reply(Proc& proc)
+{
+	while (true)
+	{
+		std::string str = co_await proc.read();
+	
+		com::CommandReply reply;
+		if (reply.ParseFromString(str))
+			co_return reply;
+	}
+
+	co_return {};
+}
+
 EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
 {
 
@@ -15,15 +43,7 @@ EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams param
 
 	while (true)
 	{
-		std::optional<com::CommandQuery> query = co_await std::invoke([&proc] -> EagerTask<std::optional<com::CommandQuery>>
-		{
-			if (std::optional<CmdSocketAwaiterServer> await_msg = proc.read<CmdSocketAwaiterServer>())
-			{
-				co_return (co_await *await_msg);
-			}
-			
-			co_return std::nullopt;
-		});
+		std::optional<com::CommandQuery> query = co_await read_query(proc);
 
 		if (!query)
 		{

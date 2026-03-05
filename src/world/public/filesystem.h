@@ -289,6 +289,9 @@ public:
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
 	FileOpResult open(uint64_t fid, FileAccessFlags flags = FileAccessFlags::All);
 	FileOpResult open(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);
+	
+	/* Basic find function for low-level code, without file scope. Prefer 'open' to using this. */
+	File* find(uint64_t fid);
 
 	static void set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags);
 	static void clear_flag(FilePermissionTriad& base, FilePermissionTriad clear_flags);

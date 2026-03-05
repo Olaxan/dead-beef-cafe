@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file.h"
+
 #include <cstdint>
 #include <memory>
 #include <coroutine>
@@ -34,34 +36,43 @@ private:
 };
 
 /* Awaiter for reading from a process. */
-template<typename T>
 struct ProcessReadAwaiter
 {
-	explicit ProcessReadAwaiter() { }
+	ProcessReadAwaiter(std::shared_ptr<File> file = nullptr)
+		: file_(file) { }
 
     ProcessReadAwaiter(ProcessReadAwaiter&) = delete;
 
 	bool await_ready()
 	{
-		return false;
+		/* If the file is not valid, we don't want to yield but instead immediately return empty. */
+		if (file_ == nullptr)
+			return true;
+
+		/* If the file contains some data already, we can return immediately. */
+		if (file_->size() > 0)
+			return true;
 	}
 
 	void await_suspend(std::coroutine_handle<> h)
 	{
-        owner_->add_awaiter([this, h](const T& msg)
-        {
-            msg_ = msg;
-            h.resume();
-        });
+        file_->add_callback([h](std::string_view content)
+		{
+			h.resume();
+		});
 	}
 
-	T await_resume() const
+	std::string await_resume() const
 	{
-		return msg_.value();
+		if (file_ == nullptr)
+			return {};
+
+		return file_->eat();
 	}
 
 private:
 
-	std::optional<T> msg_{};
+
+	std::shared_ptr<File> file_{nullptr};
 
 };

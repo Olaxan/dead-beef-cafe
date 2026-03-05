@@ -31,6 +31,9 @@ using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
 using WriterFn = std::function<void(const std::string&)>;
 using ReaderFn = std::function<std::any(void)>;
 
+template <class... Ts> struct WriterOverload : Ts... { using Ts::operator()...; };
+template <class... Ts> WriterOverload(Ts...) -> WriterOverload<Ts...>;
+
 enum class EnvVarAccessMode
 {
 	Local,
@@ -133,51 +136,31 @@ public:
 	/* ---- FUNCTIONS THAT RELATE TO GETTING INPUT FROM THE USER --- */
 
 	/* Add a reader of a certain type, which can be used in read function calls. */
-	template <typename T>
-    void add_reader(std::function<std::any()> reader) 
+    void set_reader(std::function<ProcessReadAwaiter()> reader) 
 	{
-        readers_[std::type_index(typeid(T))] = [reader]() 
-		{
-            return reader();
-        };
+        reader_ = reader;
     }
 
 	/* Try to read something from a reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
-	template<typename T> 
-	std::optional<T> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
+	ProcessReadAwaiter read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
 	{
-		if (auto it = readers_.find(std::type_index(typeid(T))); it != readers_.end())
-		{
-			try
-			{
-				if (std::any&& get = it->second(); get.has_value())
-				{
-					return std::any_cast<T>(get);
-				}
-			}
-			catch (const std::bad_any_cast& e)
-			{
-				std::cerr << e.what() << std::endl;
-			}
-		}
+		if (reader_)
+			return reader_();
 
 		if (host && mode == EnvVarAccessMode::Inherit)
-			return host->read<T>(mode);
+			return host->read(mode);
 
-		return std::nullopt;
+		return ProcessReadAwaiter{nullptr};
 	}
+
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 
 	/* Register a writer of a certain type, to be used in put/write function calls instead of standard out. */
-	template <typename T>
-    void add_writer(std::function<void(const T&)> writer) 
+    void set_writer(std::function<void(const std::string&)> writer) 
 	{
-        writers_[std::type_index(typeid(T))] = [writer](const void* msg) 
-		{
-            writer(*static_cast<const T*>(msg));
-        };
+        writer_ = writer; 
     }
 
 	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
@@ -201,6 +184,8 @@ public:
 	{
         return write(std::string(msg));
     }
+
+
 
 	/* Write to the process 'standard output'. */
 	template<typename ...Args>
@@ -287,8 +272,8 @@ public:
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	std::any data_{};
-	std::unordered_map<std::type_index, std::function<void(const void*)>> writers_;
-	std::unordered_map<std::type_index, std::function<std::any()>> readers_;
+	std::function<void(const std::string&)> writer_{nullptr};
+	std::function<ProcessReadAwaiter()> reader_{nullptr};
 
 private:
 

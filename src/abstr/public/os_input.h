@@ -11,10 +11,6 @@
 
 class Proc;
 
-using CmdSocketServer = Socket<com::CommandQuery, com::CommandReply>;
-using CmdSocketClient = Socket<com::CommandReply, com::CommandQuery>;
-using CmdSocketAwaiterServer = MessageAwaiter<com::CommandQuery, com::CommandReply>;
-using CmdSocketAwaiterClient = MessageAwaiter<com::CommandReply, com::CommandQuery>;
 using CmdQueryFn = std::function<void(const com::CommandQuery&)>;
 
 namespace CmdInput
@@ -25,5 +21,7 @@ namespace CmdInput
 		bool password{false};
 	};
 
+	EagerTask<com::CommandQuery> read_query(Proc& proc);
+	EagerTask<com::CommandReply> read_reply(Proc& proc);
 	EagerTask<std::string> read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback = nullptr);
 }

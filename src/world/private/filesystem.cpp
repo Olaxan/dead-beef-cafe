@@ -597,6 +597,14 @@ FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
 
+File* FileSystem::find(uint64_t fid)
+{
+	if (auto it = files_.find(fid); it != files_.end())
+		return it->second.get();
+
+	return nullptr;
+}
+
 void FileSystem::set_flag(FilePermissionTriad& base, FilePermissionTriad set_flags)
 {
 	base |= set_flags;

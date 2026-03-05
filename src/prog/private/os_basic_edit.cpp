@@ -20,26 +20,6 @@
 #include <cctype>
 
 
-EagerTask<com::CommandQuery> await_input(Proc& proc)
-{
-	OS& os = *proc.owning_os;
-
-	if (auto async_read = proc.read<CmdSocketAwaiterServer>())
-	{
-		co_return (co_await *async_read);
-	}
-	else
-	{
-		while (true)
-		{
-			if (std::optional<com::CommandQuery> opt_input = proc.read<com::CommandQuery>())
-				co_return *opt_input;
-
-			co_await os.wait(0.16f);
-		}
-	}
-}
-
 EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Proc& proc, std::string prefix)
 {
 	OS& os = *proc.owning_os;
@@ -52,7 +32,7 @@ EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Pro
 
 	while (true)
 	{
-		com::CommandQuery query_in = co_await await_input(proc);
+		com::CommandQuery query_in = co_await CmdInput::read_query(proc);
 		std::string str_in = query_in.command();
 		EditorState::HandlerReturn ret = substate.accept_input(str_in);
 
@@ -164,17 +144,17 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		com::CommandQuery input = co_await await_input(proc);
+		com::CommandQuery com = co_await CmdInput::read_query(proc);
 
 		/* First, update terminal parameters if we're being passed configuration data. */
-		if (input.has_screen_data())
+		if (com.has_screen_data())
 		{
-			com::ScreenData screen = input.screen_data();
+			com::ScreenData screen = com.screen_data();
 			state.set_size(screen.size_x(), screen.size_y());
 		}
 
 		/* Next, read the actual command and consider it based on first-byte. */
-		std::string str_in = input.command();
+		std::string str_in = com.command();
 
 		for (char c : str_in)
 			std::print("{}, ", (int)c);
