@@ -167,6 +167,8 @@ public:
 		std::cout << "Client joined from " << socket_.remote_endpoint() << ".\n";
 		
 		OS& local_os = local_->get_os();
+		NetManager* net = local_os.get_network_manager();
+		
 		local_os.run_process(Programs::CmdSSH, {"ssh"});
 		sock_ = local_os.create_socket<CmdSocketClient>();
 		local_os.connect_socket<CmdSocketServer>(sock_, local_os.get_global_ip(), 22);

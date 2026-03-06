@@ -1,6 +1,5 @@
 #include "msg_queue.h"
 
-#include "proto/test.pb.h"
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 
