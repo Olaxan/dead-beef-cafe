@@ -23,5 +23,7 @@ namespace CmdInput
 
 	EagerTask<com::CommandQuery> read_query(Proc& proc);
 	EagerTask<com::CommandReply> read_reply(Proc& proc);
+	void write_query(Proc& proc, const com::CommandQuery& query);
+	void write_reply(Proc& proc, const com::CommandReply& reply);
 	EagerTask<std::string> read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback = nullptr);
 }

@@ -52,6 +52,6 @@ protected:
 	uint64_t socket_index_{0};
 
 	std::unordered_map<uint64_t, std::shared_ptr<File>> sockets_;
-	std::unordered_map<AddressPair, int32_t> bindings_;
+	std::unordered_map<AddressPair, uint64_t> bindings_;
 
 };

@@ -60,8 +60,10 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
+	NetManager* nm = os.get_network_manager();
+
 	const Address6& dest = parse_res.value();
-	Address6 src = os.get_global_ip();
+	Address6 src = nm->get_primary_ip();
 
 	proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
 
@@ -81,7 +83,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 	SocketDescriptor sock = sock_res.value();
 
-	net->send(sock, std::move(package));
+	//net->send(sock, std::move(package));
 
 	//auto [conn, err] = NetUtils::connect(proc, dest, 22);
 

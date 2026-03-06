@@ -2,6 +2,7 @@
 
 #include "task.h"
 #include "proc_io.h"
+#include "proc_defs.h"
 #include "term_utils.h"
 #include "session.h"
 
@@ -26,13 +27,8 @@
 class Proc;
 class OS;
 
-using ProcessTask = Task<int32_t, std::suspend_always>;
-using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
 using WriterFn = std::function<void(const std::string&)>;
-using ReaderFn = std::function<std::any(void)>;
-
-template <class... Ts> struct WriterOverload : Ts... { using Ts::operator()...; };
-template <class... Ts> WriterOverload(Ts...) -> WriterOverload<Ts...>;
+using ReaderFn = std::move_only_function<ProcessReadAwaiter(void)>;
 
 enum class EnvVarAccessMode
 {
@@ -73,11 +69,7 @@ public:
 	Proc(int32_t pid, OS* owner)
 		: owning_os(owner), pid(pid) {}
 
-	~Proc()
-	{
-		s_err << std::flush;
-		s_out << std::flush;
-	}
+	~Proc();
 
 	void set_leader(Proc* leader);
 
@@ -115,76 +107,33 @@ public:
 	}
 
 	/* Default version of get_var, returning a string (no converstion). */
-	std::string_view get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
-	{
-		if (auto it = envvars_.find(key); it != envvars_.end())
-			return it->second;
+	std::string_view get_var(std::string key, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const;
 
-		if (host && mode == EnvVarAccessMode::Inherit)
-			return host->get_var(key, mode);
-		
-		return {};
-	}
-
-	std::string_view get_var_or(std::string key, std::string_view or_value, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const
-	{
-		std::string_view get = get_var(key, mode);
-		return !get.empty() ? get : or_value;
-	}
+	std::string_view get_var_or(std::string key, std::string_view or_value, EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const;
 
 
 	/* ---- FUNCTIONS THAT RELATE TO GETTING INPUT FROM THE USER --- */
 
 	/* Add a reader of a certain type, which can be used in read function calls. */
-    void set_reader(std::function<ProcessReadAwaiter()> reader) 
-	{
-        reader_ = reader;
-    }
+    void set_reader(ReaderFn&& reader);
 
 	/* Try to read something from a reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
-	ProcessReadAwaiter read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit)
-	{
-		if (reader_)
-			return reader_();
-
-		if (host && mode == EnvVarAccessMode::Inherit)
-			return host->read(mode);
-
-		return ProcessReadAwaiter{nullptr};
-	}
+	ProcessReadAwaiter read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
 
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 
 	/* Register a writer of a certain type, to be used in put/write function calls instead of standard out. */
-    void set_writer(std::function<void(const std::string&)> writer) 
-	{
-        writer_ = writer; 
-    }
+    void set_writer(WriterFn writer);
 
 	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
-	template <typename T>
-    bool write(const T& msg) 
-	{
-        if (auto it = writers_.find(std::type_index(typeid(T))); it != writers_.end())
-		{
-            it->second(&msg);
-			return true;
-		}
-
-		if (host)
-			return host->write<T>(msg);
-
-		return false;
-    }
+    bool write(const std::string& msg);
 
 	/* Overload to ensure string literals work. */
-    bool write(const char* msg) 
-	{
-        return write(std::string(msg));
-    }
-
+    bool write(const char* msg);
+	bool write(const com::CommandQuery& com);
+	bool write(const com::CommandReply& com);
 
 
 	/* Write to the process 'standard output'. */
@@ -272,8 +221,8 @@ public:
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	std::any data_{};
-	std::function<void(const std::string&)> writer_{nullptr};
-	std::function<ProcessReadAwaiter()> reader_{nullptr};
+	WriterFn writer_{nullptr};
+	ReaderFn reader_{nullptr};
 
 private:
 

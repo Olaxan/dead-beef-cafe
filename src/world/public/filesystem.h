@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file.h"
+
 #include <vector>
 #include <memory>
 #include <functional>
@@ -9,7 +11,7 @@
 #include <tuple>
 #include <chrono>
 
-#include "file.h"
+struct SessionData;
 
 class FileSystem;
 

@@ -42,6 +42,8 @@ struct ProcessReadAwaiter
 		: file_(file) { }
 
     ProcessReadAwaiter(ProcessReadAwaiter&) = delete;
+	ProcessReadAwaiter(ProcessReadAwaiter&&) = default;
+	~ProcessReadAwaiter() = default;
 
 	bool await_ready()
 	{
@@ -52,6 +54,8 @@ struct ProcessReadAwaiter
 		/* If the file contains some data already, we can return immediately. */
 		if (file_->size() > 0)
 			return true;
+
+		return false;
 	}
 
 	void await_suspend(std::coroutine_handle<> h)

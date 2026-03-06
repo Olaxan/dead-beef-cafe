@@ -1,5 +1,9 @@
 #include "editor.h"
 
+#include "term_utils.h"
+
+#include <ranges>
+#include <algorithm>
 
 bool EditorState::set_file(FilePath path, std::string_view view)
 {

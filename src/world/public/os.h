@@ -1,5 +1,6 @@
 #pragma once
 
+#include "host.h"
 #include "task.h"
 #include "proc.h"
 #include "timer_mgr.h"
@@ -20,7 +21,7 @@
 #include <unordered_set>
 #include <concepts>
 
-class Host;
+//class Host;
 class FileSystem;
 
 class OS

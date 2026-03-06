@@ -1,7 +1,7 @@
 #pragma once
 
 #include "device.h"
-#include "os.h"
+//#include "os.h"
 
 #include <vector>
 #include <string>
@@ -9,6 +9,7 @@
 
 struct Command;
 
+class OS;
 class World;
 class File;
 
@@ -18,6 +19,7 @@ public:
 
 	Host() = delete;
 	Host(World& world, std::string Hostname);
+	~Host();
 
 	const std::string& get_hostname() const { return hostname_; }
 	OS& get_os() { return *os_; }
@@ -53,7 +55,7 @@ public:
 	std::vector<T*> get_devices_of_type() const
 	{
 		std::vector<T*> out;
-		for (auto& [uuid, dev] : devices_)
+		for (auto& dev : devices_)
 		{
 			if (T* cast = dynamic_cast<T*>(dev.get()))
 				out.push_back(cast);
@@ -62,12 +64,7 @@ public:
 		return out;
 	}
 
-	template<std::derived_from<OS> T, typename ...Args>
-	T& create_os(Args&& ...args)
-	{
-		os_ = std::move(std::make_unique<T>(*this, std::forward<Args>(args)...));
-		return static_cast<T&>(*os_);
-	}
+	void set_os(std::unique_ptr<OS>&& os);
 
 private:
 	

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "proc.h"
+#include "proc_defs.h"
 
 #include <string>
 #include <sstream>
 #include <memory>
+#include <functional>
 
 using FileWriteCallbackFn = std::function<void(std::string_view)>;
 

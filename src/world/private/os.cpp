@@ -62,7 +62,7 @@ Proc* OS::create_process(CreateProcessParams&& params)
 
     if (params.writer)
     {
-        proc->add_writer(std::move(params.writer));
+        proc->set_writer(std::move(params.writer));
     }
 
     if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())

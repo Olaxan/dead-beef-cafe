@@ -1,4 +1,5 @@
 #include "filesystem.h"
+#include "session.h"
 
 #include <ranges>
 #include <algorithm>

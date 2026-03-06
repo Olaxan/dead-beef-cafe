@@ -36,6 +36,20 @@ EagerTask<com::CommandReply> CmdInput::read_reply(Proc& proc)
 	co_return {};
 }
 
+void CmdInput::write_query(Proc& proc, const com::CommandQuery& query)
+{
+	std::string out;
+	query.SerializeToString(&out);
+	proc.write(out);
+}
+
+void CmdInput::write_reply(Proc& proc, const com::CommandReply& reply)
+{
+	std::string out;
+	reply.SerializeToString(&out);
+	proc.write(out);
+}
+
 EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
 {
 

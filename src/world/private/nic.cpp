@@ -24,8 +24,8 @@ void NIC::on_shutdown(Host* owner)
 
 void NIC::transfer_one(NIC* other)
 {
-	if (std::optional<ip::IpPackage> pop = tx_queue_.pop())
-	{
-		other->rx_queue_.push(*pop);
-	}
+	// if (std::optional<ip::IpPackage> pop = tx_queue_.pop())
+	// {
+	// 	other->rx_queue_.push(*pop);
+	// }
 }
