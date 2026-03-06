@@ -14,6 +14,13 @@
 
 namespace HostUtils
 {
+	template<std::derived_from<OS> T, typename ...Args>
+	void create_os(Host& host, Args&& ...args)
+	{
+		std::unique_ptr<OS> os = std::make_unique<T>(*this, std::forward<Args>(args)...);
+		host.set_os(std::move(os));
+	}
+
 	template<std::derived_from<OS> T_OS>
 	Host* create_host(World& world, std::string hostname)
 	{
@@ -25,7 +32,7 @@ namespace HostUtils
         NIC& my_nic = skel.create_device<NIC>(100.f);
         FileSystem& fs = my_disk.create_fs();
 
-        skel.create_os<T_OS>();
+        HostUtils::create_os<T_OS>();
 
 		return world.add_host(std::move(ptr));
 	}

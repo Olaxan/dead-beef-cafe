@@ -9,10 +9,87 @@
 #include <string>
 
 
+Proc::~Proc()
+{
+	s_err << std::flush;
+	s_out << std::flush;
+}
+
 void Proc::set_leader(Proc* leader)
 {
 	host = leader;
 	sid = leader->get_sid();
+}
+
+std::string_view Proc::get_var(std::string key, EnvVarAccessMode mode) const
+{
+	if (auto it = envvars_.find(key); it != envvars_.end())
+		return it->second;
+
+	if (host && mode == EnvVarAccessMode::Inherit)
+		return host->get_var(key, mode);
+	
+	return {};
+}
+
+std::string_view Proc::get_var_or(std::string key, std::string_view or_value, EnvVarAccessMode mode) const
+{
+	std::string_view get = get_var(key, mode);
+	return !get.empty() ? get : or_value;
+}
+
+void Proc::set_reader(ReaderFn&& reader)
+{
+	reader_ = std::move(reader);
+}
+
+ProcessReadAwaiter Proc::read(EnvVarAccessMode mode)
+{
+	if (reader_)
+		return reader_();
+
+	if (host && mode == EnvVarAccessMode::Inherit)
+		return host->read(mode);
+
+	return ProcessReadAwaiter{nullptr};
+}
+
+void Proc::set_writer(WriterFn writer)
+{
+	writer_ = writer; 
+}
+
+bool Proc::write(const std::string& msg)
+{
+	if (writer_)
+	{
+		writer_(msg);
+		return true;
+	}
+
+	if (host)
+		return host->write(msg);
+
+	return false;
+}
+
+bool Proc::write(const char* msg)
+{
+	return write(std::string(msg));
+}
+
+bool Proc::write(const com::CommandQuery& com)
+{
+	std::string out;
+	com.SerializeToString(&out);
+	return write(out);
+}
+
+bool Proc::write(const com::CommandReply& com)
+{
+	std::string out;
+	com.SerializeToString(&out);
+	return write(out);
 }
 
 void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resume)

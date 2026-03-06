@@ -20,6 +20,10 @@
 Host::Host(World& world, std::string Hostname)
 : world_(world), hostname_(Hostname) { }
 
+Host::~Host()
+{
+}
+
 bool Host::start_host()
 {
     if (state_ != DeviceState::PoweredOff)
@@ -50,4 +54,9 @@ bool Host::shutdown_host()
     state_ = DeviceState::PoweredOn;
 
     return true;
+}
+
+void Host::set_os(std::unique_ptr<OS>&& os)
+{
+	os_ = std::move(os);
 }

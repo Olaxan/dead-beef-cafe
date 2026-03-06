@@ -57,9 +57,12 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 
 		co_await os.wait(0.16f);
 
-		if (std::optional<com::CommandQuery> opt_query = proc.read<com::CommandQuery>(); opt_query.has_value())
+		// Do some kind of read with timeout here...
+
+		if (false)
 		{
-			const std::string& query = opt_query->command();
+
+			std::string query; //...
 			
 			if (query.size() == 0)
 				continue;
