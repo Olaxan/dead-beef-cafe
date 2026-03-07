@@ -33,6 +33,16 @@ int main(int argc, char* argv[])
 	World our_world{};
 	Host* our_host = HostUtils::create_host<BasicOS>(our_world, "MyComputer");
 	OS& our_os = our_host->get_os();
+	NetManager& net = *our_os.get_network_manager();
+
+	our_os.run_process(Programs::CmdSSH, {"ssh"});
+
+	auto sock = net.create_socket();
+
+	if (!sock)
+		return 1;
+
+	
 
 	auto our_sock = our_os.create_socket<CmdSocketClient>(); 
 	our_os.connect_socket<CmdSocketServer>(our_sock, our_os.get_global_ip(), 22);
