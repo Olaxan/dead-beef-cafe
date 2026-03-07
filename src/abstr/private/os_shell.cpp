@@ -8,7 +8,9 @@
 #include <print>
 #include <format>
 #include <ranges>
+#include <algorithm>
 #include <functional>
+#include <optional>
 
 EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 {
@@ -63,7 +65,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 	});
 
 	/* Try to find a file that matches on the PATH (or directly specified) */
-	auto match = [&] -> std::optional<FilePath>
+	auto match = std::invoke([&]() -> std::optional<FilePath>
 	{
 		std::vector<std::string> candidates = proc.get_var("PATH")
 		| std::views::split(';')
@@ -81,7 +83,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 		}
 
 		return std::nullopt;
-	}();
+	});
 	
 	if (!match)
 	{
