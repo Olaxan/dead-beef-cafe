@@ -47,6 +47,11 @@ int32_t NetManager::bind_socket(SocketDescriptor sock, AddressPair addr)
 	return 0;
 }
 
+int32_t NetManager::bind_socket(SocketDescriptor sock, Address6 addr, int32_t port)
+{
+	return bind_socket(sock, {addr, port});
+}
+
 void NetManager::connect_socket(SocketDescriptor sock, AddressPair addr)
 {
 	if (SocketFile* file = find_socket(sock))
@@ -69,7 +74,10 @@ ProcessReadAwaiter NetManager::async_read_socket(SocketDescriptor sock)
 void NetManager::async_write_socket(SocketDescriptor sock, const std::string& bytes)
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
+	{
 		it->second->write(bytes);
+		process_sockets();
+	}
 }
 
 void NetManager::send(ip::IpPackage&& package)
@@ -80,6 +88,7 @@ void NetManager::send(ip::IpPackage&& package)
 
 void NetManager::receive(ip::IpPackage&& package)
 {
+	std::println("Parsing package (ip len = {})...", package.dest_ip().size());
 	const std::string& dest_ip_bytes = package.dest_ip();
 	if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes.data()))
 	{
@@ -89,10 +98,12 @@ void NetManager::receive(ip::IpPackage&& package)
 
 void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 {
+	std::println("Received package.");
 	AddressPair pair = { addr, package.dest_port() };
 	if (File* sock = find_socket(pair))
 	{
 		sock->write(package.payload());
+		sock->notify_write();
 	}
 }
 
@@ -139,7 +150,7 @@ void NetManager::process_sockets()
 {
 	for (auto& [fd, sock] : sockets_)
 	{
-		if (std::optional<std::string> data = sock->eat(); data.has_value())
+		if (std::optional<std::string> data = sock->read_tx(); data.has_value())
 		{
 			const AddressPair& src = sock->local_endpoint;
 			const AddressPair& dest = sock->other_endpoint;
@@ -149,8 +160,19 @@ void NetManager::process_sockets()
 			pak.set_dest_ip(dest.addr.raw);
 			pak.set_src_port(src.port);
 			pak.set_src_ip(src.addr.raw);
+			pak.set_payload(*data);
+			pak.set_protocol(ip::Protocol::TCP);
 
-			send(std::move(pak));
+			std::println("Dispatch {}:{} --> {}:{}", src.addr, src.port, dest.addr, dest.port);
+
+			if (dest.addr == src.addr)
+			{
+				receive(std::move(pak));
+			}
+			else
+			{
+				send(std::move(pak));
+			}
 		}
 	}
 }

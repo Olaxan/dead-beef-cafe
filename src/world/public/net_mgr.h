@@ -30,6 +30,7 @@ public:
 	std::expected<SocketDescriptor, std::runtime_error> create_socket();
 
 	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
+	int32_t bind_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 
 	void connect_socket(SocketDescriptor sock, AddressPair addr);
 	void connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);

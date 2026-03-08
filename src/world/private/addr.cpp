@@ -49,7 +49,7 @@ std::expected<Address6, std::invalid_argument> Address6::from_string(const std::
 
 std::expected<Address6, std::invalid_argument> Address6::from_bytes(std::string_view str) noexcept
 {
-	if (str.size() != 16)
+	if (str.size() < 16)
 	{
 		return std::unexpected(std::invalid_argument(
 			std::format("Address6 bytes constructor takes 16 bytes, got {}", str.size())));

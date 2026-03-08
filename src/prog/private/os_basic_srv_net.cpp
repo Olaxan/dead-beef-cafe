@@ -21,6 +21,8 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_ip = net->get_primary_ip();
 
+	std::println("RX service running.");
+
 	while (true)
 	{
 		ip::IpPackage packet = co_await net->async_read_rx();
@@ -53,6 +55,8 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();
 
+	std::println("TX service running.");
+
 	while (true)
 	{
 		/* 
@@ -61,9 +65,6 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		* 3. Otherwise, perform an ARP request and try again (maybe skip, increase fail count?).
 		* 4. If fail count > N, discard package, maybe return a rejection package to source.
 		*/
-
-		// Placeholder probably
-		net->process_sockets();
 
 		try
 		{

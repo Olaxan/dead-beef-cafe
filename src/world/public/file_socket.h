@@ -19,6 +19,9 @@ public:
 	std::optional<std::string> read() const override;
 	std::optional<std::string> eat() override;
 
+	std::optional<std::string> read_rx();
+	std::optional<std::string> read_tx();
+
 	MessageQueue<std::string> rx_queue{};
 	MessageQueue<std::string> tx_queue{};
 
