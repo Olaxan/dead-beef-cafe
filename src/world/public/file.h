@@ -17,13 +17,21 @@ public:
 	
 	File(uint64_t fid) : fid_(fid) {};
 
+	virtual ~File() = default;
+
 	void write(ProcessFn exec);
 	//void write(ProcessFn&& exec);
-	void write(std::string content);
-	void append(std::string content);
+	
+	/* Write to the file, modifying it. */
+	virtual void write(std::string content);
+
+	/* Read all content from the file, but do not modify it. */
+	virtual std::optional<std::string> read() const;
 
 	/* Consume all content of the file. */
-	std::string eat();
+	virtual std::optional<std::string> eat();
+
+	void append(std::string content);
 
 	std::size_t size() const;
 	
@@ -31,7 +39,7 @@ public:
 	std::stringstream get_stream() const;
 	const ProcessFn& get_executable() const;
 
-	void add_callback(FileWriteCallbackFn&& callback)
+	void add_read_callback(FileWriteCallbackFn&& callback)
     {
         callbacks_.push_back(std::move(callback));
     }

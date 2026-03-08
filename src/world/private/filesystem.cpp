@@ -397,26 +397,6 @@ std::vector<uint64_t> FileSystem::get_root_chain(uint64_t fid) const
 	return chain;
 }
 
-FileOpResult FileSystem::create_file(const FilePath& path, const CreateFileParams& params)
-{
-	if (get_fid(path))
-		return std::make_tuple(0, nullptr, FileSystemError::FileExists);
-
-	if (params.recurse)
-		create_ensure_path(path, params);
-
-	auto res = add_file<File>(path, params.meta);
-	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
-	{
-		if (!params.content.empty()) 
-			ptr->write(params.content);
-			
-		if (params.executable)
-			ptr->write(params.executable);
-	}
-	return res;
-}
-
 FileOpResult FileSystem::create_directory(const FilePath& path, const CreateFileParams& params)
 {
 	FileOpResult res = create_file(path, params);

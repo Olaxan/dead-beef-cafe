@@ -220,7 +220,6 @@ public:
 	std::ostream s_err{&buf_err};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
-	std::any data_{};
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
 

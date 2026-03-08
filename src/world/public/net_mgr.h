@@ -1,7 +1,7 @@
 #pragma once
 
 #include "addr.h"
-#include "str_sock.h"
+#include "file_socket.h"
 #include "proc_io.h"
 #include "msg_queue.h"
 #include "netw.h"
@@ -25,13 +25,18 @@ public:
 
 	NetManager() = delete;
 	NetManager(OS* owner);
+	~NetManager() = default;
 
-	std::expected<uint64_t, std::runtime_error> create_socket();
+	std::expected<SocketDescriptor, std::runtime_error> create_socket();
 
 	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
 
+	void connect_socket(SocketDescriptor sock, AddressPair addr);
+	void connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+
+
 	ProcessReadAwaiter async_read_socket(SocketDescriptor sock);
-	ProcessWriteAwaiter async_write_socket(SocketDescriptor sock, const std::string& bytes);
+	void async_write_socket(SocketDescriptor sock, const std::string& bytes);
 	
 	void send(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package);
@@ -42,16 +47,21 @@ public:
 
 	Address6 get_primary_ip() const;
 
+	bool socket_is_open(SocketDescriptor fd) const;
+	
+	void process_sockets();
+
 protected:
 
-	File* find_socket(const AddressPair& tuple);
+	SocketFile* find_socket(SocketDescriptor sock_fd);
+	SocketFile* find_socket(const AddressPair& tuple);
 
 	OS& os_;
 	NIC* nic_{nullptr};
 
 	uint64_t socket_index_{0};
 
-	std::unordered_map<uint64_t, std::shared_ptr<File>> sockets_;
-	std::unordered_map<AddressPair, uint64_t> bindings_;
+	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
+	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
 
 };

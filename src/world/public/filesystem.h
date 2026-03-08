@@ -361,6 +361,27 @@ public:
 		return std::make_tuple(fid, nullptr, FileSystemError::IOError);
 	}
 
+	template<std::derived_from<File> T = File>
+	FileOpResult create_file(const FilePath& path, const CreateFileParams& params)
+	{
+		if (get_fid(path))
+			return std::make_tuple(0, nullptr, FileSystemError::FileExists);
+
+		if (params.recurse)
+			create_ensure_path(path, params);
+
+		auto res = add_file<T>(path, params.meta);
+		if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
+		{
+			if (!params.content.empty()) 
+				ptr->write(params.content);
+				
+			if (params.executable)
+				ptr->write(params.executable);
+		}
+		return res;
+	}
+
 private:
 
 	const uint64_t root_{1};

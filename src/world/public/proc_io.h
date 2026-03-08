@@ -60,7 +60,7 @@ struct ProcessReadAwaiter
 
 	void await_suspend(std::coroutine_handle<> h)
 	{
-        file_->add_callback([h](std::string_view content)
+        file_->add_read_callback([h](std::string_view content)
 		{
 			h.resume();
 		});
@@ -71,7 +71,7 @@ struct ProcessReadAwaiter
 		if (file_ == nullptr)
 			return {};
 
-		return file_->eat();
+		return file_->eat().value_or("");
 	}
 
 private:

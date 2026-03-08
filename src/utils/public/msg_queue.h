@@ -57,7 +57,7 @@ public:
 		return msg;
     }
 
-    std::optional<T> peek() 
+    std::optional<T> peek() const
 	{
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -118,7 +118,7 @@ public:
 private:
 
     std::deque<T> queue_{};
-    std::mutex mutex_{};
+    mutable std::mutex mutex_{};
     MessageCallbackList<T> callbacks_{};
 
 };

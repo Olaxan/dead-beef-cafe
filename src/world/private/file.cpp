@@ -24,15 +24,20 @@ void File::write(std::string content)
 	notify_write();
 }
 
+std::optional<std::string> File::read() const
+{
+	return content_;
+}
+
+std::optional<std::string> File::eat()
+{
+	return std::move(content_);
+}
+
 void File::append(std::string content)
 {
 	content_.append(std::move(content));
 	notify_write();
-}
-
-std::string File::eat()
-{
-	return std::move(content_);
 }
 
 std::string_view File::get_view() const
