@@ -57,8 +57,9 @@ const ProcessFn& File::get_executable() const
 
 void File::notify_write()
 {
-	std::vector<FileWriteCallbackFn> copy = callbacks_;
+	std::vector<FileWriteCallbackFn> empty{};
+	std::swap(callbacks_, empty);
 
-	for (auto&& callback : copy)
+	for (auto&& callback : empty)
 		callback(content_);
 }

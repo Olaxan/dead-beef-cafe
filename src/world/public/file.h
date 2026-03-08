@@ -51,6 +51,6 @@ protected:
 	uint64_t fid_{};
 	std::string content_{};
 	ProcessFn executable_{nullptr};
-	std::vector<FileWriteCallbackFn> callbacks_{nullptr};
+	std::vector<FileWriteCallbackFn> callbacks_{};
 
 };
