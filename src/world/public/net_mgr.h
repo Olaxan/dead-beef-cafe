@@ -34,7 +34,6 @@ public:
 	void connect_socket(SocketDescriptor sock, AddressPair addr);
 	void connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 
-
 	ProcessReadAwaiter async_read_socket(SocketDescriptor sock);
 	void async_write_socket(SocketDescriptor sock, const std::string& bytes);
 	
