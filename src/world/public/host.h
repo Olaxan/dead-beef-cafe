@@ -1,7 +1,7 @@
 #pragma once
 
 #include "device.h"
-//#include "os.h"
+#include "os.h"
 
 #include <vector>
 #include <string>
@@ -22,7 +22,7 @@ public:
 	~Host();
 
 	const std::string& get_hostname() const { return hostname_; }
-	OS& get_os() { return *os_; }
+	OS& get_os();
 	World& get_world() { return world_; }
 	DeviceState get_state() const { return state_; }
 

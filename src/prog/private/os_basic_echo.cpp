@@ -10,6 +10,6 @@
 
 ProcessTask Programs::CmdEcho(Proc& proc, std::vector<std::string> args)
 {
-	proc.putln("echo: {0}", args);
+	//proc.putln("echo: {0}", args);
 	co_return 0;
 }

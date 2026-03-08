@@ -24,7 +24,7 @@ public:
 	virtual void on_start(Host* owner) {};
 	virtual void on_shutdown(Host* owner) {};
 
-	virtual ~Device() { }
+	virtual ~Device();
 
 protected:
 

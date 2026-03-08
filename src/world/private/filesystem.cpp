@@ -761,3 +761,8 @@ bool FileSystem::check_permission(const SessionData& session, uint64_t fid, File
 	
 	return false;
 }
+
+FileOpResult FileSystem::create_file(const FilePath& path, const CreateFileParams& params)
+{
+	return create_file<File>(path, params);
+}

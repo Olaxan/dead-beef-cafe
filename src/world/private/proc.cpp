@@ -9,6 +9,9 @@
 #include <string>
 
 
+Proc::Proc(int32_t pid, OS* owner)
+	: owning_os(owner), pid(pid) {}
+
 Proc::~Proc()
 {
 	s_err << std::flush;

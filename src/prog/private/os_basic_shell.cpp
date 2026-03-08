@@ -163,7 +163,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			std::string ret_sym = std::format(CSI_PLACEHOLDER "{}" CSI_RESET, (ret == 0 ? 32 : 31), (ret == 0 ? "✓" : "✕"));
 			std::string time_str = std::format("{:%Y-%m-%d %X}", current_time);
 			std::string line_str = std::format("{} {}", ret_sym, time_str);
-			int32_t length = 2 + time_str.length();
+			int32_t length = static_cast<int32_t>(2 + time_str.length());
 
 			proc.putln("\n{}", TermUtils::msg_line(line_str, term_w - length));
 		}

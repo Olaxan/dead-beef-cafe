@@ -10,6 +10,9 @@ class SocketFile : public File
 public:
 
 	SocketFile() = default;
+
+	SocketFile(uint64_t fid) : File(fid) { };
+
 	~SocketFile() = default;
 
 	void write(std::string content) override;

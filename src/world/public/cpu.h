@@ -1,6 +1,7 @@
 #pragma once
 
 #include "device.h"
+
 #include <print>
 
 class CPU : public Device
@@ -9,6 +10,7 @@ public:
 
 	CPU() = default;
 	CPU(float mhz) : mhz_(mhz) {}
+	~CPU();
 
 	virtual void config_device(std::string_view cmd) override {};
 	virtual std::string get_device_id() const override { return "Processor"; }

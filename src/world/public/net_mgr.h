@@ -25,7 +25,7 @@ public:
 
 	NetManager() = delete;
 	NetManager(OS* owner);
-	~NetManager() = default;
+	~NetManager();
 
 	std::expected<SocketDescriptor, std::runtime_error> create_socket();
 

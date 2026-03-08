@@ -14,6 +14,16 @@
 #include <print>
 #include <unordered_set>
 
+OS::OS(Host& owner)
+    : owner_(owner) 
+{ 
+    register_devices(); 
+}
+
+OS::~OS()
+{
+}
+
 std::size_t OS::register_devices()
 {
     int32_t uuid = 0;

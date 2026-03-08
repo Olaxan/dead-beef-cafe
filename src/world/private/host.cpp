@@ -20,8 +20,11 @@
 Host::Host(World& world, std::string Hostname)
 : world_(world), hostname_(Hostname) { }
 
-Host::~Host()
+Host::~Host() = default;
+
+OS& Host::get_os()
 {
+	return *os_;
 }
 
 bool Host::start_host()

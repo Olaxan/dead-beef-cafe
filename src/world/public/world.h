@@ -4,13 +4,14 @@
 #include "net_srv.h"
 #include "msg_queue.h"
 #include "link_srv.h"
+#include "host.h"
 
 #include <memory>
 #include <vector>
 #include <thread>
 
 class NIC;
-class Host;
+//class Host;
 
 using MessageFn = std::function<void(void)>;
 using WorldUpdateQueue = MessageQueue<MessageFn>;

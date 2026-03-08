@@ -5,6 +5,8 @@
 #include "link_srv.h"
 #include "msg_queue.h"
 
+NIC::~NIC() = default;
+
 void NIC::set_ip(const std::string& new_ip)
 {
 	address_ = Address6::from_string(new_ip).value_or(Address6{});

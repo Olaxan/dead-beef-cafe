@@ -1,6 +1,6 @@
 #pragma once
 
-#include "host.h"
+//#include "host.h"
 #include "task.h"
 #include "proc.h"
 #include "timer_mgr.h"
@@ -12,7 +12,6 @@
 #include "session.h"
 #include "session_mgr.h"
 #include "users_mgr.h"
-#include "str_sock.h"
 #include "net_srv.h"
 
 #include <memory>
@@ -23,6 +22,8 @@
 
 //class Host;
 class FileSystem;
+class Host;
+class World;
 
 class OS
 {
@@ -32,13 +33,9 @@ public:
 
 	OS() = delete;
 
-	OS(Host& owner)
-		: owner_(owner) 
-	{ 
-		register_devices(); 
-	}
+	OS(Host& owner);
 
-	virtual ~OS() = default;
+	virtual ~OS();
 
 	virtual std::size_t register_devices();
 
@@ -94,14 +91,27 @@ public:
 	template <std::derived_from<Device> T>
 	T* get_device() const
 	{
-		return owner_.get_device<T>();
+		for (auto& [id, dev] : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev))
+				return cast;
+		}
+
+		return nullptr;
 	}
 
 	/* Gets a list of devices matching the specified type. */
 	template <std::derived_from<Device> T>
 	std::vector<T*> get_devices_of_type() const
 	{
-		return owner_.get_devices_of_type<T>();
+		std::vector<T*> out;
+		for (auto& [id, dev] : devices_)
+		{
+			if (T* cast = dynamic_cast<T*>(dev))
+				out.push_back(cast);
+		}
+
+		return out;
 	}
 
 	/* --- Scheduler --- */

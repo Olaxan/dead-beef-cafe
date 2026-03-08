@@ -1,5 +1,6 @@
 #include "os_basic.h"
 
+#include "host.h"
 #include "device.h"
 #include "netw.h"
 #include "proc.h"
@@ -273,6 +274,10 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	}, false);
 
 	users_.commit();
+}
+
+BasicOS::~BasicOS()
+{
 }
 
 void BasicOS::start_os()

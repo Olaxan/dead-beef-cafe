@@ -1,6 +1,7 @@
 #include "net_mgr.h"
 #include "uuid.h"
 #include "os.h"
+#include "host.h"
 #include "nic.h"
 #include "filesystem.h"
 
@@ -11,6 +12,8 @@
 
 NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_device<NIC>())
 { }
+
+NetManager::~NetManager() = default;
 
 std::expected<uint64_t, std::runtime_error> NetManager::create_socket()
 {
@@ -146,7 +149,7 @@ void NetManager::process_sockets()
 			pak.set_dest_ip(dest.addr.raw);
 			pak.set_src_port(src.port);
 			pak.set_src_ip(src.addr.raw);
-			
+
 			send(std::move(pak));
 		}
 	}

@@ -66,8 +66,7 @@ class Proc
 {
 public:
 
-	Proc(int32_t pid, OS* owner)
-		: owning_os(owner), pid(pid) {}
+	Proc(int32_t pid, OS* owner);
 
 	~Proc();
 

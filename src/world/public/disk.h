@@ -16,6 +16,7 @@ public:
 
 	Disk() = default;
 	Disk(int32_t size) : size_(size) {}
+	~Disk();
 
 	virtual void config_device(std::string_view cmd) override {};
 	virtual std::string get_device_id() const override { return "Physical Drive"; }

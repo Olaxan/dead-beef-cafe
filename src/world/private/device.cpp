@@ -24,3 +24,5 @@ bool Device::shutdown_device(Host* owner)
 	on_shutdown(owner);
 	return true;
 }
+
+Device::~Device() = default;

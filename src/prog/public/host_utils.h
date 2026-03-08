@@ -1,5 +1,6 @@
 #pragma once
 
+#include "os.h"
 #include "host.h"
 #include "world.h"
 #include "device.h"
@@ -8,7 +9,6 @@
 #include "filesystem.h"
 #include "cpu.h"
 #include "nic.h"
-#include "os.h"
 
 #include <concepts>
 
@@ -17,7 +17,7 @@ namespace HostUtils
 	template<std::derived_from<OS> T, typename ...Args>
 	void create_os(Host& host, Args&& ...args)
 	{
-		std::unique_ptr<OS> os = std::make_unique<T>(*this, std::forward<Args>(args)...);
+		std::unique_ptr<OS> os = std::make_unique<T>(host, std::forward<Args>(args)...);
 		host.set_os(std::move(os));
 	}
 
@@ -32,7 +32,7 @@ namespace HostUtils
         NIC& my_nic = skel.create_device<NIC>(100.f);
         FileSystem& fs = my_disk.create_fs();
 
-        HostUtils::create_os<T_OS>();
+        HostUtils::create_os<T_OS>(skel);
 
 		return world.add_host(std::move(ptr));
 	}

@@ -270,9 +270,6 @@ public:
 		ProcessFn executable{nullptr};
 	};
 
-	/* Create a file at the specified location (and optionally fills in missing directories). */
-	FileOpResult create_file(const FilePath& path, const CreateFileParams& params);
-
 	/* Create a directory at the specified location (and optionally fills in missing directories). */
 	FileOpResult create_directory(const FilePath& path, const CreateFileParams& params);
 
@@ -361,7 +358,7 @@ public:
 		return std::make_tuple(fid, nullptr, FileSystemError::IOError);
 	}
 
-	template<std::derived_from<File> T = File>
+	template<std::derived_from<File> T>
 	FileOpResult create_file(const FilePath& path, const CreateFileParams& params)
 	{
 		if (get_fid(path))
@@ -381,6 +378,9 @@ public:
 		}
 		return res;
 	}
+
+	FileOpResult create_file(const FilePath& path, const CreateFileParams& params);
+
 
 private:
 

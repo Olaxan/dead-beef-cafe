@@ -48,8 +48,6 @@ protected:
 
 	void notify_write();
 
-private:
-
 	uint64_t fid_{};
 	std::string content_{};
 	ProcessFn executable_{nullptr};

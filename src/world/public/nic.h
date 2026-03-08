@@ -21,6 +21,8 @@ public:
 		set_ip(IPv6Generator::generate());	
 	}
 
+	~NIC();
+
 	virtual void config_device(std::string_view cmd) override {};
 	virtual std::string get_device_id() const override { return "Network Interface Card"; }
 	virtual std::string get_driver_id() const override { return "net"; }

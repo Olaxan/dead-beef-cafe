@@ -59,8 +59,11 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		* 1. Check IP of outgoing packet.
 		* 2. If the IP is in the "ARP" cache, send it across the wire to the receiving "MAC".
 		* 3. Otherwise, perform an ARP request and try again (maybe skip, increase fail count?).
-		* 4. If fail count > N, discard package, return a rejection package to source.
+		* 4. If fail count > N, discard package, maybe return a rejection package to source.
 		*/
+
+		// Placeholder probably
+		net->process_sockets();
 
 		try
 		{
