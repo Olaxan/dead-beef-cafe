@@ -54,6 +54,11 @@ World& OS::get_world()
     return owner_.get_world();
 }
 
+Host& OS::get_owner()
+{
+	return owner_;
+}
+
 Proc* OS::create_process(CreateProcessParams&& params)
 {
     /* Here, we create the process object, which will hold data for the running process. 

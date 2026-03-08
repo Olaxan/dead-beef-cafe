@@ -10,7 +10,7 @@
 #include <print>
 #include <memory>
 
-NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_device<NIC>())
+NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_owner().get_device<NIC>())
 { }
 
 NetManager::~NetManager() = default;

@@ -58,6 +58,9 @@ public:
 	/* Gets the world from the owning Host. */
 	[[nodiscard]] World& get_world();
 
+	/* Gets the owning host of the OS. */
+	[[nodiscard]] Host& get_owner();
+
 	/* Gets the filesystem, if one exists (otherwise nullptr). */
 	[[nodiscard]] FileSystem* get_filesystem() const;
 
