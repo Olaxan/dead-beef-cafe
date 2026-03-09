@@ -13,8 +13,6 @@ message IpPackage
 {
 	bytes src_ip = 1;
 	bytes dest_ip = 2;
-	int32 src_port = 3;
-	int32 dest_port = 4;
-	Protocol protocol = 5;
-	string payload = 6;
+	Protocol protocol = 3;
+	string payload = 4;
 }

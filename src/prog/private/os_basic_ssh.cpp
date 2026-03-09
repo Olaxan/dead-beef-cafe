@@ -25,6 +25,11 @@
 #include <ranges>
 #include <functional>
 
+EagerTask<int32_t> create_ssh_worker(SocketDescriptor fd)
+{
+	co_return 0;
+}
+
 ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 {
 
@@ -47,13 +52,28 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		co_return 2;
 	}
 
-	if (!net->bind_socket(*exp_sock, {local_ip, 22}))
+	SocketDescriptor fd = *exp_sock;
+
+	if (!net->bind_socket(fd, {local_ip, 22}))
 	{
 		proc.errln("Failed to bind socket 22 for reading.");
 		co_return 1;
 	}
 
-	SSHNetSock ssh_sock{ .fd = *exp_sock, .netmgr = net };
+	SSHNetSock ssh_sock{ .fd = fd, .netmgr = net };
+
+	if (!net->listen(fd))
+	{
+		proc.errln("Failed to set socket 22 as a listening connection.");
+	}
+
+	// while (net->socket_is_open(fd))
+	// {
+	// 	if (auto&& [ec, peer_fd] = co_await net->accept(fd); net->socket_is_open(peer_fd))
+	// 	{
+	// 		create_ssh_worker(peer_fd);
+	// 	}
+	// }
 
 	/* --- WRITER FUNCTORS  ---
 	Register writer functors in the process so that output

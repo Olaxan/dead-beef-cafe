@@ -16,7 +16,7 @@ struct ProcessWriteAwaiter
 
 	bool await_ready()
 	{
-		return false;
+		return true;
 	}
 
 	void await_suspend(std::coroutine_handle<> h)
@@ -26,12 +26,10 @@ struct ProcessWriteAwaiter
 
 	int32_t await_resume() const // returns: bytes sent
 	{
-		return next_.value();
+		return 0;
 	}
 
 private:
-
-	std::optional<int32_t> next_{};
 
 };
 
@@ -75,7 +73,6 @@ struct ProcessReadAwaiter
 	}
 
 private:
-
 
 	std::shared_ptr<File> file_{nullptr};
 

@@ -80,6 +80,20 @@ void NetManager::async_write_socket(SocketDescriptor sock, const std::string& by
 	}
 }
 
+int32_t NetManager::listen(SocketDescriptor sock)
+{
+	if (SocketFile* file = find_socket(sock))
+	{
+		return 0;
+	}
+	return 1;
+}
+
+SocketAcceptorAwaiter NetManager::accept(SocketDescriptor sock)
+{
+	return SocketAcceptorAwaiter();
+}
+
 void NetManager::send(ip::IpPackage&& package)
 {
 	assert(nic_);
@@ -92,17 +106,102 @@ void NetManager::receive(ip::IpPackage&& package)
 	const std::string& dest_ip_bytes = package.dest_ip();
 	if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes.data()))
 	{
-		receive(std::forward<ip::IpPackage>(package), *exp_dest_ip);
+		receive(std::move(package), *exp_dest_ip);
 	}
 }
 
 void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 {
 	std::println("Received package.");
-	AddressPair pair = { addr, package.dest_port() };
+	const std::string& payload = package.payload();
+
+	switch (package.protocol())
+	{
+		case ip::Protocol::ICMP:
+		{
+			ip::IcmpPacket icmp;
+			if (icmp.ParseFromString(payload))
+			{
+				handle_packet(std::move(icmp), std::move(package), addr);
+			}
+			break;
+		}
+		case ip::Protocol::TCP:
+		{
+			ip::TcpPacket tcp;
+			if (tcp.ParseFromString(payload))
+			{
+				handle_packet(std::move(tcp), std::move(package), addr);
+			}
+			break;
+		}
+		case ip::Protocol::UDP:
+		{
+			ip::UdpPacket udp;
+			if (udp.ParseFromString(payload))
+			{
+				handle_packet(std::move(udp), std::move(package), addr);
+			}
+			break;
+		}
+		default: break;
+	}
+}
+
+void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+{
+	switch (packet.type())
+	{
+		case ip::IcmpType::EchoRequest:
+		{
+			if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
+			{
+				std::println("Received echo request from {}.", *exp_src);
+			}
+
+			ip::IcmpPacket reply;
+			reply.set_type(ip::IcmpType::EchoReply);
+			std::string ret_str;
+			if (reply.SerializeToString(&ret_str))
+			{
+				ip::IpPackage pak;
+				pak.set_dest_ip(outer.src_ip());
+				pak.set_src_ip(get_primary_ip().raw);
+				pak.set_protocol(ip::Protocol::ICMP);
+				pak.set_payload(ret_str);
+				send(std::move(pak));
+			}
+			break;
+		}
+		case ip::IcmpType::EchoReply:
+		{
+			if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
+			{
+				std::println("Received echo reply from {}.", *exp_src);
+			}
+			break;
+		}
+		default: break;
+	}
+}
+
+void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+{
+	AddressPair pair = { addr, packet.dest_port() };
 	if (File* sock = find_socket(pair))
 	{
-		sock->write(package.payload());
+		sock->write(packet.payload());
+		sock->notify_write();
+	}
+	/* In the future, we should return an ACK here. */
+}
+
+void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+{
+	AddressPair pair = { addr, packet.dest_port() };
+	if (File* sock = find_socket(pair))
+	{
+		sock->write(packet.payload());
 		sock->notify_write();
 	}
 }
@@ -155,12 +254,19 @@ void NetManager::process_sockets()
 			const AddressPair& src = sock->local_endpoint;
 			const AddressPair& dest = sock->other_endpoint;
 
-			ip::IpPackage pak;
-			pak.set_dest_port(dest.port);
+			ip::TcpPacket tcp{};
+			tcp.set_dest_port(dest.port);
+			tcp.set_src_port(src.port);
+			tcp.set_payload(*data);
+
+			std::string tcp_data{};
+			if (!tcp.SerializeToString(&tcp_data))
+				continue;
+
+			ip::IpPackage pak{};
 			pak.set_dest_ip(dest.addr.raw);
-			pak.set_src_port(src.port);
 			pak.set_src_ip(src.addr.raw);
-			pak.set_payload(*data);
+			pak.set_payload(tcp_data);
 			pak.set_protocol(ip::Protocol::TCP);
 
 			std::println("Dispatch {}:{} --> {}:{}", src.addr, src.port, dest.addr, dest.port);

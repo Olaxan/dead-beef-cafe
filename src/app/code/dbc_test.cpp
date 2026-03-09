@@ -39,6 +39,7 @@ int main(int argc, char* argv[])
 	Host* our_host = HostUtils::create_host<BasicOS>(our_world, "MyComputer");
 	OS& our_os = our_host->get_os();
 	NetManager* net = our_os.get_network_manager();
+	Address6 local_addr = net->get_primary_ip();
 
 	auto sock = net->create_socket();
 
@@ -47,7 +48,8 @@ int main(int argc, char* argv[])
 
 	SocketDescriptor fd = *sock;
 
-	net->connect_socket(fd, net->get_primary_ip(), 22);
+	net->bind_socket(fd, local_addr, 50001);
+	net->connect_socket(fd, local_addr, 22);
 
 	our_host->start_host();
 	our_world.launch();
@@ -61,12 +63,28 @@ int main(int argc, char* argv[])
 		std::string input{};
 		std::getline(std::cin, input);
 
-		com::CommandQuery query{};
-		query.set_command(input);
+		ip::IcmpPacket icmp;
+		std::string icmp_data{};
+		icmp.set_type(ip::IcmpType::EchoRequest);
+		icmp.set_code(0);
 
-		std::string str{};
-		if (query.SerializeToString(&str))
-			net->async_write_socket(fd, str);
+		if (!icmp.SerializeToString(&icmp_data))
+			continue;
+
+		ip::IpPackage ip;
+		ip.set_dest_ip(local_addr.raw);
+		ip.set_src_ip(local_addr.raw);
+		ip.set_protocol(ip::Protocol::ICMP);
+		ip.set_payload(icmp_data);
+
+		net->send(std::move(ip));
+
+		// com::CommandQuery query{};
+		// query.set_command(input);
+
+		// std::string str{};
+		// if (query.SerializeToString(&str))
+		// 	net->async_write_socket(fd, str);
 
 	}
 

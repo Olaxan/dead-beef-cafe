@@ -38,11 +38,11 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 			const Address6& dest_ip = *exp_dest_ip;
 			if (dest_ip == local_ip)
 			{
-				net->receive(std::forward<ip::IpPackage>(packet), dest_ip);
+				net->receive(std::move(packet), dest_ip);
 			}
 			else
 			{
-				net->send(std::forward<ip::IpPackage>(packet));
+				net->send(std::move(packet));
 			}
 		}
 	}
@@ -54,6 +54,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();
+	Address6 local_addr = net->get_primary_ip();
 
 	std::println("TX service running.");
 
@@ -73,8 +74,16 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 
 			if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes))
 			{
-				const Address6& dest_ip = *exp_dest_ip;
-				std::println("Sent {} bytes (dest. {}).", packet.ByteSizeLong(), dest_ip);
+				const Address6& dest_addr = *exp_dest_ip;
+
+				if (dest_addr == local_addr)
+				{
+					std::println("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
+					net->receive(std::move(packet));
+					continue;
+				}
+				
+				std::println("Sent {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
 			}
 			else
 			{

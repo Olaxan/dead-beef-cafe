@@ -7,6 +7,9 @@
 #include "netw.h"
 
 #include "proto/ip_packet.pb.h"
+#include "proto/icmp_packet.pb.h"
+#include "proto/tcp_packet.pb.h"
+#include "proto/udp_packet.pb.h"
 
 #include <string>
 #include <expected>
@@ -38,9 +41,17 @@ public:
 	ProcessReadAwaiter async_read_socket(SocketDescriptor sock);
 	void async_write_socket(SocketDescriptor sock, const std::string& bytes);
 	
+	int32_t listen(SocketDescriptor sock);
+
+	SocketAcceptorAwaiter accept(SocketDescriptor sock);
+
 	void send(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package, const Address6& addr);
+
+	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
+	void handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
+	void handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
 
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();

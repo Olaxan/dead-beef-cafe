@@ -80,6 +80,11 @@ Proc* OS::create_process(CreateProcessParams&& params)
         proc->set_writer(std::move(params.writer));
     }
 
+    if (params.reader)
+    {
+        proc->set_reader(std::move(params.reader));
+    }
+
     if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())
     {
         Proc* leader = ihost->second.get();

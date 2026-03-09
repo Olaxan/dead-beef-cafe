@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ip;
+
+enum IcmpType
+{
+	EchoReply = 0;
+	Reserved = 1;
+	DestinationUnreachable = 2;
+	SourceQuench = 3;
+	RedirectMessage = 4;
+	EchoRequest = 5;
+	RouterAdvertisement = 6;
+	RouterSolicitation = 7;
+	TimeExceeded = 8;
+	ParameterProblem = 9;
+	TimeStamp = 10;
+	TimeStampReply = 11;
+}
+
+message IcmpPacket
+{
+	IcmpType type = 1;
+	int32 code = 2;
+}
