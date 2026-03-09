@@ -10,13 +10,8 @@
 #include <vector>
 #include <thread>
 
-class NIC;
-//class Host;
-
 using MessageFn = std::function<void(void)>;
 using WorldUpdateQueue = MessageQueue<MessageFn>;
-using IpLinkServer = LinkServer<NIC*>;
-
 
 class World
 {
@@ -31,7 +26,7 @@ public:
 
     void launch();
 
-    IpLinkServer& get_link_server() { return net_; }
+    LinkServer& get_link_server() { return net_; }
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
     IpManager& get_ip_manager() { return ip_; }
@@ -52,6 +47,6 @@ private:
 
     WorldUpdateQueue queue_{};
 
-    IpLinkServer net_{};
+    LinkServer net_{};
 
 };

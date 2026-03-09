@@ -4,12 +4,13 @@
 #include "endpoint.h"
 #include "addr.h"
 #include "netw.h"
+#include "link_srv.h"
 
 #include "proto/ip_packet.pb.h"
 
 #include <print>
 
-class NIC : public Device, public IEndpoint
+class NIC : public Device, public IEndpoint, public ILinkable
 {
 public:
 
@@ -35,6 +36,11 @@ public:
 	void set_ip(const Address6& new_ip) override { address_ = new_ip; }
 	const Address6& get_ip() const override { return address_; }
 	/* Endpoint IF */
+
+	/* Linkable IF */
+	void on_linked(LinkServer* links) override;
+	void on_unlinked(LinkServer* links) override;
+	/* Linkable IF */
 
 	virtual void on_start(Host* owner) override;
 	virtual void on_shutdown(Host* owner) override;

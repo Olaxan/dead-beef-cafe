@@ -36,29 +36,46 @@ EagerTask<int32_t> reader(NetManager* net_mgr, SocketDescriptor read_socket)
 int main(int argc, char* argv[])
 {
 	World our_world{};
-	Host* our_host = HostUtils::create_host<BasicOS>(our_world, "MyComputer");
-	OS& our_os = our_host->get_os();
-	NetManager* net = our_os.get_network_manager();
-	Address6 local_addr = net->get_primary_ip();
 
-	auto sock = net->create_socket();
+	LinkServer& links = our_world.get_link_server();
+
+	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
+	Host* server = HostUtils::create_host<BasicOS>(our_world, "Server");
+
+	NIC* client_nic = client->get_device<NIC>();
+	NIC* server_nic = client->get_device<NIC>();
+	assert(client_nic && server_nic);
+
+	links.link(client_nic, server_nic);
+
+	OS& client_os = client->get_os();
+	OS& server_os = server->get_os();
+
+	NetManager* client_net_mgr = client_os.get_network_manager();
+	NetManager* server_net_mgr = server_os.get_network_manager();
+
+	Address6 local_addr = client_net_mgr->get_primary_ip();
+	Address6 remote_addr = server_net_mgr->get_primary_ip();
+
+	auto sock = client_net_mgr->create_socket();
 
 	if (!sock)
 		return 1;
 
 	SocketDescriptor fd = *sock;
-
-	net->bind_socket(fd, local_addr, 50001);
-	net->connect_socket(fd, local_addr, 22);
-
-	our_host->start_host();
+	
+	client->start_host();
+	server->start_host();
 	our_world.launch();
+	
+	server_os.run_process(Programs::CmdSSH, {"ssh"});
 
-	our_os.run_process(Programs::CmdSSH, {"ssh"});
+	client_net_mgr->bind_socket(fd, local_addr, 50001);
+	client_net_mgr->connect_socket(fd, local_addr, 22);
 
-	reader(net, fd);
+	reader(client_net_mgr, fd);
 
-	while (net->socket_is_open(fd))
+	while (client_net_mgr->socket_is_open(fd))
 	{
 		std::string input{};
 		std::getline(std::cin, input);
@@ -77,7 +94,7 @@ int main(int argc, char* argv[])
 		ip.set_protocol(ip::Protocol::ICMP);
 		ip.set_payload(icmp_data);
 
-		net->send(std::move(ip));
+		client_net_mgr->send(std::move(ip));
 
 		// com::CommandQuery query{};
 		// query.set_command(input);

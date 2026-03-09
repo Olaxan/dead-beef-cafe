@@ -1,8 +1,5 @@
 #pragma once
-
-#include "soa_helpers.h"
-#include "msg_queue.h"
-#include "task.h"
+#pragma once
 
 #include <set>
 #include <print>
@@ -11,32 +8,17 @@
 #include <unordered_map>
 #include <unordered_set>
 
-using NetNotifyFn = std::function<void(void)>;
+class LinkServer;
 
-template<typename T>
-using NetServerContainerBase = std::vector<T, std::allocator<T>>;
-
-enum NetServerComponents : uint8_t
+class ILinkable
 {
-	ComNetRxQueue,
-    ComNetTxQueue,
+public:
+
+	virtual void on_linked(LinkServer*) = 0;
+	virtual void on_unlinked(LinkServer*) = 0;
+
 };
 
-template<typename ... T>
-struct NetServerData : public std::tuple<T ...>
-{
-	using std::tuple<T...>::tuple;
- 	auto& get_rx_queue() { return std::get<ComNetRxQueue>(*this); }
-	auto& get_tx_queue() { return std::get<ComNetTxQueue>(*this); }
-};
-
-using NetServerDataTypes = NetServerData<
-	MessageQueue<std::string>,	// RX
-	MessageQueue<std::string>>;	// TX
-
-using NetServerContainer = BaseContainer<NetServerContainerBase, DataLayout::SoA, NetServerDataTypes>;
-
-template <typename T>
 class LinkServer
 {
 public:
@@ -45,22 +27,24 @@ public:
 	LinkServer(LinkServer&) = delete;
 
 	/* Adds a link between two nodes. */
-	void link(T first, T second)
+	void link(ILinkable* first, ILinkable* second)
 	{
 		links_.insert(std::pair{first, second});
 		links_.insert(std::pair{second, first});
+		first->on_linked(this);
+		second->on_linked(this);
 	}
 
 	/* Removes a specific link between two nodes. */
-	void unlink(T first, T second)
+	void unlink(ILinkable* first, ILinkable* second)
 	{
-		links_.erase(std::pair{first, second});
-		links_.erase(std::pair{second, first});
+		// links_.erase(std::make_pair(first, second));
+		// links_.erase(std::make_pair(second, first));
 	}
 
 	/* Removes a node entirely from the directory,
 	and removes all links to and from it. */
-	void purge(T node)
+	void purge(ILinkable* node)
 	{
 		links_.erase(node);
 		auto range = links_.equal_range(node);
@@ -73,20 +57,19 @@ public:
 		}
 	}
 
-	void register_node(T node)
+	void register_node(ILinkable* node)
 	{
-		alive_.insert(node);
+		nodes_.insert(node);
 	}
 
-	void unregister_node(T node)
+	void unregister_node(ILinkable* node)
 	{
-		if (alive_.erase(node)) { purge(node); }
+		if (nodes_.erase(node)) { purge(node); }
 	}
 
 protected:
 
-	NetServerContainer data_{};
-	std::unordered_multimap<T, T> links_{};
-	std::unordered_set<T> alive_{};
+	std::unordered_multimap<ILinkable*, ILinkable*> links_{};
+	std::unordered_set<ILinkable*> nodes_{};
 
 };
