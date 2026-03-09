@@ -99,3 +99,12 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 
 	co_return 1;
 }
+
+ProcessTask Programs::SrvNetArp(Proc& proc, std::vector<std::string> args)
+{
+	OS& os = *proc.owning_os;
+	NetManager* net = os.get_network_manager();
+	Address6 local_addr = net->get_primary_ip();
+
+	co_return 0;
+}

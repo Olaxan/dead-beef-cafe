@@ -282,3 +282,8 @@ void NetManager::process_sockets()
 		}
 	}
 }
+
+LinkUpdateAwaiter NetManager::async_await_link()
+{
+	return LinkUpdateAwaiter{nic_};
+}

@@ -62,6 +62,8 @@ public:
 	
 	void process_sockets();
 
+	LinkUpdateAwaiter async_await_link();
+
 protected:
 
 	SocketFile* find_socket(SocketDescriptor sock_fd);

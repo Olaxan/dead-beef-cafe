@@ -9,6 +9,8 @@
 #include "proto/ip_packet.pb.h"
 
 #include <print>
+#include <functional>
+#include <vector>
 
 class NIC : public Device, public IEndpoint, public ILinkable
 {
@@ -39,7 +41,7 @@ public:
 
 	/* Linkable IF */
 	void on_linked(LinkServer* links, ILinkable* other) override;
-	void on_unlinked(LinkServer* links) override;
+	void on_unlinked(LinkServer* links, ILinkable* other) override;
 	/* Linkable IF */
 
 	virtual void on_start(Host* owner) override;
@@ -47,16 +49,15 @@ public:
 
 	void transfer_one(NIC* other);
 
-	template <typename Params>
-	void send(NIC* other, Params&& data)
-	{
-		other->rx_queue_.push(std::forward<Params>(data));
-	}
+	void add_link_update_callback(LinkUpdateCallbackFn&& fn);
+	void notify_link_update(NIC* new_link, LinkUpdateType type);
 
 	NetQueue& get_rx_queue() { return rx_queue_; }
 	NetQueue& get_tx_queue() { return tx_queue_; }
 
-private:
+protected:
+
+	std::vector<LinkUpdateCallbackFn> callbacks_;
 
 	Address6 address_{};
 	float bandwidth_ = 0.f;

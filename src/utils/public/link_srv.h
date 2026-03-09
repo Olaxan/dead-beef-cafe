@@ -15,7 +15,7 @@ class ILinkable
 public:
 
 	virtual void on_linked(LinkServer*, ILinkable*) = 0;
-	virtual void on_unlinked(LinkServer*) = 0;
+	virtual void on_unlinked(LinkServer*, ILinkable*) = 0;
 
 };
 

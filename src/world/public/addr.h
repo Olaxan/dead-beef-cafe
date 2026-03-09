@@ -27,7 +27,7 @@ public:
 
 	Address6() = default;
 
-	Address6(uint64_t pre, uint64_t post) noexcept
+	Address6(uint64_t pre, uint64_t post = 0) noexcept
 		: head(pre), tail(post)	{ }
 
     explicit Address6(std::array<uint8_t, 16>&& raw_bytes) noexcept;

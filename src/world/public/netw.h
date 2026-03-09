@@ -10,6 +10,8 @@
 #include <coroutine>
 #include <print>
 
+class NIC;
+
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
 
@@ -19,18 +21,38 @@ struct SocketAcceptorAwaiter
 
 	SocketAcceptorAwaiter(SocketAcceptorAwaiter&) = delete;
 
-	bool await_ready()
-	{
-		return true;
-	}
+	bool await_ready();
+	void await_suspend(std::coroutine_handle<> h);
+	int32_t await_resume() const;
+	
+};
 
-	void await_suspend(std::coroutine_handle<> h)
-	{
-		h.resume();
-	}
+enum class LinkUpdateType : uint8_t
+{
+	LinkAdded,
+	LinkRemoved,
+	LinkIdle
+};
 
-	int32_t await_resume() const
-	{
-		return 0;
-	}
+using LinkUpdatePair = std::pair<NIC*, LinkUpdateType>;
+using LinkUpdateCallbackFn = std::move_only_function<void(const LinkUpdatePair&)>;
+
+struct LinkUpdateAwaiter
+{
+	LinkUpdateAwaiter(NIC* nic)
+		: nic_(nic) { }
+
+    LinkUpdateAwaiter(LinkUpdateAwaiter&) = delete;
+	LinkUpdateAwaiter(LinkUpdateAwaiter&&) = default;
+	~LinkUpdateAwaiter() = default;
+
+	bool await_ready();
+	void await_suspend(std::coroutine_handle<> h);
+	LinkUpdatePair await_resume() const;
+
+private:
+
+	NIC* nic_{nullptr};
+	LinkUpdatePair retval_{};
+
 };
