@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 	Host* server = HostUtils::create_host<BasicOS>(our_world, "Server");
 
 	NIC* client_nic = client->get_device<NIC>();
-	NIC* server_nic = client->get_device<NIC>();
+	NIC* server_nic = server->get_device<NIC>();
 	assert(client_nic && server_nic);
 
 	links.link(client_nic, server_nic);

@@ -14,7 +14,7 @@ class ILinkable
 {
 public:
 
-	virtual void on_linked(LinkServer*) = 0;
+	virtual void on_linked(LinkServer*, ILinkable*) = 0;
 	virtual void on_unlinked(LinkServer*) = 0;
 
 };
@@ -31,8 +31,8 @@ public:
 	{
 		links_.insert(std::pair{first, second});
 		links_.insert(std::pair{second, first});
-		first->on_linked(this);
-		second->on_linked(this);
+		first->on_linked(this, second);
+		second->on_linked(this, first);
 	}
 
 	/* Removes a specific link between two nodes. */

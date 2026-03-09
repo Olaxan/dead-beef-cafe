@@ -38,7 +38,7 @@ public:
 	/* Endpoint IF */
 
 	/* Linkable IF */
-	void on_linked(LinkServer* links) override;
+	void on_linked(LinkServer* links, ILinkable* other) override;
 	void on_unlinked(LinkServer* links) override;
 	/* Linkable IF */
 
