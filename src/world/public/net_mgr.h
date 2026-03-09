@@ -20,8 +20,6 @@ class OS;
 class NIC;
 class File;
 
-using SocketDescriptor = uint64_t;
-
 class NetManager
 {
 public:
@@ -35,15 +33,15 @@ public:
 	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
 	int32_t bind_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 
-	void connect_socket(SocketDescriptor sock, AddressPair addr);
-	void connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+	SocketConnectAwaiter async_connect_socket(SocketDescriptor sock, AddressPair addr);
+	SocketConnectAwaiter async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 
 	ProcessReadAwaiter async_read_socket(SocketDescriptor sock);
 	void async_write_socket(SocketDescriptor sock, const std::string& bytes);
 	
 	int32_t listen(SocketDescriptor sock);
 
-	SocketAcceptorAwaiter accept(SocketDescriptor sock);
+	SocketAcceptAwaiter async_accept_socket(SocketDescriptor sock);
 
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, UUID mac);

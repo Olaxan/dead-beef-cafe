@@ -52,15 +52,37 @@ int32_t NetManager::bind_socket(SocketDescriptor sock, Address6 addr, int32_t po
 	return bind_socket(sock, {addr, port});
 }
 
-void NetManager::connect_socket(SocketDescriptor sock, AddressPair addr)
+SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, AddressPair dest)
 {
 	if (SocketFile* file = find_socket(sock))
-		file->other_endpoint = addr;
+	{
+		const AddressPair& src = file->local_endpoint;
+
+		ip::TcpPacket tcp;
+		tcp.set_src_port(src.port);
+		tcp.set_dest_port(dest.port);
+		tcp.set_type(ip::TcpType::Syn);
+
+		std::string tcp_data;
+		if (!tcp.SerializeToString(&tcp_data))
+			return {};
+
+		ip::IpPackage ip;
+		ip.set_src_ip(src.addr.raw);
+		ip.set_dest_ip(dest.addr.raw);
+		ip.set_protocol(ip::Protocol::TCP);
+		ip.set_payload(tcp_data);
+		
+		send(std::move(ip));
+		return SocketConnectAwaiter{this, sock};
+	}
+
+	return {};
 }
 
-void NetManager::connect_socket(SocketDescriptor sock, Address6 addr, int32_t port)
+SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port)
 {
-	return connect_socket(sock, {addr, port});
+	return async_connect_socket(sock, {addr, port});
 }
 
 ProcessReadAwaiter NetManager::async_read_socket(SocketDescriptor sock)
@@ -89,9 +111,9 @@ int32_t NetManager::listen(SocketDescriptor sock)
 	return 1;
 }
 
-SocketAcceptorAwaiter NetManager::accept(SocketDescriptor sock)
+SocketAcceptAwaiter NetManager::async_accept_socket(SocketDescriptor sock)
 {
-	return SocketAcceptorAwaiter();
+	return SocketAcceptAwaiter();
 }
 
 void NetManager::send(ip::IpPackage&& package)

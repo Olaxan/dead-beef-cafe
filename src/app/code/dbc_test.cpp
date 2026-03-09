@@ -46,22 +46,21 @@ int main(int argc, char* argv[])
 	NIC* server_nic = server->get_device<NIC>();
 	assert(client_nic && server_nic);
 
-	links.link(client_nic, server_nic);
-
+	
 	OS& client_os = client->get_os();
 	OS& server_os = server->get_os();
-
+	
 	NetManager* client_net_mgr = client_os.get_network_manager();
 	NetManager* server_net_mgr = server_os.get_network_manager();
-
+	
 	Address6 local_addr = client_net_mgr->get_primary_ip();
 	Address6 remote_addr = server_net_mgr->get_primary_ip();
-
+	
 	auto sock = client_net_mgr->create_socket();
-
+	
 	if (!sock)
-		return 1;
-
+	return 1;
+	
 	SocketDescriptor fd = *sock;
 	
 	client->start_host();
@@ -69,9 +68,11 @@ int main(int argc, char* argv[])
 	our_world.launch();
 	
 	server_os.run_process(Programs::CmdSSH, {"ssh"});
+	
+	links.link(client_nic, server_nic);
 
 	client_net_mgr->bind_socket(fd, local_addr, 50001);
-	client_net_mgr->connect_socket(fd, local_addr, 22);
+	client_net_mgr->async_connect_socket(fd, local_addr, 22);
 
 	reader(client_net_mgr, fd);
 

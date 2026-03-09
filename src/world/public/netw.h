@@ -12,19 +12,38 @@
 #include <print>
 
 class NIC;
+class NetManager;
 
+using SocketDescriptor = uint64_t;
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
 
-struct SocketAcceptorAwaiter
+struct SocketAcceptAwaiter
 {
-	explicit SocketAcceptorAwaiter() { }
+	explicit SocketAcceptAwaiter() { }
 
-	SocketAcceptorAwaiter(SocketAcceptorAwaiter&) = delete;
+	SocketAcceptAwaiter(SocketAcceptAwaiter&) = delete;
 
 	bool await_ready();
 	void await_suspend(std::coroutine_handle<> h);
 	int32_t await_resume() const;
+	
+};
+
+struct SocketConnectAwaiter
+{
+	SocketConnectAwaiter();
+	SocketConnectAwaiter(NetManager* net, SocketDescriptor sock);
+
+	SocketConnectAwaiter(SocketConnectAwaiter&) = delete;
+
+	bool await_ready();
+	void await_suspend(std::coroutine_handle<> h);
+	int32_t await_resume() const;
+
+protected:
+
+	SocketDescriptor sock_{0};
 	
 };
 

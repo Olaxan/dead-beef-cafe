@@ -2,9 +2,17 @@ syntax = "proto3";
 
 package ip;
 
+enum TcpType
+{
+	Data = 0;
+	Syn = 1;
+	Ack = 2;
+}
+
 message TcpPacket
 {
 	int32 src_port = 1;
 	int32 dest_port = 2;
-	string payload = 3;
+	TcpType type = 3;
+	string payload = 4;
 }
