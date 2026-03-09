@@ -97,6 +97,15 @@ struct std::hash<AddressPair>
 	}
 };
 
+template <>
+struct std::hash<Address6>
+{
+  	std::size_t operator()(const Address6& k) const
+	{
+    	return std::hash<uint64_t>()(k.tail);
+	}
+};
+
 namespace IPv6Generator 
 {
     Address6 generate();

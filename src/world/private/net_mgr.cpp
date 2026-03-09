@@ -100,6 +100,12 @@ void NetManager::send(ip::IpPackage&& package)
 	nic_->get_tx_queue().push(std::move(package));
 }
 
+void NetManager::send(ip::IpPackage&& package, UUID mac)
+{
+	assert(nic_);
+	nic_->transfer(mac, std::move(package));
+}
+
 void NetManager::receive(ip::IpPackage&& package)
 {
 	std::println("Parsing package (ip len = {})...", package.dest_ip().size());
@@ -286,4 +292,33 @@ void NetManager::process_sockets()
 LinkUpdateAwaiter NetManager::async_await_link()
 {
 	return LinkUpdateAwaiter{nic_};
+}
+
+void NetManager::arp_request()
+{
+	nic_->broadcast([this](UUID mac, NIC* nic)
+	{
+		Address6 addr = nic->get_ip();
+		arp_cache_[addr] = mac;
+		std::println("- ARP entry: {} -> {}", addr, mac);
+	});
+}
+
+void NetManager::arp_request(UUID mac)
+{
+	nic_->unicast(mac, [this](UUID mac, NIC* nic)
+	{
+		Address6 addr = nic->get_ip();
+		arp_cache_[addr] = mac;
+		std::println("- ARP entry: {} -> {}", addr, mac);
+	});
+}
+
+std::optional<UUID> NetManager::arp_lookup(Address6 addr)
+{
+	if (auto it = arp_cache_.find(addr); it != arp_cache_.end())
+	{
+		return it->second;
+	}
+	return std::nullopt;
 }

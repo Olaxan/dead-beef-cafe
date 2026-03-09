@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 			continue;
 
 		ip::IpPackage ip;
-		ip.set_dest_ip(local_addr.raw);
+		ip.set_dest_ip(remote_addr.raw);
 		ip.set_src_ip(local_addr.raw);
 		ip.set_protocol(ip::Protocol::ICMP);
 		ip.set_payload(icmp_data);

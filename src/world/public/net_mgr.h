@@ -46,6 +46,8 @@ public:
 	SocketAcceptorAwaiter accept(SocketDescriptor sock);
 
 	void send(ip::IpPackage&& package);
+	void send(ip::IpPackage&& package, UUID mac);
+
 	void receive(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package, const Address6& addr);
 
@@ -63,6 +65,9 @@ public:
 	void process_sockets();
 
 	LinkUpdateAwaiter async_await_link();
+	void arp_request();
+	void arp_request(UUID mac);
+	std::optional<UUID> arp_lookup(Address6 addr);
 
 protected:
 
@@ -72,9 +77,10 @@ protected:
 	OS& os_;
 	NIC* nic_{nullptr};
 
-	uint64_t socket_index_{0};
+	uint64_t socket_index_{1};
 
 	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
+	std::unordered_map<Address6, UUID> arp_cache_;
 
 };

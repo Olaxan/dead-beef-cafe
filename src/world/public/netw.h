@@ -2,6 +2,7 @@
 
 #include "msg_queue.h"
 #include "addr.h"
+#include "uuid.h"
 
 #include "proto/ip_packet.pb.h"
 
@@ -34,7 +35,7 @@ enum class LinkUpdateType : uint8_t
 	LinkIdle
 };
 
-using LinkUpdatePair = std::pair<NIC*, LinkUpdateType>;
+using LinkUpdatePair = std::pair<UUID, LinkUpdateType>;
 using LinkUpdateCallbackFn = std::move_only_function<void(const LinkUpdatePair&)>;
 
 struct LinkUpdateAwaiter

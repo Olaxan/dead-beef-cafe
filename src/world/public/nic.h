@@ -12,6 +12,9 @@
 #include <functional>
 #include <vector>
 
+
+using NetCastFn = std::function<void(UUID, class NIC*)>;
+
 class NIC : public Device, public IEndpoint, public ILinkable
 {
 public:
@@ -47,17 +50,20 @@ public:
 	virtual void on_start(Host* owner) override;
 	virtual void on_shutdown(Host* owner) override;
 
-	void transfer_one(NIC* other);
+	size_t transfer(UUID mac, ip::IpPackage&& packet);
+	void broadcast(NetCastFn broadcast_fn);
+	void unicast(UUID mac, NetCastFn unicast_fn);
 
 	void add_link_update_callback(LinkUpdateCallbackFn&& fn);
-	void notify_link_update(NIC* new_link, LinkUpdateType type);
+	void notify_link_update(UUID new_mac, LinkUpdateType type);
 
 	NetQueue& get_rx_queue() { return rx_queue_; }
 	NetQueue& get_tx_queue() { return tx_queue_; }
 
 protected:
 
-	std::vector<LinkUpdateCallbackFn> callbacks_;
+	std::vector<LinkUpdateCallbackFn> callbacks_{};
+	std::unordered_map<UUID, NIC*> link_cache_{};
 
 	Address6 address_{};
 	float bandwidth_ = 0.f;

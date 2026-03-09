@@ -7,6 +7,7 @@
 #include "uuid.h"
 
 #include <print>
+#include <algorithm>
 
 NIC::~NIC() = default;
 
@@ -20,16 +21,22 @@ void NIC::on_linked(LinkServer* links, ILinkable* other)
 	assert(other);
 	std::println("Linked {} to {}.", UUID{reinterpret_cast<uint64_t>(this)}, UUID{reinterpret_cast<uint64_t>(other)});
 
-	NIC* other_nic = static_cast<NIC*>(other);
-	notify_link_update(other_nic, LinkUpdateType::LinkAdded);
+	NIC* other_nic{static_cast<NIC*>(other)};
+	UUID other_mac{reinterpret_cast<uint64_t>(other_nic)};
+
+	link_cache_[other_mac] = other_nic;
+	notify_link_update(other_mac, LinkUpdateType::LinkAdded);
 }
 
 void NIC::on_unlinked(LinkServer* links, ILinkable* other)
 {
 	std::println("Unlinked {} from {}.", UUID{reinterpret_cast<uint64_t>(this)}, UUID{reinterpret_cast<uint64_t>(other)});
 
-	NIC* other_nic = static_cast<NIC*>(other);
-	notify_link_update(other_nic, LinkUpdateType::LinkRemoved);
+	NIC* other_nic{static_cast<NIC*>(other)};
+	UUID other_mac{reinterpret_cast<uint64_t>(other_nic)};
+
+	link_cache_.erase(other_mac);
+	notify_link_update(other_mac, LinkUpdateType::LinkRemoved);
 }
 
 void NIC::on_start(Host* owner)
@@ -44,9 +51,29 @@ void NIC::on_shutdown(Host* owner)
 	internet.unregister_node(this);
 }
 
-void NIC::transfer_one(NIC* other)
+size_t NIC::transfer(UUID mac, ip::IpPackage&& packet)
 {
-	
+	if (auto it = link_cache_.find(mac); it != link_cache_.end())
+	{
+		size_t bytes = packet.ByteSizeLong();
+		NIC* other = it->second;
+		other->rx_queue_.push(std::move(packet));
+		return bytes;
+	}
+
+	return 0;
+}
+
+void NIC::broadcast(NetCastFn broadcast_fn)
+{
+	for (auto& [uuid, nic] : link_cache_)
+		broadcast_fn(uuid, nic);
+}
+
+void NIC::unicast(UUID mac, NetCastFn unicast_fn)
+{
+	if (auto it = link_cache_.find(mac); it != link_cache_.end())
+		unicast_fn(mac, it->second);
 }
 
 void NIC::add_link_update_callback(LinkUpdateCallbackFn&& fn)
@@ -54,10 +81,10 @@ void NIC::add_link_update_callback(LinkUpdateCallbackFn&& fn)
 	callbacks_.push_back(std::move(fn));
 }
 
-void NIC::notify_link_update(NIC* new_link, LinkUpdateType type)
+void NIC::notify_link_update(UUID mac, LinkUpdateType type)
 {
 	for (auto&& fn : callbacks_)
 	{
-		fn(std::make_pair(new_link, type));
+		fn(std::make_pair(mac, type));
 	}
 }
