@@ -83,7 +83,7 @@ Proc* OS::create_process(CreateProcessParams&& params)
     {
         proc->set_writer([pid](const std::string& str)
         {
-            std::print("pid {}: {}", pid, str);
+            std::cout << str;
         });
     }
 

@@ -163,6 +163,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/bin/rm", Programs::CmdRemoveFile},
 		{"/bin/cat", Programs::CmdCat},
 		{"/bin/ping", Programs::CmdPing},
+		{"/bin/crypto", Programs::CmdCrypto},
 		{"/usr/bin/count", Programs::CmdCount},
 		{"/usr/bin/snake", Programs::CmdSnake},
 		{"/usr/bin/dogs", Programs::CmdDogs},

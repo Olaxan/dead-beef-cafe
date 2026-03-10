@@ -33,6 +33,7 @@ namespace Programs
 	ProcessTask InitDisk(Proc& proc, std::vector<std::string> args);
 	ProcessTask InitProg(Proc& proc, std::vector<std::string> args);
 	
+	/* Services */
 	ProcessTask SrvNetRx(Proc& proc, std::vector<std::string> args);
 	ProcessTask SrvNetTx(Proc& proc, std::vector<std::string> args);
 	ProcessTask SrvNetArp(Proc& proc, std::vector<std::string> args);
@@ -49,6 +50,9 @@ namespace Programs
 	/* Test programs */
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdDogs(Proc& proc, std::vector<std::string> args);
+
+	/* Utilities */
+	ProcessTask CmdCrypto(Proc& proc, std::vector<std::string> args);
 
 	/* Networks programs */
 	ProcessTask CmdPing(Proc& proc, std::vector<std::string> args);
