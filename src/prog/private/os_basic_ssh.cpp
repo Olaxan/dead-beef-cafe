@@ -70,24 +70,16 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	}
 
 	proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
-	SocketDescriptor con_ret = co_await net->async_accept_socket(fd);
-	proc.putln("Connection established ({}).", con_ret);
-
-	while (true)
-	{
-		std::string woo = co_await net->async_read_socket(con_ret);
-		proc.putln("got: {}.", woo);
-	}
-
-
+	SocketDescriptor con = co_await net->async_accept_socket(fd);
+	proc.putln("Connection established ({}).", con);
 
 	/* --- READER FUNCTORS ---
 	Add reader functors so that child processes can listen to our traffic. */
 
 	/* Asynchronous reader for common strings. */
-	proc.set_reader([rs = ssh_sock]() -> Task<std::string>
+	proc.set_reader([net, con]() -> Task<std::string>
 	{
-		return rs.netmgr->async_read_socket(rs.fd);
+		return net->async_read_socket(con);
 	});
 
 	proc.putln("SecureShell version 5:");

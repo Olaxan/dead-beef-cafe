@@ -47,12 +47,12 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 			if (dest_ip == local_ip)
 			{
-				proc.putln("Receiving {} bytes (dest. {})...", packet_size, dest_ip);
+				//proc.putln("Receiving {} bytes (dest. {})...", packet_size, dest_ip);
 				net->receive(std::move(packet), src_ip, dest_ip);
 			}
 			else
 			{
-				proc.putln("Forwarding {} bytes (dest. {})...", packet_size, dest_ip);
+				//proc.putln("Forwarding {} bytes (dest. {})...", packet_size, dest_ip);
 				net->send(std::move(packet));
 			}
 		}
@@ -94,7 +94,7 @@ entry:
 
 				if (dest_addr == local_addr)
 				{
-					proc.putln("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
+					//proc.putln("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
 					net->receive(std::move(packet));
 					continue;
 				}
@@ -103,7 +103,7 @@ entry:
 				{
 					if (std::optional<UUID> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 					{
-						proc.putln("Transmitting {} bytes (dest. {})...", bytes, dest_addr);
+						//proc.putln("Transmitting {} bytes (dest. {})...", bytes, dest_addr);
 						net->send(std::move(packet), *arp_entry);
 						goto entry;
 					}
