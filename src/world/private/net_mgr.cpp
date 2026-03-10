@@ -9,6 +9,8 @@
 
 #include <print>
 #include <memory>
+#include <ranges>
+#include <algorithm>
 
 NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_owner().get_device<NIC>())
 { }
@@ -52,10 +54,11 @@ int32_t NetManager::bind_socket(SocketDescriptor sock, Address6 addr, int32_t po
 	return bind_socket(sock, {addr, port});
 }
 
-SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, AddressPair dest)
+Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPair dest)
 {
-	if (SocketFile* file = find_socket(sock))
+	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
+		const SocketFile* file = it->second.get();
 		const AddressPair& src = file->local_endpoint;
 
 		ip::TcpPacket tcp;
@@ -65,7 +68,7 @@ SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, Add
 
 		std::string tcp_data;
 		if (!tcp.SerializeToString(&tcp_data))
-			return {};
+			co_return -1;
 
 		ip::IpPackage ip;
 		ip.set_src_ip(src.addr.raw);
@@ -74,32 +77,52 @@ SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, Add
 		ip.set_payload(tcp_data);
 		
 		send(std::move(ip));
-		return SocketConnectAwaiter{this, sock};
+
+		std::println("Awaiting ACK from {}...", dest.addr);
+		
+		while (true)
+		{
+			std::string reply_bytes = co_await async_read_socket(sock);
+			ip::TcpPacket reply;
+			if (reply.ParseFromString(reply_bytes))
+			{
+				if (reply.type() == ip::TcpType::Ack)
+				{
+					std::println("Received ACK from {}.", dest.addr);
+					co_return 0;
+				}
+			}
+		}
 	}
 
-	return {};
+	co_return -1;
 }
 
-SocketConnectAwaiter NetManager::async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port)
+Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port)
 {
 	return async_connect_socket(sock, {addr, port});
 }
 
-ProcessReadAwaiter NetManager::async_read_socket(SocketDescriptor sock)
+Task<std::string> NetManager::async_read_socket(SocketDescriptor sock)
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
-		return ProcessReadAwaiter{it->second};
+	{
+		std::shared_ptr<SocketFile> file = it->second;
+		co_return (co_await file->rx_queue.async_pop());
+	}
 
-	return {};
+	co_return {};
 }
 
-void NetManager::async_write_socket(SocketDescriptor sock, const std::string& bytes)
+Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string bytes)
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
 		it->second->write(bytes);
 		process_sockets();
+		co_return bytes.size();
 	}
+	co_return 0;
 }
 
 int32_t NetManager::listen(SocketDescriptor sock)
@@ -111,9 +134,36 @@ int32_t NetManager::listen(SocketDescriptor sock)
 	return 1;
 }
 
-SocketAcceptAwaiter NetManager::async_accept_socket(SocketDescriptor sock)
+Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 {
-	return SocketAcceptAwaiter();
+	while (true)
+	{
+		std::string data = co_await async_read_socket(sock);
+		ip::TcpPacket pak;
+		if (pak.ParseFromString(data))
+		{
+			if (pak.type() == ip::TcpType::Syn)
+			{
+				// Create new socket and return;
+				co_return 0;
+			}
+		}
+	}
+
+	co_return 0;
+}
+
+void NetManager::add_socket_filter(SocketFilter&& filter)
+{
+	socket_filters_.push_back(std::move(filter));
+}
+
+void NetManager::remove_socket_filter(void* listener)
+{
+	std::erase_if(socket_filters_, [listener](const SocketFilter& filter)
+	{
+		return (filter.listener == listener);
+	});
 }
 
 void NetManager::send(ip::IpPackage&& package)
@@ -130,7 +180,6 @@ void NetManager::send(ip::IpPackage&& package, UUID mac)
 
 void NetManager::receive(ip::IpPackage&& package)
 {
-	std::println("Parsing package (ip len = {})...", package.dest_ip().size());
 	const std::string& dest_ip_bytes = package.dest_ip();
 	if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes.data()))
 	{
@@ -140,7 +189,6 @@ void NetManager::receive(ip::IpPackage&& package)
 
 void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 {
-	std::println("Received package.");
 	const std::string& payload = package.payload();
 
 	switch (package.protocol())
@@ -271,6 +319,17 @@ SocketFile* NetManager::find_socket(const AddressPair& tuple)
 		return find_socket(it_fd->second);
 
 	return nullptr;
+}
+
+void NetManager::broadcast_socket_rx(SocketDescriptor fd, const std::string& payload)
+{
+	for (auto&& filter : socket_filters_)
+	{
+		if (filter.fd == fd)
+		{
+			filter.fn(payload);
+		}
+	}
 }
 
 void NetManager::process_sockets()

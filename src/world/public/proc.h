@@ -28,7 +28,7 @@ class Proc;
 class OS;
 
 using WriterFn = std::function<void(const std::string&)>;
-using ReaderFn = std::move_only_function<ProcessReadAwaiter(void)>;
+using ReaderFn = std::move_only_function<Task<std::string>(void)>;
 
 enum class EnvVarAccessMode
 {
@@ -118,7 +118,7 @@ public:
 
 	/* Try to read something from a reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
-	ProcessReadAwaiter read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
+	Task<std::string> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
 
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */

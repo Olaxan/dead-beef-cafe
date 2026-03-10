@@ -7,6 +7,7 @@
 #include <functional>
 #include <coroutine>
 #include <ranges>
+#include <algorithm>
 
 template<typename T>
 using MessageCallbackFn = std::function<void(const T&)>;

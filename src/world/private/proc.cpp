@@ -46,15 +46,15 @@ void Proc::set_reader(ReaderFn&& reader)
 	reader_ = std::move(reader);
 }
 
-ProcessReadAwaiter Proc::read(EnvVarAccessMode mode)
+Task<std::string> Proc::read(EnvVarAccessMode mode)
 {
 	if (reader_)
-		return reader_();
+		co_return (co_await reader_());
 
 	if (host && mode == EnvVarAccessMode::Inherit)
-		return host->read(mode);
+		co_return (co_await host->read(mode));
 
-	return ProcessReadAwaiter{nullptr};
+	co_return {};
 }
 
 void Proc::set_writer(WriterFn writer)

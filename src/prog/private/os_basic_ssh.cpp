@@ -39,6 +39,18 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_ip = net->get_primary_ip();
 
+	std::println("SSH service started.");
+
+	/* --- WRITER FUNCTORS  ---
+	Register writer functors in the process so that output
+	is delivered in the form of command objects via the socket. */
+
+	/* Writer for regular strings. */
+	proc.set_writer([](const std::string& out_str)
+	{
+		std::print("ssh: {}", out_str);
+	});
+
 	struct SSHNetSock
 	{
 		SocketDescriptor fd{0};
@@ -54,7 +66,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 
 	SocketDescriptor fd = *exp_sock;
 
-	if (!net->bind_socket(fd, {local_ip, 22}))
+	if (net->bind_socket(fd, {local_ip, 22}) != 0)
 	{
 		proc.errln("Failed to bind socket 22 for reading.");
 		co_return 1;
@@ -62,34 +74,20 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 
 	SSHNetSock ssh_sock{ .fd = fd, .netmgr = net };
 
-	if (!net->listen(fd))
+	if (net->listen(fd) != 0)
 	{
 		proc.errln("Failed to set socket 22 as a listening connection.");
 	}
 
-	// while (net->socket_is_open(fd))
-	// {
-	// 	if (auto&& [ec, peer_fd] = co_await net->accept(fd); net->socket_is_open(peer_fd))
-	// 	{
-	// 		create_ssh_worker(peer_fd);
-	// 	}
-	// }
-
-	/* --- WRITER FUNCTORS  ---
-	Register writer functors in the process so that output
-	is delivered in the form of command objects via the socket. */
-
-	/* Writer for regular strings. */
-	proc.set_writer([ws = ssh_sock](const std::string& out_str)
-	{
-		ws.netmgr->async_write_socket(ws.fd, out_str);
-	});
+	proc.putln("Waiting for connections...");
+	int32_t con_ret = co_await net->async_accept_socket(fd);
+	proc.putln("Connection established ({}).", con_ret);
 
 	/* --- READER FUNCTORS ---
 	Add reader functors so that child processes can listen to our traffic. */
 
 	/* Asynchronous reader for common strings. */
-	proc.set_reader([rs = ssh_sock]() -> ProcessReadAwaiter
+	proc.set_reader([rs = ssh_sock]() -> Task<std::string>
 	{
 		return rs.netmgr->async_read_socket(rs.fd);
 	});

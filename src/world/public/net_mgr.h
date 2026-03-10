@@ -5,6 +5,7 @@
 #include "proc_io.h"
 #include "msg_queue.h"
 #include "netw.h"
+#include "task.h"
 
 #include "proto/ip_packet.pb.h"
 #include "proto/icmp_packet.pb.h"
@@ -33,15 +34,19 @@ public:
 	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
 	int32_t bind_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 
-	SocketConnectAwaiter async_connect_socket(SocketDescriptor sock, AddressPair addr);
-	SocketConnectAwaiter async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+	Task<int32_t> async_connect_socket(SocketDescriptor sock, AddressPair addr);
+	Task<int32_t> async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+	
+	Task<int32_t> async_accept_socket(SocketDescriptor sock);
 
-	ProcessReadAwaiter async_read_socket(SocketDescriptor sock);
-	void async_write_socket(SocketDescriptor sock, const std::string& bytes);
+	Task<std::string> async_read_socket(SocketDescriptor sock);
+	Task<size_t> async_write_socket(SocketDescriptor sock, std::string bytes);
 	
 	int32_t listen(SocketDescriptor sock);
 
-	SocketAcceptAwaiter async_accept_socket(SocketDescriptor sock);
+
+	void add_socket_filter(SocketFilter&& filter);
+	void remove_socket_filter(void* listener);
 
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, UUID mac);
@@ -71,6 +76,7 @@ protected:
 
 	SocketFile* find_socket(SocketDescriptor sock_fd);
 	SocketFile* find_socket(const AddressPair& tuple);
+	void broadcast_socket_rx(SocketDescriptor fd, const std::string& payload);
 
 	OS& os_;
 	NIC* nic_{nullptr};
@@ -80,5 +86,6 @@ protected:
 	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
 	std::unordered_map<Address6, UUID> arp_cache_;
+	std::vector<SocketFilter> socket_filters_;
 
 };

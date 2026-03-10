@@ -71,6 +71,23 @@ int main(int argc, char* argv[])
 	
 	links.link(client_nic, server_nic);
 
+	/* Test ICMP */
+	ip::IcmpPacket icmp;
+	std::string icmp_data{};
+	icmp.set_type(ip::IcmpType::EchoRequest);
+	icmp.set_code(0);
+
+	if (icmp.SerializeToString(&icmp_data))
+	{
+		ip::IpPackage ip;
+		ip.set_dest_ip(remote_addr.raw);
+		ip.set_src_ip(local_addr.raw);
+		ip.set_protocol(ip::Protocol::ICMP);
+		ip.set_payload(icmp_data);
+	
+		client_net_mgr->send(std::move(ip));
+	}
+
 	client_net_mgr->bind_socket(fd, local_addr, 50001);
 	client_net_mgr->async_connect_socket(fd, local_addr, 22);
 
@@ -81,28 +98,12 @@ int main(int argc, char* argv[])
 		std::string input{};
 		std::getline(std::cin, input);
 
-		ip::IcmpPacket icmp;
-		std::string icmp_data{};
-		icmp.set_type(ip::IcmpType::EchoRequest);
-		icmp.set_code(0);
+		com::CommandQuery query{};
+		query.set_command(input);
 
-		if (!icmp.SerializeToString(&icmp_data))
-			continue;
-
-		ip::IpPackage ip;
-		ip.set_dest_ip(remote_addr.raw);
-		ip.set_src_ip(local_addr.raw);
-		ip.set_protocol(ip::Protocol::ICMP);
-		ip.set_payload(icmp_data);
-
-		client_net_mgr->send(std::move(ip));
-
-		// com::CommandQuery query{};
-		// query.set_command(input);
-
-		// std::string str{};
-		// if (query.SerializeToString(&str))
-		// 	net->async_write_socket(fd, str);
+		std::string str{};
+		if (query.SerializeToString(&str))
+		 	client_net_mgr->async_write_socket(fd, str);
 
 	}
 

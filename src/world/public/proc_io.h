@@ -37,11 +37,7 @@ private:
 struct ProcessReadAwaiter
 {
 	ProcessReadAwaiter(std::shared_ptr<File> file = nullptr)
-		: file_(file) { }
-
-    ProcessReadAwaiter(ProcessReadAwaiter&) = delete;
-	ProcessReadAwaiter(ProcessReadAwaiter&&) = default;
-	~ProcessReadAwaiter() = default;
+		: file_(std::move(file)) { }
 
 	bool await_ready()
 	{

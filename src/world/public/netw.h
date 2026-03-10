@@ -5,46 +5,29 @@
 #include "uuid.h"
 
 #include "proto/ip_packet.pb.h"
+#include "proto/tcp_packet.pb.h"
 
 #include <cstdint>
 #include <memory>
 #include <coroutine>
+#include <functional>
 #include <print>
+
 
 class NIC;
 class NetManager;
+class SocketFile;
 
 using SocketDescriptor = uint64_t;
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
+using SocketFilterFn = std::function<void(const std::string&)>;
 
-struct SocketAcceptAwaiter
+struct SocketFilter
 {
-	explicit SocketAcceptAwaiter() { }
-
-	SocketAcceptAwaiter(SocketAcceptAwaiter&) = delete;
-
-	bool await_ready();
-	void await_suspend(std::coroutine_handle<> h);
-	int32_t await_resume() const;
-	
-};
-
-struct SocketConnectAwaiter
-{
-	SocketConnectAwaiter();
-	SocketConnectAwaiter(NetManager* net, SocketDescriptor sock);
-
-	SocketConnectAwaiter(SocketConnectAwaiter&) = delete;
-
-	bool await_ready();
-	void await_suspend(std::coroutine_handle<> h);
-	int32_t await_resume() const;
-
-protected:
-
-	SocketDescriptor sock_{0};
-	
+	void* listener{nullptr};
+	SocketDescriptor fd{0};
+	SocketFilterFn fn{nullptr};
 };
 
 enum class LinkUpdateType : uint8_t
