@@ -223,19 +223,6 @@ Task<SocketDescriptor> NetManager::async_accept_socket(SocketDescriptor sock)
 	co_return 0;
 }
 
-void NetManager::add_socket_filter(SocketFilter&& filter)
-{
-	socket_filters_.push_back(std::move(filter));
-}
-
-void NetManager::remove_socket_filter(void* listener)
-{
-	std::erase_if(socket_filters_, [listener](const SocketFilter& filter)
-	{
-		return (filter.listener == listener);
-	});
-}
-
 void NetManager::send(ip::IpPackage&& package)
 {
 	assert(nic_);
@@ -441,17 +428,6 @@ SocketFile* NetManager::find_socket(const AddressTuple& tuple)
 		return find_socket(it_fd->second);
 
 	return nullptr;
-}
-
-void NetManager::broadcast_socket_rx(SocketDescriptor fd, const std::string& payload)
-{
-	for (auto&& filter : socket_filters_)
-	{
-		if (filter.fd == fd)
-		{
-			filter.fn(payload);
-		}
-	}
 }
 
 LinkUpdateAwaiter NetManager::async_await_link()

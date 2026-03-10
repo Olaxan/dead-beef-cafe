@@ -119,7 +119,7 @@ EagerTask<int32_t> OS::run_process(ProcessFn program, std::vector<std::string> a
     /* Now we actually run (and await) the process. */
     int32_t ret = co_await proc->await_dispatch(program, std::move(args));
     
-    processes_.erase(pid); // Use pid instead of iterator in case it's been invalidated after awaiting.
+    processes_.erase(pid);
     co_return ret;
 }
 

@@ -21,14 +21,6 @@ class SocketFile;
 using SocketDescriptor = uint64_t;
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
-using SocketFilterFn = std::function<void(const std::string&)>;
-
-struct SocketFilter
-{
-	void* listener{nullptr};
-	SocketDescriptor fd{0};
-	SocketFilterFn fn{nullptr};
-};
 
 enum class LinkUpdateType : uint8_t
 {

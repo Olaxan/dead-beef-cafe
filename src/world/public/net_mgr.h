@@ -47,9 +47,6 @@ public:
 	
 	int32_t listen(SocketDescriptor sock);
 
-	void add_socket_filter(SocketFilter&& filter);
-	void remove_socket_filter(void* listener);
-
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);
 
@@ -79,7 +76,6 @@ protected:
 	SocketFile* find_socket(SocketDescriptor sock_fd);
 	SocketFile* find_socket(const AddressPair& tuple);
 	SocketFile* find_socket(const AddressTuple& tuple);
-	void broadcast_socket_rx(SocketDescriptor fd, const std::string& payload);
 
 	OS& os_;
 	NIC* nic_{nullptr};
@@ -90,6 +86,5 @@ protected:
 	std::unordered_map<AddressTuple, SocketDescriptor> sessions_;
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
-	std::vector<SocketFilter> socket_filters_;
 
 };
