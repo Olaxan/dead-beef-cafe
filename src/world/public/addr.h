@@ -80,12 +80,38 @@ struct std::formatter<Address6> : std::formatter<std::string>
     }
 };
 
+template <>
+struct std::hash<Address6>
+{
+  	std::size_t operator()(const Address6& k) const
+	{
+    	return std::hash<uint64_t>()(k.tail);
+	}
+};
+
+
 struct AddressPair
 {
 	Address6 addr{};
 	int32_t port{0};
 	
 	auto operator <=> (const AddressPair&) const = default;
+};
+
+struct AddressTuple
+{
+    AddressTuple() = default;
+    
+    AddressTuple(AddressPair src, AddressPair dest)
+        : source(std::move(src)), dest(std::move(dest)) {}
+
+    AddressTuple(Address6 src_addr, int32_t src_port, Address6 dest_addr, int32_t dest_port)
+        : source({src_addr, src_port}), dest({src_addr, src_port}) {}
+
+    AddressPair source{};
+    AddressPair dest{};
+
+    auto operator <=> (const AddressTuple&) const = default;
 };
 
 template <>
@@ -98,11 +124,11 @@ struct std::hash<AddressPair>
 };
 
 template <>
-struct std::hash<Address6>
+struct std::hash<AddressTuple>
 {
-  	std::size_t operator()(const Address6& k) const
+  	std::size_t operator()(const AddressTuple& k) const
 	{
-    	return std::hash<uint64_t>()(k.tail);
+    	return ((std::hash<AddressPair>()(k.source) ^ (std::hash<AddressPair>()(k.dest) << 1)) >> 1);
 	}
 };
 

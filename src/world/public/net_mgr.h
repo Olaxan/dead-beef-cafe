@@ -46,7 +46,6 @@ public:
 	
 	int32_t listen(SocketDescriptor sock);
 
-
 	void add_socket_filter(SocketFilter&& filter);
 	void remove_socket_filter(void* listener);
 
@@ -54,11 +53,11 @@ public:
 	void send(ip::IpPackage&& package, UUID mac);
 
 	void receive(ip::IpPackage&& package);
-	void receive(ip::IpPackage&& package, const Address6& addr);
+	void receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
 
-	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
-	void handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
-	void handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& dest_addr);
+	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
+	void handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
+	void handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
 
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
@@ -66,8 +65,6 @@ public:
 	Address6 get_primary_ip() const;
 
 	bool socket_is_open(SocketDescriptor fd) const;
-	
-	void process_sockets();
 
 	LinkUpdateAwaiter async_await_link();
 	void arp_request();
@@ -78,6 +75,7 @@ protected:
 
 	SocketFile* find_socket(SocketDescriptor sock_fd);
 	SocketFile* find_socket(const AddressPair& tuple);
+	SocketFile* find_socket(const AddressTuple& tuple);
 	void broadcast_socket_rx(SocketDescriptor fd, const std::string& payload);
 
 	OS& os_;
@@ -86,6 +84,7 @@ protected:
 	uint64_t socket_index_{1};
 
 	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
+	std::unordered_map<AddressTuple, SocketDescriptor> sessions_;
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
 	std::unordered_map<Address6, UUID> arp_cache_;
 	std::vector<SocketFilter> socket_filters_;

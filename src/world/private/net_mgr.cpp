@@ -11,6 +11,7 @@
 #include <memory>
 #include <ranges>
 #include <algorithm>
+#include <tuple>
 
 NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_owner().get_device<NIC>())
 { }
@@ -89,6 +90,7 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 				if (reply.type() == ip::TcpType::Ack)
 				{
 					std::println("Received ACK from {}.", dest.addr);
+					sessions_.emplace(AddressTuple{src.addr, src.port, dest.addr, dest.port}, sock);
 					co_return 0;
 				}
 			}
@@ -131,7 +133,6 @@ Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string b
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
 		it->second->write(bytes);
-		process_sockets();
 		co_return bytes.size();
 	}
 	co_return 0;
@@ -153,7 +154,9 @@ Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 		ip::IpPackage raw = co_await async_read_socket_raw(sock);
 
 		auto exp_src_addr = Address6::from_bytes(raw.src_ip());
-		if (!exp_src_addr)
+		auto exp_dest_addr = Address6::from_bytes(raw.dest_ip());
+
+		if (!(exp_src_addr && exp_dest_addr))
 			continue;
 
 		ip::TcpPacket syn;
@@ -162,15 +165,11 @@ Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 
 		if (syn.type() == ip::TcpType::Syn)
 		{
-			// auto exp_fd = create_socket();
-			// if (!exp_fd)
-			// 	co_return -1;
+			auto exp_fd = create_socket();
+			if (!exp_fd)
+				co_return -1;
 
-			// if (SocketFile* file = find_socket(sock))
-			// {
-			// 	file->other_endpoint = { *exp_src_addr, syn.dest_port() };
-			// }
-			// else co_return -1;
+			sessions_.emplace(AddressTuple{*exp_src_addr, syn.src_port(), *exp_dest_addr, syn.dest_port()}, sock);
 
 			ip::IpPackage reply;
 			reply.set_dest_ip(raw.src_ip());
@@ -222,14 +221,19 @@ void NetManager::send(ip::IpPackage&& package, UUID mac)
 
 void NetManager::receive(ip::IpPackage&& package)
 {
+	const std::string& src_ip_bytes = package.src_ip();
 	const std::string& dest_ip_bytes = package.dest_ip();
-	if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes.data()))
+
+	auto exp_src_addr = Address6::from_bytes(src_ip_bytes.data());
+	auto exp_dest_addr = Address6::from_bytes(dest_ip_bytes.data());
+
+	if (exp_src_addr && exp_dest_addr)
 	{
-		receive(std::move(package), *exp_dest_ip);
+		receive(std::move(package), *exp_src_addr, *exp_dest_addr);
 	}
 }
 
-void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
+void NetManager::receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr)
 {
 	const std::string& payload = package.payload();
 
@@ -240,7 +244,7 @@ void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 			ip::IcmpPacket icmp;
 			if (icmp.ParseFromString(payload))
 			{
-				handle_packet(std::move(icmp), std::move(package), addr);
+				handle_packet(std::move(icmp), std::move(package), src_addr, dest_addr);
 			}
 			break;
 		}
@@ -249,7 +253,7 @@ void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 			ip::TcpPacket tcp;
 			if (tcp.ParseFromString(payload))
 			{
-				handle_packet(std::move(tcp), std::move(package), addr);
+				handle_packet(std::move(tcp), std::move(package), src_addr, dest_addr);
 			}
 			break;
 		}
@@ -258,7 +262,7 @@ void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 			ip::UdpPacket udp;
 			if (udp.ParseFromString(payload))
 			{
-				handle_packet(std::move(udp), std::move(package), addr);
+				handle_packet(std::move(udp), std::move(package), src_addr, dest_addr);
 			}
 			break;
 		}
@@ -266,7 +270,7 @@ void NetManager::receive(ip::IpPackage&& package, const Address6& addr)
 	}
 }
 
-void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr)
 {
 	switch (packet.type())
 	{
@@ -303,25 +307,45 @@ void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, c
 	}
 }
 
-void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr)
 {
-	AddressPair pair = { addr, packet.dest_port() };
-	if (SocketFile* sock = find_socket(pair))
+	AddressPair src = { src_addr, packet.src_port() };
+	AddressPair dest = { dest_addr, packet.dest_port() };
+	AddressTuple sess = { src, dest };
+
+	switch (packet.type())
 	{
-		sock->rx_queue.push(std::move(outer));
-		//sock->notify_write();
+		case ip::TcpType::Data:
+		{
+			/* If this is a data transfer, we need to have an established session 
+			-- use the full tuple. */
+			if (SocketFile* sock = find_socket(sess))
+			{
+				sock->rx_queue.push(std::move(outer));
+			}
+			break;
+		}
+
+		case ip::TcpType::Ack:
+		case ip::TcpType::Syn:
+		{
+			/* If this is a connection request or reply, check for a socket based on binding. */
+			if (SocketFile* sock = find_socket(dest))
+			{
+				sock->rx_queue.push(std::move(outer));
+			}
+			break;
+		}
 	}
+
+	
 	/* In the future, we should return an ACK here. */
 }
 
-void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
+void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr)
 {
-	AddressPair pair = { addr, packet.dest_port() };
-	if (SocketFile* sock = find_socket(pair))
-	{
-		sock->rx_queue.push(std::move(outer));
-		//sock->notify_write();
-	}
+	AddressPair src = { src_addr, packet.src_port() };
+	AddressPair dest = { dest_addr, packet.dest_port() };
 }
 
 NetMessageAwaiter NetManager::async_read_rx()
@@ -363,6 +387,14 @@ SocketFile* NetManager::find_socket(const AddressPair& tuple)
 	return nullptr;
 }
 
+SocketFile* NetManager::find_socket(const AddressTuple& tuple)
+{
+	if (auto it_fd = sessions_.find(tuple); it_fd != sessions_.end())
+		return find_socket(it_fd->second);
+
+	return nullptr;
+}
+
 void NetManager::broadcast_socket_rx(SocketDescriptor fd, const std::string& payload)
 {
 	for (auto&& filter : socket_filters_)
@@ -370,44 +402,6 @@ void NetManager::broadcast_socket_rx(SocketDescriptor fd, const std::string& pay
 		if (filter.fd == fd)
 		{
 			filter.fn(payload);
-		}
-	}
-}
-
-void NetManager::process_sockets()
-{
-	for (auto& [fd, sock] : sockets_)
-	{
-		if (std::optional<std::string> data = sock->read_tx(); data.has_value())
-		{
-			const AddressPair& src = sock->local_endpoint;
-			const AddressPair& dest = sock->other_endpoint;
-
-			ip::TcpPacket tcp{};
-			tcp.set_dest_port(dest.port);
-			tcp.set_src_port(src.port);
-			tcp.set_payload(*data);
-
-			std::string tcp_data{};
-			if (!tcp.SerializeToString(&tcp_data))
-				continue;
-
-			ip::IpPackage pak{};
-			pak.set_dest_ip(dest.addr.raw);
-			pak.set_src_ip(src.addr.raw);
-			pak.set_payload(tcp_data);
-			pak.set_protocol(ip::Protocol::TCP);
-
-			std::println("Dispatch {}:{} --> {}:{}", src.addr, src.port, dest.addr, dest.port);
-
-			if (dest.addr == src.addr)
-			{
-				receive(std::move(pak));
-			}
-			else
-			{
-				send(std::move(pak));
-			}
 		}
 	}
 }
