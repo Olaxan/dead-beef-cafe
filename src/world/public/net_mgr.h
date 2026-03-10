@@ -37,9 +37,10 @@ public:
 	Task<int32_t> async_connect_socket(SocketDescriptor sock, AddressPair addr);
 	Task<int32_t> async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
 	
-	Task<int32_t> async_accept_socket(SocketDescriptor sock);
+	Task<SocketDescriptor> async_accept_socket(SocketDescriptor sock);
 
 	Task<std::string> async_read_socket(SocketDescriptor sock);
+	Task<ip::TcpPacket> async_read_socket_tcp(SocketDescriptor sock);
 	Task<ip::IpPackage> async_read_socket_raw(SocketDescriptor sock);
 
 	Task<size_t> async_write_socket(SocketDescriptor sock, std::string bytes);
