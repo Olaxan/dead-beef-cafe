@@ -7,7 +7,6 @@
 #include <memory>
 #include <functional>
 
-using FileWriteCallbackFn = std::function<void(std::string_view)>;
 
 class File : public std::enable_shared_from_this<File>
 {
@@ -38,13 +37,6 @@ public:
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
 	const ProcessFn& get_executable() const;
-	
-	void add_read_callback(FileWriteCallbackFn&& callback)
-    {
-		callbacks_.push_back(std::move(callback));
-    }
-	
-	void notify_write();
 
 protected:
 
@@ -52,6 +44,5 @@ protected:
 	uint64_t fid_{};
 	std::string content_{};
 	ProcessFn executable_{nullptr};
-	std::vector<FileWriteCallbackFn> callbacks_{};
 
 };

@@ -9,19 +9,11 @@ void File::write(ProcessFn exec)
 {
 	executable_ = std::move(exec);
 	content_ = "BIN64::";
-	notify_write();
 }
-
-// void File::write(ProcessFn&& exec)
-// {
-// 	executable_ = exec;
-// 	content_ = "BIN64::";
-// }
 
 void File::write(std::string content)
 {
 	content_ = std::move(content);
-	notify_write();
 }
 
 std::optional<std::string> File::read() const
@@ -37,7 +29,6 @@ std::optional<std::string> File::eat()
 void File::append(std::string content)
 {
 	content_.append(std::move(content));
-	notify_write();
 }
 
 std::string_view File::get_view() const
@@ -53,13 +44,4 @@ std::stringstream File::get_stream() const
 const ProcessFn& File::get_executable() const
 {
 	return executable_;
-}
-
-void File::notify_write()
-{
-	std::vector<FileWriteCallbackFn> empty{};
-	std::swap(callbacks_, empty);
-
-	for (auto&& callback : empty)
-		callback(content_);
 }
