@@ -21,7 +21,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_ip = net->get_primary_ip();
 
-	std::println("RX service running.");
+	proc.putln("RX service running.");
 
 	while (true)
 	{
@@ -56,7 +56,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_addr = net->get_primary_ip();
 
-	std::println("TX service running.");
+	proc.putln("TX service running.");
 
 	while (true)
 	{
@@ -79,7 +79,7 @@ entry:
 
 				if (dest_addr == local_addr)
 				{
-					std::println("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
+					proc.putln("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
 					net->receive(std::move(packet));
 					continue;
 				}
@@ -89,27 +89,27 @@ entry:
 					if (std::optional<UUID> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 					{
 						net->send(std::move(packet), *arp_entry);
-						std::println("Sent {} bytes (dest. {}).", bytes, dest_addr);
+						proc.putln("Sent {} bytes (dest. {}).", bytes, dest_addr);
 						goto entry;
 					}
 					else
 					{
-						std::println("Performing ARP request (to find {})...", dest_addr);
+						proc.putln("Performing ARP request (to find {})...", dest_addr);
 						net->arp_request();
 					}
 				}
 
-				std::println("ARP resolution failed for {}.", dest_addr);
+				proc.warnln("ARP resolution failed for {}.", dest_addr);
 				
 			}
 			else
 			{
-				std::println("Failed to extract address: {}.", exp_dest_ip.error().what());
+				proc.warnln("Failed to extract address: {}.", exp_dest_ip.error().what());
 			}
 		}
 		catch (const std::exception& e)
 		{
-			std::println("fatal system error: {}.", e.what());
+			proc.errln("fatal system error: {}.", e.what());
 			co_return 2;
 		}
 	}
@@ -123,7 +123,7 @@ ProcessTask Programs::SrvNetArp(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_addr = net->get_primary_ip();
 
-	std::println("ARP service running.");
+	proc.putln("ARP service running.");
 
 	while (true)
 	{
@@ -132,7 +132,7 @@ ProcessTask Programs::SrvNetArp(Proc& proc, std::vector<std::string> args)
 		{
 			case LinkUpdateType::LinkAdded:
 			{
-				std::println("Detected new link '{}'.", mac);
+				proc.putln("Detected new link '{}'.", mac);
 				net->arp_request(mac);
 				break;
 			}

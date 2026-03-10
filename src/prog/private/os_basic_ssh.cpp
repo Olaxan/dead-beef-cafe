@@ -39,17 +39,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_ip = net->get_primary_ip();
 
-	std::println("SSH service started.");
-
-	/* --- WRITER FUNCTORS  ---
-	Register writer functors in the process so that output
-	is delivered in the form of command objects via the socket. */
-
-	/* Writer for regular strings. */
-	proc.set_writer([](const std::string& out_str)
-	{
-		std::print("ssh: {}", out_str);
-	});
+	proc.putln("SSH service started.");
 
 	struct SSHNetSock
 	{
