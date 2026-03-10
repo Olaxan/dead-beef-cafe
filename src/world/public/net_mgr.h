@@ -40,6 +40,8 @@ public:
 	Task<int32_t> async_accept_socket(SocketDescriptor sock);
 
 	Task<std::string> async_read_socket(SocketDescriptor sock);
+	Task<ip::IpPackage> async_read_socket_raw(SocketDescriptor sock);
+
 	Task<size_t> async_write_socket(SocketDescriptor sock, std::string bytes);
 	
 	int32_t listen(SocketDescriptor sock);

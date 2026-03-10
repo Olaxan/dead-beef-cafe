@@ -23,14 +23,16 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("RX service running.");
 
+	/* 
+	* 1. Check IP of incoming packet.
+	* 2. If the IP is ours, look for a receiver in the sockets list.
+	* 3. Otherwise dump it into the TX queue for the dispatcher to handle (or discard).
+	*/
+
 	while (true)
 	{
 		ip::IpPackage packet = co_await net->async_read_rx();
-		/* 
-		* 1. Check IP of incoming packet.
-		* 2. If the IP is ours, look for a receiver in the sockets list.
-		* 3. Otherwise dump it into the TX queue for the dispatcher to handle (or discard).
-		*/
+		size_t packet_size = packet.ByteSizeLong();
 
 		const std::string& dest_ip_bytes = packet.dest_ip();
 		if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes.data()))
@@ -38,10 +40,12 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 			const Address6& dest_ip = *exp_dest_ip;
 			if (dest_ip == local_ip)
 			{
+				proc.putln("Receiving {} bytes (dest. {})...", packet_size, dest_ip);
 				net->receive(std::move(packet), dest_ip);
 			}
 			else
 			{
+				proc.putln("Forwarding {} bytes (dest. {})...", packet_size, dest_ip);
 				net->send(std::move(packet));
 			}
 		}
@@ -88,8 +92,8 @@ entry:
 				{
 					if (std::optional<UUID> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 					{
+						proc.putln("Transmitting {} bytes (dest. {})...", bytes, dest_addr);
 						net->send(std::move(packet), *arp_entry);
-						proc.putln("Sent {} bytes (dest. {}).", bytes, dest_addr);
 						goto entry;
 					}
 					else

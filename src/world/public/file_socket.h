@@ -4,6 +4,7 @@
 #include "msg_queue.h"
 #include "addr.h"
 
+#include "proto/ip_packet.pb.h"
 
 class SocketFile : public File
 {
@@ -15,15 +16,11 @@ public:
 
 	~SocketFile() = default;
 
-	void write(std::string content) override;
-	std::optional<std::string> read() const override;
-	std::optional<std::string> eat() override;
-
 	std::optional<std::string> read_rx();
 	std::optional<std::string> read_tx();
 
-	MessageQueue<std::string> rx_queue{};
-	MessageQueue<std::string> tx_queue{};
+	MessageQueue<ip::IpPackage> rx_queue{};
+	MessageQueue<ip::IpPackage> tx_queue{};
 
 	AddressPair local_endpoint{};
 	AddressPair other_endpoint{};

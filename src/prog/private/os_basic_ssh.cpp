@@ -69,7 +69,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		proc.errln("Failed to set socket 22 as a listening connection.");
 	}
 
-	proc.putln("Waiting for connections...");
+	proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
 	int32_t con_ret = co_await net->async_accept_socket(fd);
 	proc.putln("Connection established ({}).", con_ret);
 

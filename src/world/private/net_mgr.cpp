@@ -78,7 +78,7 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 		
 		send(std::move(ip));
 
-		std::println("Awaiting ACK from {}...", dest.addr);
+		std::println("Awaiting ACK from {}:{}...", dest.addr, dest.port);
 		
 		while (true)
 		{
@@ -104,6 +104,18 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, Address6 a
 }
 
 Task<std::string> NetManager::async_read_socket(SocketDescriptor sock)
+{
+	if (auto&& it = sockets_.find(sock); it != sockets_.end())
+	{
+		std::shared_ptr<SocketFile> file = it->second;
+		ip::IpPackage pak = co_await file->rx_queue.async_pop();
+		co_return pak.payload();
+	}
+
+	co_return {};
+}
+
+Task<ip::IpPackage> NetManager::async_read_socket_raw(SocketDescriptor sock)
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
@@ -138,19 +150,49 @@ Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 {
 	while (true)
 	{
-		std::string data = co_await async_read_socket(sock);
-		ip::TcpPacket pak;
-		if (pak.ParseFromString(data))
+		ip::IpPackage raw = co_await async_read_socket_raw(sock);
+
+		auto exp_src_addr = Address6::from_bytes(raw.src_ip());
+		if (!exp_src_addr)
+			continue;
+
+		ip::TcpPacket syn;
+		if (!syn.ParseFromString(raw.payload()))
+			continue;
+
+		if (syn.type() == ip::TcpType::Syn)
 		{
-			if (pak.type() == ip::TcpType::Syn)
+			// auto exp_fd = create_socket();
+			// if (!exp_fd)
+			// 	co_return -1;
+
+			// if (SocketFile* file = find_socket(sock))
+			// {
+			// 	file->other_endpoint = { *exp_src_addr, syn.dest_port() };
+			// }
+			// else co_return -1;
+
+			ip::IpPackage reply;
+			reply.set_dest_ip(raw.src_ip());
+			reply.set_src_ip(raw.dest_ip());
+			reply.set_protocol(ip::Protocol::TCP);
+
+			ip::TcpPacket ack;
+			ack.set_dest_port(syn.src_port());
+			ack.set_src_port(syn.dest_port());
+			ack.set_type(ip::TcpType::Ack);
+
+			std::string ack_data;
+			if (ack.SerializeToString(&ack_data))
 			{
-				// Create new socket and return;
+				reply.set_payload(ack_data);
+				send(std::move(reply));
 				co_return 0;
 			}
 		}
 	}
 
-	co_return 0;
+	co_return -1;
 }
 
 void NetManager::add_socket_filter(SocketFilter&& filter)
@@ -264,10 +306,10 @@ void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, c
 void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
 {
 	AddressPair pair = { addr, packet.dest_port() };
-	if (File* sock = find_socket(pair))
+	if (SocketFile* sock = find_socket(pair))
 	{
-		sock->write(packet.payload());
-		sock->notify_write();
+		sock->rx_queue.push(std::move(outer));
+		//sock->notify_write();
 	}
 	/* In the future, we should return an ACK here. */
 }
@@ -275,10 +317,10 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& addr)
 {
 	AddressPair pair = { addr, packet.dest_port() };
-	if (File* sock = find_socket(pair))
+	if (SocketFile* sock = find_socket(pair))
 	{
-		sock->write(packet.payload());
-		sock->notify_write();
+		sock->rx_queue.push(std::move(outer));
+		//sock->notify_write();
 	}
 }
 
