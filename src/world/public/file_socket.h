@@ -23,6 +23,6 @@ public:
 	MessageQueue<ip::IpPackage> tx_queue{};
 
 	AddressPair local_endpoint{};
-	AddressPair other_endpoint{};
+	AddressPair remote_endpoint{};
 
 };

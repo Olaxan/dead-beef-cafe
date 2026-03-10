@@ -66,6 +66,8 @@ public:
 
 	bool socket_is_open(SocketDescriptor fd) const;
 
+	bool create_session(SocketDescriptor fd);
+
 	LinkUpdateAwaiter async_await_link();
 	void arp_request();
 	void arp_request(UUID mac);

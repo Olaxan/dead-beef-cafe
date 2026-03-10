@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	client_net_mgr->bind_socket(fd, local_addr, 50001);
+	client_net_mgr->bind_socket(fd, local_addr, 49152);
 	client_net_mgr->async_connect_socket(fd, remote_addr, 22);
 
 	reader(client_net_mgr, fd);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 		com::CommandQuery query{};
 		query.set_command(input);
 
-		std::string str{};
+		std::string str;
 		if (query.SerializeToString(&str))
 		 	client_net_mgr->async_write_socket(fd, str);
 

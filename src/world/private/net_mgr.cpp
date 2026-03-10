@@ -59,7 +59,7 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
-		const SocketFile* file = it->second.get();
+		std::shared_ptr<SocketFile> file = it->second;
 		const AddressPair& src = file->local_endpoint;
 
 		ip::TcpPacket tcp;
@@ -90,7 +90,8 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 				if (reply.type() == ip::TcpType::Ack)
 				{
 					std::println("Received ACK from {}.", dest.addr);
-					sessions_.emplace(AddressTuple{src.addr, src.port, dest.addr, dest.port}, sock);
+					sessions_.emplace(AddressTuple{dest.addr, dest.port, src.addr, src.port}, sock);
+					file->remote_endpoint = dest;
 					co_return 0;
 				}
 			}
@@ -132,8 +133,27 @@ Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string b
 {
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
-		it->second->write(bytes);
-		co_return bytes.size();
+		SocketFile* file = it->second.get();
+		ip::TcpPacket tcp;
+		tcp.set_dest_port(file->remote_endpoint.port);
+		tcp.set_src_port(file->local_endpoint.port);
+		tcp.set_type(ip::TcpType::Data);
+		tcp.set_payload(bytes);
+
+		std::string tcp_data;
+		if (!tcp.SerializeToString(&tcp_data))
+			co_return 0;
+
+		ip::IpPackage pak;
+		pak.set_dest_ip(file->remote_endpoint.addr.raw);
+		pak.set_src_ip(file->local_endpoint.addr.raw);
+		pak.set_protocol(ip::Protocol::TCP);
+		pak.set_payload(tcp_data);
+
+		size_t tx_size = pak.ByteSizeLong();
+		send(std::move(pak));
+
+		co_return tx_size;
 	}
 	co_return 0;
 }
@@ -153,8 +173,8 @@ Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 	{
 		ip::IpPackage raw = co_await async_read_socket_raw(sock);
 
-		auto exp_src_addr = Address6::from_bytes(raw.src_ip());
-		auto exp_dest_addr = Address6::from_bytes(raw.dest_ip());
+		auto exp_src_addr = Address6::from_bytes(raw.src_ip());		// Remote, them
+		auto exp_dest_addr = Address6::from_bytes(raw.dest_ip()); 	// Local, us
 
 		if (!(exp_src_addr && exp_dest_addr))
 			continue;
@@ -169,7 +189,7 @@ Task<int32_t> NetManager::async_accept_socket(SocketDescriptor sock)
 			if (!exp_fd)
 				co_return -1;
 
-			sessions_.emplace(AddressTuple{*exp_src_addr, syn.src_port(), *exp_dest_addr, syn.dest_port()}, sock);
+			create_session(*exp_fd);
 
 			ip::IpPackage reply;
 			reply.set_dest_ip(raw.src_ip());
@@ -323,6 +343,10 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			{
 				sock->rx_queue.push(std::move(outer));
 			}
+			else
+			{
+				std::println("Dropping packet (no session).");
+			}
 			break;
 		}
 
@@ -334,12 +358,13 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			{
 				sock->rx_queue.push(std::move(outer));
 			}
+			else
+			{
+				std::println("Dropping packet (no binding).");
+			}
 			break;
 		}
 	}
-
-	
-	/* In the future, we should return an ACK here. */
 }
 
 void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr)
@@ -369,6 +394,20 @@ Address6 NetManager::get_primary_ip() const
 bool NetManager::socket_is_open(SocketDescriptor fd) const
 {
 	return (sockets_.contains(fd));
+}
+
+bool NetManager::create_session(SocketDescriptor fd)
+{
+	if (SocketFile* file = find_socket(fd))
+	{
+		const AddressPair& local = file->local_endpoint;
+		const AddressPair& remote = file->remote_endpoint;
+		sessions_.emplace(AddressTuple{local, remote}, fd);
+		std::println("Created session {}:{} <-> {}:{}.", local.addr, local.port, remote.addr, remote.port);
+		return true;
+	}
+
+	return false;
 }
 
 SocketFile* NetManager::find_socket(SocketDescriptor sock_fd)
