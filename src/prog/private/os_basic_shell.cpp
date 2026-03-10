@@ -85,7 +85,9 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	icu::UnicodeString buffer;
 	CmdInput::CmdReaderParams read_params;
 
-	proc.set_var("PWD", "/");
+	if (proc.get_var("PWD").empty())
+		proc.set_var("PWD", "/");
+		
 	proc.set_var("PATH", "/bin;/usr/bin;/sbin");
 
 	while (true)
@@ -126,6 +128,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		};
 
 		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
+
+		if (out_cmd.compare("exit") == 0)
+		{
+			proc.putln("Goodbye...");
+			co_return 0;
+		}
 
 		/* At this point we have a valid command -- attempt to execute it. */
 		int32_t ret = co_await std::invoke([&proc, &os, &fs, &cd](const std::string& cmd) -> EagerTask<int32_t>

@@ -25,9 +25,26 @@
 #include <ranges>
 #include <functional>
 
-EagerTask<int32_t> create_ssh_worker(SocketDescriptor fd)
+ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 {
-	co_return 0;
+	OS& os = *proc.owning_os;
+	NetManager* net = os.get_network_manager();
+
+	co_await os.wait(1.f);
+
+	proc.putln("SecureShell version 5:");
+
+	int32_t login_ret = co_await ShellUtils::Exec(proc, {"/sbin/login"});
+	
+	if (login_ret != 0)
+	{
+		proc.putln("Authentication failure.");
+		co_return 1;
+	}
+
+	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD:BEEF:CAFE:: " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
+
+	co_return (co_await ShellUtils::Exec(proc, {"/bin/shell"}));
 }
 
 ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
@@ -69,34 +86,39 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		proc.errln("Failed to set socket 22 as a listening connection.");
 	}
 
-	proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
-	SocketDescriptor con = co_await net->async_accept_socket(fd);
-	proc.putln("Connection established ({}).", con);
-
-	/* --- READER FUNCTORS ---
-	Add reader functors so that child processes can listen to our traffic. */
-
-	/* Asynchronous reader for common strings. */
-	proc.set_reader([net, con]() -> Task<std::string>
+	while (net->socket_is_open(fd))
 	{
-		return net->async_read_socket(con);
-	});
-
-	co_await os.wait(1.f);
-
-	proc.putln("SecureShell version 5:");
-
-	int32_t login_ret = co_await ShellUtils::Exec(proc, {"/sbin/login"});
+		proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
+		SocketDescriptor con = co_await net->async_accept_socket(fd);
+		proc.putln("Connection established ({}).", con);
 	
-	if (login_ret != 0)
-	{
-		proc.putln("Authentication failure.");
-		co_return 1;
+		auto sess_reader = [net, con]() -> Task<std::string>
+		{
+			return net->async_read_socket(con);
+		};
+	
+		auto sess_writer = [net, con](const std::string& str)
+		{
+			com::CommandReply rep;
+			rep.set_reply(str);
+			
+			std::string out_str;
+			if (rep.SerializeToString(&out_str))
+				net->async_write_socket(con, out_str);
+		};
+	
+		OS::CreateProcessParams params
+		{
+			.writer = std::move(sess_writer),
+			.reader = std::move(sess_reader),
+			//.leader_id = proc.get_pid()
+			/* The reason we don't provide a session leader, 
+			is that authentication would be given to the SSH host,
+			as opposed to the SSH session... for now.*/
+		};
+	
+		os.run_process(SSHSession, {std::format("ssh{}", con)}, std::move(params));	
 	}
-
-	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD::BEEF::CAFE " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
-
-	co_await ShellUtils::Exec(proc, {"/bin/shell"});
 
 	co_return 0;
 }

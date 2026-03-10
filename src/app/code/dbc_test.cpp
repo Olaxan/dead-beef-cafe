@@ -174,9 +174,13 @@ EagerTask<int32_t> reader(NetManager* net_mgr, SocketDescriptor read_socket)
 
 		com::CommandReply reply;
 		if (reply.ParseFromString(str))
-			std::print("{0}", reply.reply());
+		{
+			std::cout << reply.reply();
+		}
 		else
+		{
 			std::print(std::cerr, "Parse error: {0}.", str);
+		}
 	}
 	co_return 0;
 }

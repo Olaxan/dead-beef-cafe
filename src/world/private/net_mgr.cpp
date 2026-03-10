@@ -131,6 +131,9 @@ Task<ip::IpPackage> NetManager::async_read_socket_raw(SocketDescriptor sock)
 
 Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string bytes)
 {
+	if (bytes.size() == 0)
+		co_return 0;
+		
 	if (auto&& it = sockets_.find(sock); it != sockets_.end())
 	{
 		SocketFile* file = it->second.get();
