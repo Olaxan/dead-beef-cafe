@@ -82,6 +82,8 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		return net->async_read_socket(con);
 	});
 
+	co_await os.wait(1.f);
+
 	proc.putln("SecureShell version 5:");
 
 	int32_t login_ret = co_await ShellUtils::Exec(proc, {"/sbin/login"});

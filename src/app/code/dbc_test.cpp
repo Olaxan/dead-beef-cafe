@@ -18,7 +18,153 @@
 #include <coroutine>
 #include <memory>
 
+#include <windows.h>
+
 constexpr bool test_icmp = false;
+
+
+com::ScreenData* get_screen_data()
+{
+	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO screen_info;
+	GetConsoleScreenBufferInfo(h_out, &screen_info);
+	COORD screen_size;
+	screen_size.X = screen_info.srWindow.Right - screen_info.srWindow.Left + 1;
+	screen_size.Y = screen_info.srWindow.Bottom - screen_info.srWindow.Top + 1;
+	com::ScreenData* screen = new com::ScreenData();
+	screen->set_size_x(screen_size.X);
+	screen->set_size_y(screen_size.Y);
+
+	return screen;
+}
+
+void set_flags(DWORD& flags, DWORD flag)
+{
+	flags |= flag;
+}
+
+void unset_flags(DWORD& flags, DWORD flag)
+{
+	flags &= (~flag);
+}
+
+bool try_set_flags(DWORD handle, DWORD flags)
+{
+    HANDLE h = GetStdHandle(handle);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(h, &dwMode))
+    {
+        return false;
+    }
+
+	set_flags(dwMode, flags);
+
+	if (!SetConsoleMode(h, dwMode))
+    {
+        return false;
+    }
+
+	return true;
+}
+
+bool try_unset_flags(DWORD handle, DWORD flags)
+{
+    HANDLE h = GetStdHandle(handle);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(h, &dwMode))
+    {
+        return false;
+    }
+
+	unset_flags(dwMode, flags);
+
+	if (!SetConsoleMode(h, dwMode))
+    {
+        return false;
+    }
+
+	return true;
+}
+
+bool enable_vtt_mode()
+{
+	bool i = try_set_flags(STD_INPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_INPUT);
+	bool o = try_set_flags(STD_OUTPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	return i && o;
+}
+
+bool disable_vtt_mode()
+{
+	bool i = try_unset_flags(STD_INPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_INPUT);
+	bool o = try_unset_flags(STD_OUTPUT_HANDLE, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+	return i && o;
+}
+
+bool enable_raw_mode()
+{
+	return try_unset_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+}
+
+bool disable_raw_mode()
+{
+	return try_set_flags(STD_INPUT_HANDLE, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+}
+
+std::string getch()
+{
+	HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+	if (h == NULL) 
+	{
+		std::println("No console!");
+		return {}; // console not found
+	}
+	DWORD count;
+	TCHAR c[1024];
+	ReadConsole(h, c, 1024, &count, NULL);
+	std::string out;
+	out.assign(c, count);
+	return out;
+}
+
+/* Read Unicode (UTF-16) input from console */
+std::wstring read_console_input_w() 
+{
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    std::wstring result;
+    wchar_t buffer[256];
+    DWORD charsRead;
+
+    if (ReadConsoleW(hInput, buffer, 255, &charsRead, nullptr))
+	{
+        buffer[charsRead] = L'\0';  // Null-terminate
+        result = buffer;
+    }
+    return result;
+}
+
+std::string utf16_to_utf8(const std::wstring& wstr) 
+{
+    if (wstr.empty()) return std::string();
+
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1,
+                                         nullptr, 0, nullptr, nullptr);
+
+    std::string strTo(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1,
+                        &strTo[0], sizeNeeded, nullptr, nullptr);
+
+    return strTo;
+}
 
 EagerTask<int32_t> reader(NetManager* net_mgr, SocketDescriptor read_socket)
 {
@@ -37,6 +183,23 @@ EagerTask<int32_t> reader(NetManager* net_mgr, SocketDescriptor read_socket)
 
 int main(int argc, char* argv[])
 {
+
+	if (enable_raw_mode() == false)
+	{
+		std::println("Warning: Failed to configure raw terminal mode. The game will exit.");
+		return 1;
+	}
+	
+	if (enable_vtt_mode() == false)
+	{
+		std::println("Warning: Failed to configure virtual terminal mode. The app might not work as intended.");
+	}
+	
+	if (SetConsoleOutputCP(CP_UTF8) == false)
+	{
+		std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as intended.");
+	}
+
 	World our_world{};
 
 	LinkServer& links = our_world.get_link_server();
@@ -100,12 +263,18 @@ int main(int argc, char* argv[])
 
 	while (client_net_mgr->socket_is_open(fd))
 	{
-		std::string input{};
-		std::getline(std::cin, input);
+		std::wstring wide_in = read_console_input_w();
+		std::string utf8_in = utf16_to_utf8(wide_in);
 
-		com::CommandQuery query{};
-		query.set_command(input);
+		if (!utf8_in.empty() && utf8_in[0] == 'Q')
+			break;
 
+		com::CommandQuery query;
+		query.set_command(utf8_in);
+
+		com::ScreenData* screen = get_screen_data();
+		query.set_allocated_screen_data(screen);
+		
 		std::string str;
 		if (query.SerializeToString(&str))
 		 	client_net_mgr->async_write_socket(fd, str);
