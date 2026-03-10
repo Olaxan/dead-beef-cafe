@@ -101,7 +101,7 @@ entry:
 
 				for (size_t arp_tries = 0; arp_tries < 3; ++arp_tries)
 				{
-					if (std::optional<UUID> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
+					if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 					{
 						//proc.putln("Transmitting {} bytes (dest. {})...", bytes, dest_addr);
 						net->send(std::move(packet), *arp_entry);

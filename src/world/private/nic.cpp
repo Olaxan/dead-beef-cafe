@@ -19,10 +19,10 @@ void NIC::set_ip(const std::string& new_ip)
 void NIC::on_linked(LinkServer* links, ILinkable* other)
 {
 	assert(other);
-	std::println("Linked {} to {}.", UUID{reinterpret_cast<uint64_t>(this)}, UUID{reinterpret_cast<uint64_t>(other)});
+	std::println("Linked {} to {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
 
 	NIC* other_nic{static_cast<NIC*>(other)};
-	UUID other_mac{reinterpret_cast<uint64_t>(other_nic)};
+	Uid64 other_mac{reinterpret_cast<uint64_t>(other_nic)};
 
 	link_cache_[other_mac] = other_nic;
 	notify_link_update(other_mac, LinkUpdateType::LinkAdded);
@@ -30,10 +30,10 @@ void NIC::on_linked(LinkServer* links, ILinkable* other)
 
 void NIC::on_unlinked(LinkServer* links, ILinkable* other)
 {
-	std::println("Unlinked {} from {}.", UUID{reinterpret_cast<uint64_t>(this)}, UUID{reinterpret_cast<uint64_t>(other)});
+	std::println("Unlinked {} from {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
 
 	NIC* other_nic{static_cast<NIC*>(other)};
-	UUID other_mac{reinterpret_cast<uint64_t>(other_nic)};
+	Uid64 other_mac{reinterpret_cast<uint64_t>(other_nic)};
 
 	link_cache_.erase(other_mac);
 	notify_link_update(other_mac, LinkUpdateType::LinkRemoved);
@@ -51,7 +51,7 @@ void NIC::on_shutdown(Host* owner)
 	internet.unregister_node(this);
 }
 
-size_t NIC::transfer(UUID mac, ip::IpPackage&& packet)
+size_t NIC::transfer(Uid64 mac, ip::IpPackage&& packet)
 {
 	if (auto it = link_cache_.find(mac); it != link_cache_.end())
 	{
@@ -70,7 +70,7 @@ void NIC::broadcast(NetCastFn broadcast_fn)
 		broadcast_fn(uuid, nic);
 }
 
-void NIC::unicast(UUID mac, NetCastFn unicast_fn)
+void NIC::unicast(Uid64 mac, NetCastFn unicast_fn)
 {
 	if (auto it = link_cache_.find(mac); it != link_cache_.end())
 		unicast_fn(mac, it->second);
@@ -81,7 +81,7 @@ void NIC::add_link_update_callback(LinkUpdateCallbackFn&& fn)
 	callbacks_.push_back(std::move(fn));
 }
 
-void NIC::notify_link_update(UUID mac, LinkUpdateType type)
+void NIC::notify_link_update(Uid64 mac, LinkUpdateType type)
 {
 	for (auto&& fn : callbacks_)
 	{

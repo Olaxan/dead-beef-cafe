@@ -51,7 +51,7 @@ public:
 	void remove_socket_filter(void* listener);
 
 	void send(ip::IpPackage&& package);
-	void send(ip::IpPackage&& package, UUID mac);
+	void send(ip::IpPackage&& package, Uid64 mac);
 
 	void receive(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
@@ -71,8 +71,8 @@ public:
 
 	LinkUpdateAwaiter async_await_link();
 	void arp_request();
-	void arp_request(UUID mac);
-	std::optional<UUID> arp_lookup(Address6 addr);
+	void arp_request(Uid64 mac);
+	std::optional<Uid64> arp_lookup(Address6 addr);
 
 protected:
 
@@ -89,7 +89,7 @@ protected:
 	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
 	std::unordered_map<AddressTuple, SocketDescriptor> sessions_;
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
-	std::unordered_map<Address6, UUID> arp_cache_;
+	std::unordered_map<Address6, Uid64> arp_cache_;
 	std::vector<SocketFilter> socket_filters_;
 
 };

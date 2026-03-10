@@ -153,7 +153,7 @@ public:
 
 		IpLinkServer& links = world_.get_link_server();
 		links.link(local_nic_, remote_nic);
-		std::println("Linked {} to {}.", UUID{(uint64_t)local_nic_}, UUID{(uint64_t)remote_nic});
+		std::println("Linked {} to {}.", Uid64{(uint64_t)local_nic_}, Uid64{(uint64_t)remote_nic});
 	}
 
 	~ShellSession()

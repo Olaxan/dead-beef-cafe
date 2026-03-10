@@ -37,7 +37,7 @@ enum class LinkUpdateType : uint8_t
 	LinkIdle
 };
 
-using LinkUpdatePair = std::pair<UUID, LinkUpdateType>;
+using LinkUpdatePair = std::pair<Uid64, LinkUpdateType>;
 using LinkUpdateCallbackFn = std::move_only_function<void(const LinkUpdatePair&)>;
 
 struct LinkUpdateAwaiter
