@@ -1,9 +1,17 @@
 #include "os_basic.h"
 #include "term_utils.h"
+#include "os_input.h"
 
 #include <unicode/ustring.h>
 
 #include <algorithm>
+
+
+struct SnakeData
+{
+	bool stop{false};
+	std::optional<com::CommandQuery> query{};
+};
 
 ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 {
@@ -49,6 +57,17 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	std::deque<SnakeCoord> snake_body{ { width / 2, height / 2 } };
 	SnakeCoord apple = snake_body.front() + SnakeCoord{10, 0};
 
+	auto runtime = std::make_shared<SnakeData>();
+
+	std::invoke([rt = runtime, &proc]() -> EagerTask<int32_t>
+	{
+		while (!rt->stop)
+		{
+			rt->query = co_await CmdInput::read_query(proc);
+		}
+		co_return 0;
+	});
+
 	const std::string snake_str = "SNAKE";
 
 	while (true)
@@ -59,10 +78,11 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 
 		// Do some kind of read with timeout here...
 
-		if (false)
+		if (auto&& opt_query = runtime->query; opt_query.has_value())
 		{
 
-			std::string query; //...
+			std::string query = opt_query->command();
+			runtime->query.reset();
 			
 			if (query.size() == 0)
 				continue;
@@ -150,6 +170,8 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 		"Exiting...\n");
 
 	proc.write(end_msg);
+
+	runtime->stop = true;
 
 	co_return 0;
 }
