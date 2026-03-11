@@ -83,7 +83,10 @@ enum class FileAccessFlags : uint32_t
 	Write = 2,
 	Execute = 4,
 	Create = 8,
-	All = Read | Write | Execute | Create
+	Append = 16,
+	ReadWrite = Read | Write,
+	ReadWriteExec = Read | Write | Execute,
+	All = Read | Write | Execute | Create | Append
 };
 
 inline FileAccessFlags operator | (FileAccessFlags a, FileAccessFlags b)
@@ -104,10 +107,10 @@ inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
 
 /* --- Definitions --- */
 
-using FileOpResult = std::tuple<uint64_t, std::shared_ptr<File>, FileSystemError>;
-using FileQueryResult = std::pair<uint64_t, FileSystemError>;
-using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 using NodeIdx = int64_t;
+using FileOpResult = std::tuple<NodeIdx, std::shared_ptr<File>, FileSystemError>;
+using FileQueryResult = std::pair<NodeIdx, FileSystemError>;
+using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
 
 
 /* --- File Meta-data --- */
@@ -122,3 +125,14 @@ struct FileMeta
 	FilePermissionTriad perm_users{0};
 	ExtraFileFlags extra{};
 };
+
+using OpenFileHandle = int64_t;
+
+struct OpenFileTableEntry
+{
+	NodeIdx node{0};
+	int32_t instance_count{0};
+	FileAccessFlags flags{0};
+};
+
+using OpenFileTablePair = std::pair<OpenFileHandle, OpenFileTableEntry*>;

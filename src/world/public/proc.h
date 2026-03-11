@@ -216,6 +216,10 @@ public:
 
 	/* --- PUBLICALLY ACCESSIBLE API:s --- */
 
+protected:
+
+	void exit();
+
 public:
 
 	Proc* host{nullptr};
@@ -237,7 +241,7 @@ public:
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
 	
-	protected:
+protected:
 	
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
@@ -248,4 +252,5 @@ public:
 
 	std::unordered_map<std::string, std::string> envvars_;
 
+	friend OS;
 };

@@ -82,15 +82,25 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 
 	if (auto opt_path = state.get_path(); opt_path.has_value())
 	{
-		if (auto [fid, ptr, err] = FileUtils::open(proc, *opt_path, FileAccessFlags::Write | FileAccessFlags::Create); err == FileSystemError::Success)
+		if (auto exp_fd = proc.fs.open(*opt_path, FileAccessFlags::Write | FileAccessFlags::Create))
 		{
-			ptr->write(state.as_utf8());
-			state.set_dirty(0);
+			FileDescriptor fd = exp_fd.value();
+
+			if (auto exp_write = proc.fs.write(fd, state.as_utf8()))
+			{
+				state.set_dirty(0);
+			}
+			else
+			{
+				state.set_status(std::format("Writing to '{}' failed: {}.", *opt_path, exp_write.error().message()));	
+			}
+
+			proc.fs.close(fd);
 			co_return true;
 		}
 		else
 		{
-			state.set_status(std::format("Save failed ({}): {}.", *opt_path, FileSystem::get_fserror_name(err)));
+			state.set_status(std::format("Save failed ({}): {}.", *opt_path, exp_fd.error().message()));
 			co_return false;
 		}
 	}
@@ -128,14 +138,26 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("PWD"));
 
-		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read | FileAccessFlags::Create); err == FileSystemError::Success)
+		if (auto exp_fd = proc.fs.open(path, FileAccessFlags::Read | FileAccessFlags::Create))
 		{
-			state.set_file(path, ptr->get_view());
+			FileDescriptor fd = exp_fd.value();
+
+			if (auto exp_read =  proc.fs.read(fd))
+			{
+				state.set_file(path, exp_read.value());
+			}
+			else
+			{
+				state.set_status(std::format("Failed to read from '{}': {}.", path, exp_read.error().message()));
+			}
+
+			proc.fs.close(fd);
 		}
 		else
 		{
-			state.set_status(std::format("Failed to open '{}': {}.", path, FileSystem::get_fserror_name(err)));
+			state.set_status(std::format("Failed to open '{}': {}.", path, exp_fd.error().message()));
 		}
+
 	}
 
 	com::CommandReply begin_msg;
@@ -155,10 +177,6 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 		/* Next, read the actual command and consider it based on first-byte. */
 		std::string str_in = com.command();
-
-		for (char c : str_in)
-			std::print("{}, ", (int)c);
-		std::println("was received.");
 
 		EditorState::HandlerReturn ret = state.accept_input(str_in);
 

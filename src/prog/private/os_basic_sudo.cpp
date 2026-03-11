@@ -72,7 +72,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		}
 	}
 
-	if (auto [fid, ptr, err] = fs->open("/etc/sudoers", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/sudoers", FileAccessFlags::Read); err == FileSystemError::Success)
 	{
 		std::string_view view = ptr->get_view();
 		if (!view.contains(username))

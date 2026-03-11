@@ -7,7 +7,9 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <set>
 #include <unordered_map>
+#include <expected>
 #include <concepts>
 #include <tuple>
 #include <chrono>
@@ -101,8 +103,8 @@ public:
 	bool remove_file(const FilePath& path, FileRemoverFn&& func);
 
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
-	FileOpResult open(NodeIdx fid, FileAccessFlags flags = FileAccessFlags::All);
-	FileOpResult open(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);
+	FileOpResult get_file(NodeIdx fid, FileAccessFlags flags = FileAccessFlags::All);
+	FileOpResult get_file(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);
 	
 	/* Basic find function for low-level code, without file scope. Prefer 'open' to using this. */
 	File* find(NodeIdx fid);
@@ -196,6 +198,18 @@ public:
 
 	FileOpResult create_file(const FilePath& path, const CreateFileParams& params);
 
+	OpenFileTablePair open_file_entry(NodeIdx node, FileAccessFlags flags);
+	void close_file_entry(NodeIdx node);
+
+	std::expected<size_t, std::error_condition> write(OpenFileHandle h, std::string data);
+
+	std::expected<std::string_view, std::error_condition> read(OpenFileHandle h, size_t bytes);
+
+
+protected:
+
+	OpenFileHandle get_handle();
+	void return_handle(OpenFileHandle h);
 
 private:
 
@@ -207,6 +221,10 @@ private:
 	std::unordered_map<NodeIdx, NodeIdx> roots_{};
 	std::unordered_map<NodeIdx, FileMeta> metadata_{};
 	std::unordered_multimap<NodeIdx, NodeIdx> mappings_{};
+
+	std::unordered_map<OpenFileHandle, OpenFileTableEntry> open_files_{}; 	
+	OpenFileHandle handle_counter_{0};
+	std::set<OpenFileHandle> free_handles_{};
 
 	friend class Navigator;
 };

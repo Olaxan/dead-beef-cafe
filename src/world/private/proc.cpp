@@ -165,6 +165,11 @@ void Proc::return_descriptor(FileDescriptor fs)
 	returned_descriptors_.emplace(fs);
 }
 
+void Proc::exit()
+{
+	fs.close_all();
+}
+
 int ProcCoutBuf::sync()
 {
 	if (this->in_avail() == 0)

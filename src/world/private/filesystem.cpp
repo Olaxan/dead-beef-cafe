@@ -6,8 +6,9 @@
 #include <functional>
 #include <print>
 #include <iostream>
+#include <cassert>
 
-
+#include <iso646.h>
 
 /* --- File System --- */
 
@@ -433,7 +434,7 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 	return remove_file(fid, recurse);
 }
 
-FileOpResult FileSystem::open(NodeIdx fid, FileAccessFlags flags)
+FileOpResult FileSystem::get_file(NodeIdx fid, FileAccessFlags flags)
 {
 	if (is_dir(fid) && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write))
 		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
@@ -444,10 +445,10 @@ FileOpResult FileSystem::open(NodeIdx fid, FileAccessFlags flags)
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
 
-FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
+FileOpResult FileSystem::get_file(const FilePath& path, FileAccessFlags flags)
 {
 	if (NodeIdx fid = get_fid(path); is_file(fid))
-		return open(fid, flags);
+		return get_file(fid, flags);
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
@@ -639,4 +640,89 @@ bool FileSystem::check_permission(const SessionData& session, NodeIdx fid, FileA
 FileOpResult FileSystem::create_file(const FilePath& path, const CreateFileParams& params)
 {
 	return create_file<File>(path, params);
+}
+
+OpenFileTablePair FileSystem::open_file_entry(NodeIdx node, FileAccessFlags flags)
+{
+	OpenFileHandle h = get_handle();
+	auto [it, success] = open_files_.emplace(h, OpenFileTableEntry
+	{
+		.node = node,
+		.instance_count = 0,
+		.flags = flags
+	});
+	
+	if (success)
+		return std::make_pair(h, &it->second);
+
+	return std::make_pair(-1, nullptr);
+}
+
+void FileSystem::close_file_entry(NodeIdx node)
+{
+	if (auto it = open_files_.find(node); it != open_files_.end())
+	{
+		assert(it->second.instance_count == 0);
+	}
+
+	open_files_.erase(node);
+}
+
+std::expected<size_t, std::error_condition> FileSystem::write(OpenFileHandle h, std::string data)
+{
+	if (auto it = open_files_.find(h); it != open_files_.end())
+	{
+		OpenFileTableEntry& entry = it->second;
+		File* file = find(entry.node);
+		assert(file);
+
+		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Write))
+			return std::unexpected(std::error_condition{EPERM, std::generic_category()});
+
+		if (has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Append))
+		{
+			file->append(std::move(data));
+		}
+		else
+		{
+			file->write(std::move(data));
+		}
+
+		file_set_modified_now(entry.node);
+
+		return data.size();
+	}
+
+	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
+}
+
+std::expected<std::string_view, std::error_condition> FileSystem::read(OpenFileHandle h, size_t bytes)
+{
+	if (auto it = open_files_.find(h); it != open_files_.end())
+	{
+		OpenFileTableEntry& entry = it->second;
+		File* file = find(entry.node);
+		assert(file);
+
+		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Read))
+			return std::unexpected(std::error_condition{EPERM, std::generic_category()});
+
+		// TODO: Actually do something with the 'bytes' parameter.
+		return file->get_view();
+	}
+
+	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
+}
+
+OpenFileHandle FileSystem::get_handle()
+{
+	if (free_handles_.empty())
+		return handle_counter_++;
+
+	return free_handles_.extract(free_handles_.begin()).value();
+}
+
+void FileSystem::return_handle(OpenFileHandle h)
+{
+	free_handles_.insert(h);
 }

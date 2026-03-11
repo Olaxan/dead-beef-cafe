@@ -88,7 +88,7 @@ FileOpResult FileUtils::open(const Proc& proc, FilePath path, FileAccessFlags fl
 		if (!FileUtils::check_permission(proc, fid, flags))
 			return std::make_tuple(0, nullptr, FileSystemError::InsufficientPermissions);
 
-		return fs.open(fid, flags);
+		return fs.get_file(fid, flags);
 	}
 	else if (FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Create))
 	{
