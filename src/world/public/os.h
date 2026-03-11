@@ -1,10 +1,9 @@
 #pragma once
 
-//#include "host.h"
 #include "task.h"
 #include "proc.h"
 #include "timer_mgr.h"
-#include "netw.h"
+#include "net_types.h"
 #include "net_mgr.h"
 #include "world.h"
 #include "device.h"

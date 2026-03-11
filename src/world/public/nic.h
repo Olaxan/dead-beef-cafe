@@ -3,7 +3,7 @@
 #include "device.h"
 #include "endpoint.h"
 #include "addr.h"
-#include "netw.h"
+#include "net_types.h"
 #include "link_srv.h"
 
 #include "proto/ip_packet.pb.h"

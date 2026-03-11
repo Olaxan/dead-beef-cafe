@@ -1,6 +1,6 @@
 #pragma once
 
-#include "proc_defs.h"
+#include "proc_types.h"
 
 #include <string>
 #include <sstream>

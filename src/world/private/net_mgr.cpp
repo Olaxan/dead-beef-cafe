@@ -18,7 +18,7 @@ NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_owner().get_dev
 
 NetManager::~NetManager() = default;
 
-std::expected<uint64_t, std::runtime_error> NetManager::create_socket()
+std::expected<SocketDescriptor, std::runtime_error> NetManager::create_socket()
 {
 
 	FileSystem* fs = os_.get_filesystem();
@@ -35,6 +35,11 @@ std::expected<uint64_t, std::runtime_error> NetManager::create_socket()
 	{
 		return std::unexpected{std::runtime_error{fs->get_fserror_name(err)}};
 	}
+}
+
+std::error_condition NetManager::close_socket(SocketDescriptor sock)
+{
+	return std::error_condition();
 }
 
 int32_t NetManager::bind_socket(SocketDescriptor sock, AddressPair addr)

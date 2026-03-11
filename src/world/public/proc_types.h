@@ -11,3 +11,5 @@ using ProcessFn = std::function<ProcessTask(Proc&, std::vector<std::string>)>;
 
 template <class... Ts> struct WriterOverload : Ts... { using Ts::operator()...; };
 template <class... Ts> WriterOverload(Ts...) -> WriterOverload<Ts...>;
+
+using FileDescriptor = int64_t;

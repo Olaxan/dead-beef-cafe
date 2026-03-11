@@ -1,6 +1,6 @@
 #pragma once
 
-#include "netw.h"
+#include "net_types.h"
 #include "addr.h"
 
 #include <vector>

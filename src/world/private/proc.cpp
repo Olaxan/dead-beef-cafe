@@ -146,6 +146,20 @@ Proc* Proc::get_session_leader()
 	return (host) ? host->get_session_leader() : this;
 }
 
+FileDescriptor Proc::get_descriptor()
+{
+	if (returned_descriptors_.empty())
+		return descriptor_counter_++;
+
+	auto h = returned_descriptors_.extract(returned_descriptors_.begin());
+	return h.value();
+}
+
+void Proc::return_descriptor(FileDescriptor fs)
+{
+	returned_descriptors_.emplace(fs);
+}
+
 int ProcCoutBuf::sync()
 {
 	if (this->in_avail() == 0)

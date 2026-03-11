@@ -7,132 +7,6 @@
 #include <print>
 #include <iostream>
 
-/* --- File Path --- */
-
-FilePath::FilePath(std::string path)
-{
-	path_ = path.empty() ? "/" : path;
-	make();
-}
-
-void FilePath::make()
-{
-	valid_ = false;
-
-	if (path_.empty())
-		return;
-
-	relative_ = (path_[0] != '/');
-
-	path_ = path_
-	| std::views::split('/') 
-	| std::views::filter([](auto&& elem) { return !elem.empty(); })
-	| std::views::join_with('/')
-	| std::ranges::to<std::string>();
-
-	if (!relative_)
-		path_.insert(0, "/");
-
-	// if (path_.back() == '/')
-	// 	path_.pop_back();
-
-	valid_ = !path_.empty();
-}
-
-bool FilePath::is_backup() const
-{
-	if (path_.empty()) return false;
-	std::string_view name = get_name();
-	return name.back() == '~';
-}
-
-bool FilePath::is_config() const
-{
-	if (path_.empty()) return false;
-	std::string_view name = get_name();
-	return name.front() == '.';
-}
-
-std::string_view FilePath::get_parent_view() const
-{
-	std::string_view path(path_);
-	if (!path.empty() && path.back() == '/')
-        path.remove_suffix(1);
-
-    // Find last slash
-    auto last_slash = path.rfind('/');
-    if (last_slash == std::string_view::npos)
-        return {}; // No parent
-
-    return path.substr(0, last_slash);
-}
-
-FilePath FilePath::get_parent_path() const
-{
-	return FilePath(get_parent_view());
-}
-
-std::string_view FilePath::get_name() const
-{
-	std::string_view path(path_);
-
-	if (!path.empty() && path.back() == '/')
-        path.remove_suffix(1);
-
-    // Find last slash
-    auto last_slash = path.rfind('/');
-    if (last_slash == std::string_view::npos)
-        return {}; // No parent
-
-    return path.substr(last_slash + 1);
-}
-
-void FilePath::prepend(const FilePath& other)
-{
-	if (!other.is_valid_path())
-		return;
-
-	const std::string& other_path = other.path_;
-	path_ = std::format("{}/{}", other_path, path_);
-	make();
-}
-
-void FilePath::append(const FilePath& other)
-{
-	if (!other.is_valid_path())
-		return;
-
-	const std::string& other_path = other.path_;
-	path_ = std::format("{}/{}", path_, other_path);
-	make();
-}
-
-void FilePath::substitute(std::string_view from, std::string_view to)
-{
-	if (from.empty())
-		return;
-
-	path_ = (path_ | std::views::split(from) | std::views::join_with(to) | std::ranges::to<std::string>());
-	make();
-}
-
-void FilePath::make_absolute(std::string_view from_dir)
-{
-	if (from_dir.length() > 0)
-	{
-		path_ = std::format("{}/{}", from_dir, path_);
-	}
-
-	if (is_relative())
-		path_.insert(0, "/");
-
-	make();
-}
-
-void FilePath::make_absolute(const FilePath& from_dir)
-{
-	make_absolute(from_dir.get_view());
-}
 
 
 /* --- File System --- */
@@ -166,7 +40,7 @@ const char* FileSystem::get_fserror_name(FileSystemError code)
 	}
 }
 
-bool FileSystem::is_file(uint64_t fid) const
+bool FileSystem::is_file(NodeIdx fid) const
 {
 	return fid == get_root() || files_.contains(fid);
 }
@@ -176,7 +50,7 @@ bool FileSystem::is_file(const FilePath& path) const
 	return get_fid(path) != 0;
 }
 
-bool FileSystem::is_dir(uint64_t fid) const
+bool FileSystem::is_dir(NodeIdx fid) const
 {
 	if (fid == get_root())
 		return true;
@@ -192,7 +66,7 @@ bool FileSystem::is_dir(const FilePath& path) const
 	return is_dir(get_fid(path));
 }
 
-bool FileSystem::is_directory_root(uint64_t fid) const
+bool FileSystem::is_directory_root(NodeIdx fid) const
 {
 	if (auto it = roots_.find(fid); it != roots_.end())
 		return it->second == fid; // If the root is itself, it counts as a root.
@@ -200,16 +74,16 @@ bool FileSystem::is_directory_root(uint64_t fid) const
 	return true;
 }
 
-bool FileSystem::is_empty(uint64_t fid) const
+bool FileSystem::is_empty(NodeIdx fid) const
 {
 	if (!is_dir(fid))
 		return true;
 
-	std::vector<uint64_t> files = get_files(fid);
+	std::vector<NodeIdx> files = get_files(fid);
 	return files.empty();
 }
 
-std::string_view FileSystem::get_filename(uint64_t fid) const
+std::string_view FileSystem::get_filename(NodeIdx fid) const
 {
 	if (auto it = fid_to_path_.find(fid); it != fid_to_path_.end())
 		return it->second.get_name();
@@ -217,7 +91,7 @@ std::string_view FileSystem::get_filename(uint64_t fid) const
 	return {};
 }
 
-FilePath FileSystem::get_path(uint64_t fid) const
+FilePath FileSystem::get_path(NodeIdx fid) const
 {
 	if (fid == get_root())
 		return {"/"};
@@ -228,7 +102,7 @@ FilePath FileSystem::get_path(uint64_t fid) const
 	return {};
 }
 
-uint64_t FileSystem::get_fid(const FilePath& path) const
+NodeIdx FileSystem::get_fid(const FilePath& path) const
 {
 	if (path.is_root_or_empty())
 		return get_root();
@@ -239,12 +113,12 @@ uint64_t FileSystem::get_fid(const FilePath& path) const
 	return 0;
 }
 
-std::size_t FileSystem::get_links(uint64_t fid)
+std::size_t FileSystem::get_links(NodeIdx fid)
 {
 	return mappings_.count(fid);
 }
 
-std::size_t FileSystem::get_bytes(uint64_t fid)
+std::size_t FileSystem::get_bytes(NodeIdx fid)
 {
 	if (auto it = files_.find(fid); it != files_.end())
 	{
@@ -254,7 +128,7 @@ std::size_t FileSystem::get_bytes(uint64_t fid)
 	return 0;
 }
 
-std::string FileSystem::get_flags(uint64_t fid)
+std::string FileSystem::get_flags(NodeIdx fid)
 {
 	std::string out(10, '-');
 
@@ -288,7 +162,7 @@ std::string FileSystem::get_flags(uint64_t fid)
 	return out;
 }
 
-std::pair<int32_t, int32_t> FileSystem::get_owner(uint64_t fid)
+std::pair<int32_t, int32_t> FileSystem::get_owner(NodeIdx fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -297,7 +171,7 @@ std::pair<int32_t, int32_t> FileSystem::get_owner(uint64_t fid)
 	return std::make_pair(0, 0);
 }
 
-std::string FileSystem::get_mdate(uint64_t fid)
+std::string FileSystem::get_mdate(NodeIdx fid)
 {
 	
 	if (auto it = metadata_.find(fid); it != metadata_.end())
@@ -309,7 +183,7 @@ std::string FileSystem::get_mdate(uint64_t fid)
 	return "-";
 }
 
-uint64_t FileSystem::get_last_modified(uint64_t fid)
+NodeIdx FileSystem::get_last_modified(NodeIdx fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 		return it->second.modified;
@@ -317,7 +191,7 @@ uint64_t FileSystem::get_last_modified(uint64_t fid)
 	return 0;
 }
 
-FileMeta* FileSystem::get_metadata(uint64_t fid)
+FileMeta* FileSystem::get_metadata(NodeIdx fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 		return &it->second;
@@ -325,20 +199,20 @@ FileMeta* FileSystem::get_metadata(uint64_t fid)
 	return nullptr;
 }
 
-std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
+std::vector<NodeIdx> FileSystem::get_files(NodeIdx dir, bool recurse) const
 {
 	if (!is_dir(dir))
 		return {};
 
-	std::vector<uint64_t> v{};
+	std::vector<NodeIdx> v{};
 
 	auto range = mappings_.equal_range(dir);
-	std::transform(range.first, range.second, std::back_inserter(v), [](std::pair<uint64_t, uint64_t> element){ return element.second; });
+	std::transform(range.first, range.second, std::back_inserter(v), [](std::pair<NodeIdx, NodeIdx> element){ return element.second; });
 
 	if (recurse)
 	{
-		std::vector<uint64_t> v2{};
-		for (uint64_t child : v)
+		std::vector<NodeIdx> v2{};
+		for (NodeIdx child : v)
 		{
 			v2.append_range(get_files(child, true));
 		}
@@ -348,15 +222,15 @@ std::vector<uint64_t> FileSystem::get_files(uint64_t dir, bool recurse) const
 	return v;
 }
 
-std::vector<uint64_t> FileSystem::get_files(const FilePath& path, bool recurse) const
+std::vector<NodeIdx> FileSystem::get_files(const FilePath& path, bool recurse) const
 {
 	return get_files(get_fid(path), recurse);
 }
 
-std::vector<FilePath> FileSystem::get_paths(uint64_t fid, bool recurse) const
+std::vector<FilePath> FileSystem::get_paths(NodeIdx fid, bool recurse) const
 {
 	std::vector<FilePath> out;
-	std::ranges::transform(get_files(fid, recurse), std::back_inserter(out), [this](uint64_t node){ return get_path(node); });
+	std::ranges::transform(get_files(fid, recurse), std::back_inserter(out), [this](NodeIdx node){ return get_path(node); });
 	return out;
 }
 
@@ -365,7 +239,7 @@ std::vector<FilePath> FileSystem::get_paths(const FilePath& path, bool recurse) 
 	return get_paths(get_fid(path), recurse);
 }
 
-uint64_t FileSystem::get_parent_folder(uint64_t fid) const
+NodeIdx FileSystem::get_parent_folder(NodeIdx fid) const
 {
 	if (auto it = roots_.find(fid); it != roots_.end())
 		return it->second;
@@ -373,13 +247,13 @@ uint64_t FileSystem::get_parent_folder(uint64_t fid) const
 	return fid;
 }
 
-std::vector<uint64_t> FileSystem::get_root_chain(uint64_t fid) const
+std::vector<NodeIdx> FileSystem::get_root_chain(NodeIdx fid) const
 {
 	if (!is_file(fid))
 		return {};
 
-	std::vector<uint64_t> chain = { fid };
-	uint64_t current = fid;
+	std::vector<NodeIdx> chain = { fid };
+	NodeIdx current = fid;
 
 	while (true)
 	{
@@ -407,10 +281,10 @@ FileOpResult FileSystem::create_directory(const FilePath& path, const CreateFile
 	return res;
 }
 
-uint64_t FileSystem::create_ensure_path(const FilePath& path, const CreateFileParams& params)
+NodeIdx FileSystem::create_ensure_path(const FilePath& path, const CreateFileParams& params)
 {
 	FilePath parent = path.get_parent_path();
-	if (uint64_t parent_fid = get_fid(parent))
+	if (NodeIdx parent_fid = get_fid(parent))
 	{
 		return parent_fid;
 	}
@@ -421,7 +295,7 @@ uint64_t FileSystem::create_ensure_path(const FilePath& path, const CreateFilePa
 	}
 }
 
-bool FileSystem::remove_file(uint64_t fid, FileRemoverFn&& func)
+bool FileSystem::remove_file(NodeIdx fid, FileRemoverFn&& func)
 {
 	FilePath path = get_path(fid);
 	return remove_file(path, std::forward<FileRemoverFn>(func));
@@ -429,7 +303,7 @@ bool FileSystem::remove_file(uint64_t fid, FileRemoverFn&& func)
 
 bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 {
-	uint64_t fid = get_fid(path);
+	NodeIdx fid = get_fid(path);
 
 	/* If this is the root directory, ensure we can operate on it. */
 	if (path == "/" && !func(*this, path, FileSystemError::PreserveRoot))
@@ -452,7 +326,7 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 
 	/* If we get here, the callback must have given green light for recursion.
 	Remove all children. */
-	for (uint64_t child : get_files(fid))
+	for (NodeIdx child : get_files(fid))
 	{
 		if (!remove_file(child, std::forward<FileRemoverFn>(func)))
 		{
@@ -501,7 +375,7 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 
 }
 
-FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
+FileSystemError FileSystem::remove_file(NodeIdx fid, bool recurse)
 {
 	if (!is_file(fid))
 		return FileSystemError::FileNotFound;
@@ -542,7 +416,7 @@ FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
 	}
 	else if (recurse)
 	{
-		for (uint64_t child : get_files(fid))
+		for (NodeIdx child : get_files(fid))
 		{
 			if (FileSystemError err = remove_file(child, true); err != FileSystemError::Success)
 				return err;
@@ -555,11 +429,11 @@ FileSystemError FileSystem::remove_file(uint64_t fid, bool recurse)
 
 FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 {
-	uint64_t fid = get_fid(path);
+	NodeIdx fid = get_fid(path);
 	return remove_file(fid, recurse);
 }
 
-FileOpResult FileSystem::open(uint64_t fid, FileAccessFlags flags)
+FileOpResult FileSystem::open(NodeIdx fid, FileAccessFlags flags)
 {
 	if (is_dir(fid) && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write))
 		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
@@ -572,13 +446,13 @@ FileOpResult FileSystem::open(uint64_t fid, FileAccessFlags flags)
 
 FileOpResult FileSystem::open(const FilePath& path, FileAccessFlags flags)
 {
-	if (uint64_t fid = get_fid(path); is_file(fid))
+	if (NodeIdx fid = get_fid(path); is_file(fid))
 		return open(fid, flags);
 
 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
 }
 
-File* FileSystem::find(uint64_t fid)
+File* FileSystem::find(NodeIdx fid)
 {
 	if (auto it = files_.find(fid); it != files_.end())
 		return it->second.get();
@@ -601,7 +475,7 @@ bool FileSystem::has_flag(const FilePermissionTriad& base, FilePermissionTriad t
 	return (base & test_flags) == test_flags;
 }
 
-bool FileSystem::file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad set_flags)
+bool FileSystem::file_set_flag(NodeIdx fid, FilePermissionCategory cat, FilePermissionTriad set_flags)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -611,7 +485,7 @@ bool FileSystem::file_set_flag(uint64_t fid, FilePermissionCategory cat, FilePer
 	return false;
 }
 
-bool FileSystem::file_clear_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad clear_flags)
+bool FileSystem::file_clear_flag(NodeIdx fid, FilePermissionCategory cat, FilePermissionTriad clear_flags)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -621,7 +495,7 @@ bool FileSystem::file_clear_flag(uint64_t fid, FilePermissionCategory cat, FileP
 	return false;
 }
 
-bool FileSystem::file_has_flag(uint64_t fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const
+bool FileSystem::file_has_flag(NodeIdx fid, FilePermissionCategory cat, FilePermissionTriad test_flags) const
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -662,7 +536,7 @@ bool FileSystem::file_has_flag(const FileMeta& meta, FilePermissionCategory cat,
 	return false;
 }
 
-bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
+bool FileSystem::file_set_directory_flag(NodeIdx fid, bool new_is_dir)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -679,7 +553,7 @@ bool FileSystem::file_set_directory_flag(uint64_t fid, bool new_is_dir)
 	return false;
 }
 
-bool FileSystem::file_set_modified_now(uint64_t fid)
+bool FileSystem::file_set_modified_now(NodeIdx fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -690,7 +564,7 @@ bool FileSystem::file_set_modified_now(uint64_t fid)
 	return false;
 }
 
-bool FileSystem::file_set_permissions(uint64_t fid, FilePermissionTriad owner, FilePermissionTriad group, FilePermissionTriad users)
+bool FileSystem::file_set_permissions(NodeIdx fid, FilePermissionTriad owner, FilePermissionTriad group, FilePermissionTriad users)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{
@@ -702,7 +576,7 @@ bool FileSystem::file_set_permissions(uint64_t fid, FilePermissionTriad owner, F
 	return false;
 }
 
-bool FileSystem::file_set_permissions(uint64_t fid, int32_t owner, int32_t group, int32_t users)
+bool FileSystem::file_set_permissions(NodeIdx fid, int32_t owner, int32_t group, int32_t users)
 {
 	return file_set_permissions(fid, 
 		static_cast<FilePermissionTriad>(owner),
@@ -710,7 +584,7 @@ bool FileSystem::file_set_permissions(uint64_t fid, int32_t owner, int32_t group
 		static_cast<FilePermissionTriad>(users));
 }
 
-bool FileSystem::check_permission(const SessionData& session, uint64_t fid, FileAccessFlags mode)
+bool FileSystem::check_permission(const SessionData& session, NodeIdx fid, FileAccessFlags mode)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 	{

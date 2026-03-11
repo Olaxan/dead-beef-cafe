@@ -1,8 +1,10 @@
 #pragma once
 
 #include "task.h"
-#include "proc_io.h"
-#include "proc_defs.h"
+#include "proc_types.h"
+#include "proc_fsapi.h"
+#include "proc_netapi.h"
+#include "proc_sysapi.h"
 #include "term_utils.h"
 #include "session.h"
 
@@ -19,8 +21,6 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <any>
-#include <typeindex>
 #include <sstream>
 #include <ostream>
 
@@ -203,6 +203,17 @@ public:
 
 	Proc* get_session_leader();
 
+	/* --- FUNCTIONS THAT RELATE TO FILE DESCRIPTORS --- */
+
+	FileDescriptor get_descriptor();
+	void return_descriptor(FileDescriptor fs);
+
+	/* --- PUBLICALLY ACCESSIBLE API:s --- */
+
+	ProcFsApi fs{this};
+	ProcNetApi net{this};
+	ProcSysApi sys{this};
+
 public:
 
 	Proc* host{nullptr};
@@ -212,6 +223,10 @@ public:
 	int32_t sid{0};
 	int32_t uid{0};
 	int32_t gid{0};
+
+	std::vector<FileDescriptor> descriptors_{};
+	std::set<FileDescriptor> returned_descriptors_{};
+	FileDescriptor descriptor_counter_{3};
 
 	ProcCoutBuf buf_out{this};
 	ProcCerrBuf buf_err{this};

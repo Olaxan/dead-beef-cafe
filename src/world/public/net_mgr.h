@@ -2,9 +2,8 @@
 
 #include "addr.h"
 #include "file_socket.h"
-#include "proc_io.h"
 #include "msg_queue.h"
-#include "netw.h"
+#include "net_types.h"
 #include "task.h"
 
 #include "proto/ip_packet.pb.h"
@@ -16,6 +15,7 @@
 #include <expected>
 #include <stdexcept>
 #include <unordered_map>
+#include <system_error>
 
 class OS;
 class NIC;
@@ -30,6 +30,7 @@ public:
 	~NetManager();
 
 	std::expected<SocketDescriptor, std::runtime_error> create_socket();
+	std::error_condition close_socket(SocketDescriptor sock);
 
 	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
 	int32_t bind_socket(SocketDescriptor sock, Address6 addr, int32_t port);

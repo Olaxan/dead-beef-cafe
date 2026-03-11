@@ -18,7 +18,7 @@ class NIC;
 class NetManager;
 class SocketFile;
 
-using SocketDescriptor = uint64_t;
+using SocketDescriptor = int64_t;
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
 
