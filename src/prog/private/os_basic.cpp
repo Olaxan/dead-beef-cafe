@@ -2,7 +2,7 @@
 
 #include "host.h"
 #include "device.h"
-#include "netw.h"
+#include "net_types.h"
 #include "proc.h"
 #include "filesystem.h"
 

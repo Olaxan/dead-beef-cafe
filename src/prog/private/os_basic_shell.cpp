@@ -2,7 +2,7 @@
 
 #include "os.h"
 #include "device.h"
-#include "netw.h"
+#include "net_types.h"
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"

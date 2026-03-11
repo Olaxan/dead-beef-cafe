@@ -1,7 +1,7 @@
 #include "os_basic.h"
 
 #include "os.h"
-#include "netw.h"
+#include "net_types.h"
 #include "filesystem.h"
 #include "net_mgr.h"
 

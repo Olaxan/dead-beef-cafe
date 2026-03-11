@@ -7,6 +7,7 @@
 #include "proc_sysapi.h"
 #include "term_utils.h"
 #include "session.h"
+#include "timer_mgr.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
@@ -67,6 +68,7 @@ class Proc
 public:
 
 	Proc(int32_t pid, OS* owner);
+	Proc(Proc&) = delete;
 
 	~Proc();
 
@@ -188,6 +190,10 @@ public:
 	EagerTask<int32_t> await_dispatch(ProcessFn& program, std::vector<std::string> args);
 
 
+	/* --- FUNCTIONS THAT RELATE TO OS --- */
+	[[nodiscard]] TimerAwaiter wait(float seconds);
+
+
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
 
 	int32_t get_pid() const { return pid; }
@@ -210,10 +216,6 @@ public:
 
 	/* --- PUBLICALLY ACCESSIBLE API:s --- */
 
-	ProcFsApi fs{this};
-	ProcNetApi net{this};
-	ProcSysApi sys{this};
-
 public:
 
 	Proc* host{nullptr};
@@ -224,9 +226,9 @@ public:
 	int32_t uid{0};
 	int32_t gid{0};
 
-	std::vector<FileDescriptor> descriptors_{};
-	std::set<FileDescriptor> returned_descriptors_{};
-	FileDescriptor descriptor_counter_{3};
+	ProcFsApi fs{this};
+	ProcNetApi net{this};
+	ProcSysApi sys{this};
 
 	ProcCoutBuf buf_out{this};
 	ProcCerrBuf buf_err{this};
@@ -234,10 +236,15 @@ public:
 	std::ostream s_err{&buf_err};
 	std::optional<ProcessTask> task{nullptr};
 	std::vector<std::string> args{};
+	
+	protected:
+	
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
-
-private:
+	
+	std::vector<FileDescriptor> descriptors_{};
+	std::set<FileDescriptor> returned_descriptors_{};
+	FileDescriptor descriptor_counter_{3};
 
 	std::unordered_map<std::string, std::string> envvars_;
 

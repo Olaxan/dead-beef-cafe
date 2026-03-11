@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.h"
-#include "netw.h"
+#include "net_types.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"

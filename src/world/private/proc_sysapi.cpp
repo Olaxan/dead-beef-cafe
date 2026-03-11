@@ -57,7 +57,7 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	// 		if (where.is_relative())
 	// 			where.make_absolute(proc.get_var("PWD"));
 
-	// 		if (auto [fid, ptr, err] = FileUtils::open(proc, std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); 
+	// 		if (auto [fid, ptr, err] = proc.fs.open(std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); 
 	// 		err == FileSystemError::Success)
 	// 		{
 	// 			out = [file = std::move(ptr)](const std::string& line)
@@ -84,7 +84,7 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 
 	// 	for (auto&& path : candidates)
 	// 	{
-	// 		if (auto [fid, err] = FileUtils::query(proc, path, FileAccessFlags::Execute); fid != 0)
+	// 		if (auto [fid, err] = proc.fs.query(path, FileAccessFlags::Execute); fid != 0)
 	// 		{
 	// 			return fs->get_path(fid);
 	// 		}
@@ -99,7 +99,7 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	// 	co_return 1;
 	// }
 
-	// if (auto [fid, ptr, err] = FileUtils::open(proc, *match, FileAccessFlags::Execute); err == FileSystemError::Success)
+	// if (auto [fid, ptr, err] = proc.fs.open(*match, FileAccessFlags::Execute); err == FileSystemError::Success)
 	// {
 	// 	FileMeta* meta = fs->get_metadata(fid);
 	// 	assert(meta);

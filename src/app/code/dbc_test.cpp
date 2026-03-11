@@ -2,7 +2,7 @@
 #include "host.h"
 #include "os.h"
 #include "msg_queue.h"
-#include "netw.h"
+#include "net_types.h"
 #include "host_utils.h"
 
 #include "os_basic.h"
@@ -190,8 +190,7 @@ int main(int argc, char* argv[])
 
 	if (enable_raw_mode() == false)
 	{
-		std::println("Warning: Failed to configure raw terminal mode. The game will exit.");
-		return 1;
+		std::println("Warning: Failed to configure raw terminal mode. The app will not work as intended.");
 	}
 	
 	if (enable_vtt_mode() == false)

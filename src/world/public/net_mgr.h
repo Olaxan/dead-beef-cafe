@@ -27,6 +27,8 @@ public:
 
 	NetManager() = delete;
 	NetManager(OS* owner);
+	NetManager(NetManager&) = delete;
+	NetManager(NetManager&&) = delete;
 	~NetManager();
 
 	std::expected<SocketDescriptor, std::runtime_error> create_socket();
@@ -73,12 +75,12 @@ public:
 	std::optional<Uid64> arp_lookup(Address6 addr);
 
 protected:
-
+	
 	SocketFile* find_socket(SocketDescriptor sock_fd);
 	SocketFile* find_socket(const AddressPair& tuple);
 	SocketFile* find_socket(const AddressTuple& tuple);
-
-	OS& os_;
+	
+	OS* os_;
 	NIC* nic_{nullptr};
 
 	uint64_t socket_index_{1};
@@ -88,4 +90,5 @@ protected:
 	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
 
+	friend class ProcNetApi;
 };

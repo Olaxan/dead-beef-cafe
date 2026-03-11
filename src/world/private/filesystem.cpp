@@ -183,7 +183,7 @@ std::string FileSystem::get_mdate(NodeIdx fid)
 	return "-";
 }
 
-NodeIdx FileSystem::get_last_modified(NodeIdx fid)
+uint64_t FileSystem::get_last_modified(NodeIdx fid)
 {
 	if (auto it = metadata_.find(fid); it != metadata_.end())
 		return it->second.modified;

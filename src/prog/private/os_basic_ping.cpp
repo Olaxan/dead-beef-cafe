@@ -1,11 +1,10 @@
 #include "os_basic.h"
 
 #include "os.h"
-#include "netw.h"
+#include "net_types.h"
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
-#include "os_netio.h"
 #include "addr.h"
 #include "net_mgr.h"
 

@@ -16,4 +16,7 @@ public:
 protected:
 
 	Proc* owner_{nullptr};
+
+
+	friend Proc;
 };

@@ -2,12 +2,16 @@
 
 #include "task.h"
 #include "addr.h"
+#include "proc_types.h"
+
+#include "proto/ip_packet.pb.h"
+#include "proto/tcp_packet.pb.h"
 
 #include <cstdint>
 #include <memory>
 #include <expected>
 #include <system_error>
-#include <unordered_set>
+#include <set>
 
 class OS;
 class Proc;

@@ -62,7 +62,7 @@ public:
 	std::string get_mdate(NodeIdx fid);
 
 	/* Returns the last-modified date (seconds since epoch). */
-	NodeIdx get_last_modified(NodeIdx fid);
+	uint64_t get_last_modified(NodeIdx fid);
 
 	/* Returns metadata for a file id, or nullptr if the file does not exist. */
 	FileMeta* get_metadata(NodeIdx fid);

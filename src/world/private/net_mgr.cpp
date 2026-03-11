@@ -13,15 +13,14 @@
 #include <algorithm>
 #include <tuple>
 
-NetManager::NetManager(OS* owner) : os_(*owner), nic_(owner->get_owner().get_device<NIC>())
-{ }
+NetManager::NetManager(OS* owner) 
+: os_(owner), nic_(owner->get_owner().get_device<NIC>()) { }
 
 NetManager::~NetManager() = default;
 
 std::expected<SocketDescriptor, std::runtime_error> NetManager::create_socket()
 {
-
-	FileSystem* fs = os_.get_filesystem();
+	FileSystem* fs = os_->get_filesystem();
 
 	FilePath path{std::format("/run/{}.sock", ++socket_index_)};
 	FileSystem::CreateFileParams params{ .recurse = true };

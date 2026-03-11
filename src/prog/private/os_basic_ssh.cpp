@@ -2,7 +2,7 @@
 
 #include "os.h"
 #include "device.h"
-#include "netw.h"
+#include "net_types.h"
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"
@@ -27,10 +27,7 @@
 
 ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 {
-	OS& os = *proc.owning_os;
-	NetManager* net = os.get_network_manager();
-
-	co_await os.wait(1.f);
+	co_await proc.wait(1.f);
 
 	proc.putln("SecureShell version 5:");
 
@@ -56,30 +53,25 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	NetManager* net = os.get_network_manager();
 	Address6 local_ip = net->get_primary_ip();
 
+	ProcNetApi& netapi = proc.net;
+
 	proc.putln("SSH service started.");
 
-	struct SSHNetSock
-	{
-		SocketDescriptor fd{0};
-		NetManager* netmgr{nullptr};
-	};
-
-	auto exp_sock = net->create_socket();
+	auto exp_sock = netapi.create_socket();
 
 	if (!exp_sock)
 	{
+		proc.errln("Failed to open socket: {}.", exp_sock.error().what());
 		co_return 2;
 	}
 
 	SocketDescriptor fd = *exp_sock;
 
-	if (net->bind_socket(fd, {local_ip, 22}) != 0)
+	if (netapi.bind_socket(fd, {local_ip, 22}) != 0)
 	{
 		proc.errln("Failed to bind socket 22 for reading.");
 		co_return 1;
 	}
-
-	SSHNetSock ssh_sock{ .fd = fd, .netmgr = net };
 
 	if (net->listen(fd) != 0)
 	{
@@ -89,22 +81,22 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	while (net->socket_is_open(fd))
 	{
 		proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
-		SocketDescriptor con = co_await net->async_accept_socket(fd);
+		SocketDescriptor con = co_await netapi.async_accept_socket(fd);
 		proc.putln("Connection established ({}).", con);
 	
-		auto sess_reader = [net, con]() -> Task<std::string>
+		auto sess_reader = [&netapi, con]() -> Task<std::string>
 		{
-			return net->async_read_socket(con);
+			return netapi.async_read_socket(con);
 		};
 	
-		auto sess_writer = [net, con](const std::string& str)
+		auto sess_writer = [&netapi, con](const std::string& str)
 		{
 			com::CommandReply rep;
 			rep.set_reply(str);
 			
 			std::string out_str;
 			if (rep.SerializeToString(&out_str))
-				net->async_write_socket(con, out_str);
+				netapi.async_write_socket(con, out_str);
 		};
 	
 		OS::CreateProcessParams params

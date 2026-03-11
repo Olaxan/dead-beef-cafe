@@ -1,4 +1,4 @@
-#include "netw.h"
+#include "net_types.h"
 #include "nic.h"
 #include "net_mgr.h"
 

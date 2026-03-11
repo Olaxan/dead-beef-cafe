@@ -110,6 +110,11 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 	co_return (co_await *task);
 }
 
+TimerAwaiter Proc::wait(float seconds)
+{
+	return owning_os->wait(seconds);
+}
+
 int32_t Proc::set_sid()
 {
 	sid = owning_os->create_sid();

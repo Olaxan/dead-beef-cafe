@@ -1,7 +1,6 @@
 #include "os_basic.h"
 
 #include "device.h"
-#include "netw.h"
 #include "filesystem.h"
 #include "os_input.h"
 #include "os_fileio.h"

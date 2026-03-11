@@ -3,7 +3,7 @@
 #include "proto/query.pb.h"
 
 #include "proc.h"
-#include "netw.h"
+#include "net_types.h"
 
 #include <print>
 #include <optional>
