@@ -30,6 +30,7 @@ class OS;
 
 using WriterFn = std::function<void(const std::string&)>;
 using ReaderFn = std::move_only_function<Task<std::string>(void)>;
+using InvokeFn = std::function<void(Proc*)>;
 
 enum class EnvVarAccessMode
 {

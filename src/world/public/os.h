@@ -74,6 +74,7 @@ public:
 
 	struct CreateProcessParams
 	{
+		InvokeFn invoke{nullptr};
 		WriterFn writer{nullptr};
 		ReaderFn reader{nullptr};
 		int32_t leader_id{-1};

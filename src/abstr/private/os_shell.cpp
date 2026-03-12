@@ -31,38 +31,45 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 	});
 
 	/* If >> FILENAME is in the arguments, try to open the file as a output redirector. */
-	WriterFn redirect_writer = std::invoke([&]
+	auto redirect_to = std::invoke([&]() -> std::optional<FilePath>
 	{
 		WriterFn out{nullptr};
 
 		auto begin_find = std::ranges::find(args, ">>");		
 
 		if (begin_find == args.end())
-			return out;
+			return std::nullopt;
 
 		auto end_find = std::ranges::next(begin_find);
 
-		if (end_find != args.end())
-		{
-			FilePath where{*end_find};
+		if (end_find == args.end())
+			return std::nullopt;
 
-			if (where.is_relative())
-				where.make_absolute(proc.get_var("PWD"));
+		FilePath where{*end_find};
 
-			if (auto exp_fd = proc.fs.open(std::move(where), FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append))
-			{
-				out = [&proc, fd = exp_fd.value()](const std::string& line)
-				{
-					proc.fs.write(fd, line);
-				};
-			}
-			// The process will close the file at the end.
-		}
+		if (where.is_relative())
+			where.make_absolute(proc.get_var("PWD"));
 
 		args.erase(begin_find, std::ranges::next(end_find));
 
-		return out;
+		return where;
 	});
+
+	InvokeFn invoker = [redirect_to](Proc* new_proc)
+	{
+		if (redirect_to)
+		{
+			FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
+
+			if (auto exp_fd = new_proc->fs.open(*redirect_to, flags))
+			{
+				new_proc->set_writer([new_proc, fd = exp_fd.value()](const std::string& line)
+				{
+					new_proc->fs.write(fd, line);
+				});
+			}
+		}
+	};
 
 	/* Try to find a file that matches on the PATH (or directly specified) */
 	auto match = std::invoke([&]() -> std::optional<FilePath>
@@ -110,7 +117,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 	
 		OS::CreateProcessParams params
 		{
-			.writer = std::move(redirect_writer),
+			.invoke = std::move(invoker),
 			.leader_id = proc.get_pid(),
 			.uid = exec_uid,
 			.gid = exec_gid
