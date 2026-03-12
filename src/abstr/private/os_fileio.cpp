@@ -71,45 +71,45 @@ FileQueryResult FileUtils::query(const Proc& proc, const FilePath& path, FileAcc
 	return std::make_pair(0, FileSystemError::FileNotFound);
 }
 
-FileOpResult FileUtils::open(const Proc& proc, FilePath path, FileAccessFlags flags)
-{
+// FileOpResult FileUtils::open(const Proc& proc, FilePath path, FileAccessFlags flags)
+// {
 
-	OS& os = *proc.owning_os;
-	FileSystem& fs = *os.get_filesystem();
+// 	OS& os = *proc.owning_os;
+// 	FileSystem& fs = *os.get_filesystem();
 
-	if (path.is_relative())
-		path.make_absolute();
+// 	if (path.is_relative())
+// 		path.make_absolute();
 
-	std::println("Opening '{}': mode {}.", path, static_cast<uint32_t>(flags));
+// 	std::println("Opening '{}': mode {}.", path, static_cast<uint32_t>(flags));
 
-	if (uint64_t fid = fs.get_fid(path))
-	{
-		/* The file exists -- check if we can read it. */
-		if (!FileUtils::check_permission(proc, fid, flags))
-			return std::make_tuple(0, nullptr, FileSystemError::InsufficientPermissions);
+// 	if (uint64_t fid = fs.get_fid(path))
+// 	{
+// 		/* The file exists -- check if we can read it. */
+// 		if (!FileUtils::check_permission(proc, fid, flags))
+// 			return std::make_tuple(0, nullptr, FileSystemError::InsufficientPermissions);
 
-		return fs.get_file(fid, flags);
-	}
-	else if (FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Create))
-	{
-		/* The file doesn't exist but we want to create it, if possible. */
-		FileSystem::CreateFileParams params = {
-			.recurse = false,
-			.meta = {
-				.owner_uid = proc.get_uid(),
-				.owner_gid = proc.get_gid(),
-				.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
-				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Write,
-				.perm_users = FilePermissionTriad::Read
-			}
-		};
+// 		return fs.get_file(fid, flags);
+// 	}
+// 	else if (FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Create))
+// 	{
+// 		/* The file doesn't exist but we want to create it, if possible. */
+// 		FileSystem::CreateFileParams params = {
+// 			.recurse = false,
+// 			.meta = {
+// 				.owner_uid = proc.get_uid(),
+// 				.owner_gid = proc.get_gid(),
+// 				.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
+// 				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Write,
+// 				.perm_users = FilePermissionTriad::Read
+// 			}
+// 		};
 
-		return fs.create_file(path, params);
-	}
+// 		return fs.create_file(path, params);
+// 	}
 
-	/* The file was not found -- return nothing. */
-	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
-}
+// 	/* The file was not found -- return nothing. */
+// 	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+// }
 
 FileSystemError FileUtils::remove(const Proc& proc, const FilePath& path, bool recurse)
 {

@@ -49,14 +49,14 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 			if (where.is_relative())
 				where.make_absolute(proc.get_var("PWD"));
 
-			if (auto [fid, ptr, err] = FileUtils::open(proc, std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); 
-			err == FileSystemError::Success)
+			if (auto exp_fd = proc.fs.open(std::move(where), FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append))
 			{
-				out = [file = std::move(ptr)](const std::string& line)
+				out = [&proc, fd = exp_fd.value()](const std::string& line)
 				{
-					file->append(line);
+					proc.fs.write(fd, line);
 				};
 			}
+			// The process will close the file at the end.
 		}
 
 		args.erase(begin_find, std::ranges::next(end_find));
@@ -91,16 +91,23 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 		co_return 1;
 	}
 
-	if (auto [fid, ptr, err] = FileUtils::open(proc, *match, FileAccessFlags::Execute); err == FileSystemError::Success)
+	if (auto exp_fd = proc.fs.open(*match, FileAccessFlags::Execute))
 	{
-		FileMeta* meta = fs->get_metadata(fid);
-		assert(meta);
+		FileDescriptor fd = exp_fd.value();
 
+		auto exp_meta = proc.fs.get_metadata(fd);
+		if (!exp_meta)
+		{
+			proc.errln("exec: failed to retrieve program metadata: {}.", exp_meta.error().message());
+			co_return 1;
+		}
+
+		FileMeta* meta = exp_meta.value();
 		bool setuid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetUid);
 		bool setgid = fs->has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetGid);
 		int32_t exec_uid = setuid ? meta->owner_uid : proc.get_uid();
 		int32_t exec_gid = setgid ? meta->owner_gid : proc.get_gid();
-
+	
 		OS::CreateProcessParams params
 		{
 			.writer = std::move(redirect_writer),
@@ -128,7 +135,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 	}
 	else
 	{
-		proc.warnln("exec: failed to open '{}': {}.", *match, FileSystem::get_fserror_name(err));
+		proc.warnln("exec: failed to open '{}': {}.", *match, exp_fd.error().message());
 		co_return 1;
 	}
 	

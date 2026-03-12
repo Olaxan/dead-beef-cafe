@@ -103,6 +103,28 @@ std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescri
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
+std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescriptor fd)
+{
+	return std::expected<ProcessFn, std::error_condition>();
+}
+
+std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescriptor fd)
+{
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenFileTablePair& pair = it->second;
+		OpenFileTableEntry* entry = pair.second;
+		
+		FileMeta* meta = fs_->get_metadata(entry->node);
+
+		if (meta) { return meta; }
+
+		return std::unexpected{std::error_condition{EIO, std::generic_category()}};
+	}
+	
+	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
+}
+
 bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
 {
 	Proc& proc = *owner_;

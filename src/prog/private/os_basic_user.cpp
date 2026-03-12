@@ -57,7 +57,7 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	if (auto [fid, ptr, err] = FileUtils::open(proc, "/etc/passwd", FileAccessFlags::Read | FileAccessFlags::Write); err == FileSystemError::Success)
+	if (auto exp_fd = proc.fs.open("/etc/passwd", FileAccessFlags::Read | FileAccessFlags::Write))
 	{
 		GecosData gecos{ .full_name = params.comment };
 	
@@ -83,7 +83,7 @@ ProcessTask Programs::CmdUserAdd(Proc& proc, std::vector<std::string> args)
 	}
 	else
 	{
-		proc.warnln("useradd: cannot lock '/etc/passwd': {}.", FileSystem::get_fserror_name(err));
+		proc.warnln("useradd: cannot lock '/etc/passwd': {}.", exp_fd.error().message());
 		co_return 1;
 	}
 

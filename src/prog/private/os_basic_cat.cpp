@@ -51,14 +51,20 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 		if (params.paths.size() > 1)
 			proc.putln("{}:", path);
 
-		if (auto [fid, ptr, err] = FileUtils::open(proc, path, FileAccessFlags::Read); err == FileSystemError::Success)
+		if (auto exp_fd = proc.fs.open(path, FileAccessFlags::Read))
 		{
-			++success_count;
-			proc.putln("{}", ptr->get_view());
+			if (auto exp_read = proc.fs.read(*exp_fd))
+			{
+				proc.putln("{}", *exp_read);
+			}
+			else
+			{
+				proc.warnln("Failed to read from '{}': {}.", path, exp_read.error().message());	
+			}
 		}
 		else
 		{
-			proc.warnln("Failed to open '{}' ({}): {}.", path, fid, FileSystem::get_fserror_name(err));
+			proc.warnln("Failed to open '{}': {}.", path, exp_fd.error().message());
 		}
 	}
 

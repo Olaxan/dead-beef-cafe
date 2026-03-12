@@ -109,7 +109,7 @@ ProcessTask Programs::CmdMakeFile(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 	
-	FileAccessFlags flags = FileAccessFlags::Write;
+	FileAccessFlags flags = FileAccessFlags::Write | FileAccessFlags::Append;
 	if (!params.no_create) { flags |= FileAccessFlags::Create; }
 
 	for (auto& path : params.paths)
@@ -117,9 +117,9 @@ ProcessTask Programs::CmdMakeFile(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("PWD"));
 
-		if (auto [fid, ptr, err] = FileUtils::open(proc, path, flags); err == FileSystemError::Success)
+		if (auto exp_fd = proc.fs.open(path, flags))
 		{
-			fs->file_set_modified_now(fid);
+			proc.fs.write(*exp_fd, "");
 			++num_updated;
 		}
 	}
