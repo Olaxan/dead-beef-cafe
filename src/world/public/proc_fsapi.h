@@ -41,6 +41,5 @@ protected:
 
 	std::unordered_map<FileDescriptor, OpenFileTablePair> fd_table_{};
 
-
 	friend Proc;
 };

@@ -130,6 +130,8 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 			co_return 1;
 		}
 
+		proc.fs.close(fd);
+
 		if (run_in_background)
 		{
 			os.run_process(*prog, std::move(args), std::move(params));

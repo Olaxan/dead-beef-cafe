@@ -654,7 +654,7 @@ OpenFileTablePair FileSystem::open_file_entry(NodeIdx node, FileAccessFlags flag
 	
 	if (success)
 	{
-		std::println("Opening inode {}: mode {}.", node, static_cast<uint32_t>(flags));
+		std::println("Opening file {}, inode {}: mode {}.", h, node, static_cast<uint32_t>(flags));
 		return std::make_pair(h, &it->second);
 	}
 
@@ -666,7 +666,7 @@ void FileSystem::close_file_entry(OpenFileHandle h)
 	if (auto it = open_files_.find(h); it != open_files_.end())
 	{
 		assert(it->second.instance_count == 0);
-		std::println("Closing file handle {}.", h);
+		std::println("Closing file {}.", h);
 		open_files_.erase(it);
 	}
 }
