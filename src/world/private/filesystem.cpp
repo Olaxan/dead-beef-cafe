@@ -672,6 +672,7 @@ void FileSystem::close_file_entry(OpenFileHandle h)
 		assert(it->second.instance_count == 0);
 		std::println("Closing file {}.", h);
 		open_files_.erase(it);
+		return_handle(h);
 	}
 }
 

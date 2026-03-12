@@ -3,6 +3,8 @@
 #include "os.h"
 #include "net_mgr.h"
 
+#include <iso646.h>
+
 ProcNetApi::ProcNetApi(Proc* owner)
 : owner_(owner), os_(owner_->owning_os), net_(os_->get_network_manager()) { }
 
@@ -144,4 +146,13 @@ bool ProcNetApi::socket_is_open(FileDescriptor sock) const
 		return net_->socket_is_open(h);
 	}
 	else return false;
+}
+
+void ProcNetApi::close_all()
+{
+	while (not fd_table_.empty())
+	{
+		auto front = fd_table_.begin();
+		close_socket(front->first);	
+	}
 }

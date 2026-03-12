@@ -168,6 +168,7 @@ void Proc::return_descriptor(FileDescriptor fs)
 void Proc::exit()
 {
 	fs.close_all();
+	net.close_all();
 }
 
 int ProcCoutBuf::sync()

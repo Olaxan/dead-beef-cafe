@@ -38,6 +38,8 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
+		OpenSocketEntry* entry = &it->second;
+		//entry->rx_queue.broadcast_clear()
 		return_handle(h);
 		sockets_.erase(it);
 		return {};

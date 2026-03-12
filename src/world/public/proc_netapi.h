@@ -47,6 +47,8 @@ public:
 
 	bool socket_is_open(FileDescriptor sock) const;
 
+	void close_all();
+
 protected:
 
 	Proc* owner_{nullptr};
