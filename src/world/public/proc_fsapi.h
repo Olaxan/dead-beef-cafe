@@ -26,6 +26,7 @@ public:
 	std::error_condition close(FileDescriptor fd);
 	std::expected<size_t, std::error_condition> write(FileDescriptor fd, std::string data);
 	std::expected<std::string_view, std::error_condition> read(FileDescriptor fd);
+	std::expected<ProcessFn, std::error_condition> read_exe(FileDescriptor fd);
 	std::expected<FileMeta*, std::error_condition> get_metadata(FileDescriptor fd);
 
 	bool check_permission(NodeIdx node, FileAccessFlags mode);

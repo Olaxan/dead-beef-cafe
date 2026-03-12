@@ -199,11 +199,11 @@ public:
 	FileOpResult create_file(const FilePath& path, const CreateFileParams& params);
 
 	OpenFileTablePair open_file_entry(NodeIdx node, FileAccessFlags flags);
-	void close_file_entry(NodeIdx node);
+	void close_file_entry(OpenFileHandle h);
 
 	std::expected<size_t, std::error_condition> write(OpenFileHandle h, std::string data);
-
 	std::expected<std::string_view, std::error_condition> read(OpenFileHandle h, size_t bytes);
+	std::expected<File*, std::error_condition> get(OpenFileHandle h);
 
 
 protected:

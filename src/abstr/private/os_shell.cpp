@@ -116,7 +116,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 			.gid = exec_gid
 		};
 
-		auto&& prog = ptr->get_executable();
+		auto&& prog = proc.fs.read_exe(fd);
 		if (!prog)
 		{
 			proc.errln("exec: no program entry point detected.");
@@ -125,12 +125,12 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 		if (run_in_background)
 		{
-			os.run_process(prog, std::move(args), std::move(params));
+			os.run_process(*prog, std::move(args), std::move(params));
 			co_return 0;
 		}
 		else
 		{
-			co_return (co_await os.run_process(prog, std::move(args), std::move(params)));
+			co_return (co_await os.run_process(*prog, std::move(args), std::move(params)));
 		}
 	}
 	else

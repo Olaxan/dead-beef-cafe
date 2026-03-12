@@ -55,6 +55,7 @@ ProcessTask Programs::CmdCat(Proc& proc, std::vector<std::string> args)
 		{
 			if (auto exp_read = proc.fs.read(*exp_fd))
 			{
+				success_count++;
 				proc.putln("{}", *exp_read);
 			}
 			else

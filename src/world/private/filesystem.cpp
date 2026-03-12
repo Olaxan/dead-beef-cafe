@@ -653,19 +653,22 @@ OpenFileTablePair FileSystem::open_file_entry(NodeIdx node, FileAccessFlags flag
 	});
 	
 	if (success)
+	{
+		std::println("Opening inode {}: mode {}.", node, static_cast<uint32_t>(flags));
 		return std::make_pair(h, &it->second);
+	}
 
 	return std::make_pair(-1, nullptr);
 }
 
-void FileSystem::close_file_entry(NodeIdx node)
+void FileSystem::close_file_entry(OpenFileHandle h)
 {
-	if (auto it = open_files_.find(node); it != open_files_.end())
+	if (auto it = open_files_.find(h); it != open_files_.end())
 	{
 		assert(it->second.instance_count == 0);
+		std::println("Closing file handle {}.", h);
+		open_files_.erase(it);
 	}
-
-	open_files_.erase(node);
 }
 
 std::expected<size_t, std::error_condition> FileSystem::write(OpenFileHandle h, std::string data)
@@ -709,6 +712,23 @@ std::expected<std::string_view, std::error_condition> FileSystem::read(OpenFileH
 
 		// TODO: Actually do something with the 'bytes' parameter.
 		return file->get_view();
+	}
+
+	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
+}
+
+std::expected<File*, std::error_condition> FileSystem::get(OpenFileHandle h)
+{
+	if (auto it = open_files_.find(h); it != open_files_.end())
+	{
+		OpenFileTableEntry& entry = it->second;
+		File* file = find(entry.node);
+		assert(file);
+
+		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Execute))
+			return std::unexpected(std::error_condition{EPERM, std::generic_category()});
+
+		return file;
 	}
 
 	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});

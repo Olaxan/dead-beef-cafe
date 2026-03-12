@@ -2,6 +2,7 @@
 
 #include "users_mgr.h"
 #include "filesystem.h"
+#include "file.h"
 #include "proc.h"
 #include "os.h"
 
@@ -18,8 +19,6 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 
 	if (path.is_relative())
 		path.make_absolute();
-
-	std::println("Opening '{}': mode {}.", path, static_cast<uint32_t>(flags));
 
 	if (NodeIdx fid = fs.get_fid(path))
 	{
@@ -62,18 +61,15 @@ std::error_condition ProcFsApi::close(FileDescriptor fd)
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())
 	{
 		const OpenFileTablePair& pair = it->second;
-		OpenFileTableEntry* entry = pair.second;
+		OpenFileHandle h = pair.first;
 
-		if (--entry->instance_count == 0)
-		{
-			fs_->close_file_entry(entry->node);
-		}
-
+		fs_->close_file_entry(h);
 		fd_table_.erase(it);
 		owner_->return_descriptor(fd);
+
 		return {};
 	}
-	
+
 	return std::error_condition{EBADF, std::generic_category()};
 }
 
@@ -105,7 +101,19 @@ std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescri
 
 std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescriptor fd)
 {
-	return std::expected<ProcessFn, std::error_condition>();
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenFileTablePair& pair = it->second;
+		OpenFileHandle h = pair.first;
+		
+		if (auto exp_file = fs_->get(h))
+		{
+			File* file = exp_file.value();
+			return file->get_executable();
+		}
+	}
+	
+	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
 std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescriptor fd)
@@ -192,6 +200,10 @@ void ProcFsApi::close_all()
 {
 	while (!fd_table_.empty())
 	{
-		close(fd_table_.begin()->first);
+		auto first = fd_table_.begin();
+		if (auto exp_close = close(first->first); exp_close.value() != 0)
+		{
+			owner_->errln("proc: Failed to close file: {}.", exp_close.message());
+		}
 	}
 }
