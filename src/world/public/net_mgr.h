@@ -4,6 +4,7 @@
 #include "file_socket.h"
 #include "msg_queue.h"
 #include "net_types.h"
+#include "link_awaiter.h"
 #include "task.h"
 
 #include "proto/ip_packet.pb.h"
@@ -16,6 +17,7 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <system_error>
+#include <tuple>
 
 class OS;
 class NIC;
@@ -31,24 +33,24 @@ public:
 	NetManager(NetManager&&) = delete;
 	~NetManager();
 
-	std::expected<SocketDescriptor, std::runtime_error> create_socket();
-	std::error_condition close_socket(SocketDescriptor sock);
+	std::expected<OpenSocketPair, std::error_condition> create_socket();
+	std::error_condition close_socket(OpenSocketHandle sock);
 
-	int32_t bind_socket(SocketDescriptor sock, AddressPair addr);
-	int32_t bind_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+	std::error_condition bind_socket(OpenSocketHandle sock, AddressPair addr);
+	std::error_condition bind_socket(OpenSocketHandle sock, Address6 addr, int32_t port);
 
-	Task<int32_t> async_connect_socket(SocketDescriptor sock, AddressPair addr);
-	Task<int32_t> async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port);
+	Task<std::error_condition> async_connect_socket(OpenSocketHandle sock, AddressPair addr);
+	Task<std::error_condition> async_connect_socket(OpenSocketHandle sock, Address6 addr, int32_t port);
 	
-	Task<SocketDescriptor> async_accept_socket(SocketDescriptor sock);
+	Task<std::expected<OpenSocketPair, std::error_condition>> async_accept_socket(OpenSocketHandle sock);
 
-	Task<std::string> async_read_socket(SocketDescriptor sock);
-	Task<ip::TcpPacket> async_read_socket_tcp(SocketDescriptor sock);
-	Task<ip::IpPackage> async_read_socket_raw(SocketDescriptor sock);
+	Task<std::string> async_read_socket(OpenSocketHandle sock);
+	Task<ip::TcpPacket> async_read_socket_tcp(OpenSocketHandle sock);
+	Task<ip::IpPackage> async_read_socket_raw(OpenSocketHandle sock);
 
-	Task<size_t> async_write_socket(SocketDescriptor sock, std::string bytes);
+	Task<size_t> async_write_socket(OpenSocketHandle sock, std::string bytes);
 	
-	int32_t listen(SocketDescriptor sock);
+	int32_t listen(OpenSocketHandle sock);
 
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);
@@ -65,9 +67,9 @@ public:
 
 	Address6 get_primary_ip() const;
 
-	bool socket_is_open(SocketDescriptor fd) const;
+	bool socket_is_open(OpenSocketHandle fd) const;
 
-	bool create_session(SocketDescriptor fd);
+	bool create_session(OpenSocketHandle fd);
 
 	LinkUpdateAwaiter async_await_link();
 	void arp_request();
@@ -76,18 +78,24 @@ public:
 
 protected:
 	
-	SocketFile* find_socket(SocketDescriptor sock_fd);
-	SocketFile* find_socket(const AddressPair& tuple);
-	SocketFile* find_socket(const AddressTuple& tuple);
+	OpenSocketEntry* find_socket(OpenSocketHandle sock_fd);
+	OpenSocketEntry* find_socket(const AddressPair& tuple);
+	OpenSocketEntry* find_socket(const AddressTuple& tuple);
+
+	OpenSocketHandle get_handle();
+	void return_handle(OpenSocketHandle h);
+
+protected:
 	
 	OS* os_;
 	NIC* nic_{nullptr};
 
-	uint64_t socket_index_{1};
+	uint64_t handle_counter_{1};
+	std::set<OpenSocketHandle> free_handles_{};
 
-	std::unordered_map<SocketDescriptor, std::shared_ptr<SocketFile>> sockets_;
-	std::unordered_map<AddressTuple, SocketDescriptor> sessions_;
-	std::unordered_map<AddressPair, SocketDescriptor> bindings_;
+	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
+	std::unordered_map<AddressTuple, OpenSocketHandle> sessions_;
+	std::unordered_map<AddressPair, OpenSocketHandle> bindings_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
 
 	friend class ProcNetApi;

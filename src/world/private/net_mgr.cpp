@@ -18,52 +18,56 @@ NetManager::NetManager(OS* owner)
 
 NetManager::~NetManager() = default;
 
-std::expected<SocketDescriptor, std::runtime_error> NetManager::create_socket()
+std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 {
-	FileSystem* fs = os_->get_filesystem();
+	OpenSocketHandle h = get_handle();
+	auto [it, success] = sockets_.try_emplace(h);
 
-	FilePath path{std::format("/run/{}.sock", ++socket_index_)};
-	FileSystem::CreateFileParams params{ .recurse = true };
-
-	if (auto [fid, ptr, err] = fs->create_file<SocketFile>(path, params); err == FileSystemError::Success)
+	if (success)
 	{
-		sockets_[fid] = std::static_pointer_cast<SocketFile>(ptr);
-		return fid;
+		return std::make_pair(h, &it->second);
 	}
-	else 
+	else
 	{
-		return std::unexpected{std::runtime_error{fs->get_fserror_name(err)}};
+		return_handle(h);
+		return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 	}
 }
 
-std::error_condition NetManager::close_socket(SocketDescriptor sock)
+std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
-	return std::error_condition();
+	if (auto it = sockets_.find(h); it != sockets_.end())
+	{
+		return_handle(h);
+		sockets_.erase(it);
+		return {};
+	}
+
+	return std::error_condition{EBADF, std::generic_category()};
 }
 
-int32_t NetManager::bind_socket(SocketDescriptor sock, AddressPair addr)
+std::error_condition NetManager::bind_socket(OpenSocketHandle sock, AddressPair addr)
 {
 	if (bindings_.contains(addr))
-		return 1;
+		return std::error_condition{EALREADY, std::generic_category()};
 
 	bindings_[addr] = sock;
 
-	if (SocketFile* file = find_socket(sock))
+	if (OpenSocketEntry* file = find_socket(sock))
 		file->local_endpoint = addr;
 
-	return 0;
+	return {};
 }
 
-int32_t NetManager::bind_socket(SocketDescriptor sock, Address6 addr, int32_t port)
+std::error_condition NetManager::bind_socket(OpenSocketHandle sock, Address6 addr, int32_t port)
 {
 	return bind_socket(sock, {addr, port});
 }
 
-Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPair dest)
+Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle sock, AddressPair dest)
 {
-	if (auto&& it = sockets_.find(sock); it != sockets_.end())
+	if (OpenSocketEntry* file = find_socket(sock))
 	{
-		std::shared_ptr<SocketFile> file = it->second;
 		const AddressPair& src = file->local_endpoint;
 
 		ip::TcpPacket tcp;
@@ -73,7 +77,7 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 
 		std::string tcp_data;
 		if (!tcp.SerializeToString(&tcp_data))
-			co_return -1;
+			co_return std::error_condition{EIO, std::generic_category()};
 
 		ip::IpPackage ip;
 		ip.set_src_ip(src.addr.raw);
@@ -93,26 +97,26 @@ Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, AddressPai
 				std::println("Received ACK from {}.", dest.addr);
 				file->remote_endpoint = dest;
 				create_session(sock);
-				co_return 0;
+				co_return {};
 			}
 		}
 	}
 
-	co_return -1;
+	co_return std::error_condition{EIO, std::generic_category()};
 }
 
-Task<int32_t> NetManager::async_connect_socket(SocketDescriptor sock, Address6 addr, int32_t port)
+Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle sock, Address6 addr, int32_t port)
 {
 	return async_connect_socket(sock, {addr, port});
 }
 
-Task<std::string> NetManager::async_read_socket(SocketDescriptor sock)
+Task<std::string> NetManager::async_read_socket(OpenSocketHandle sock)
 {
 	ip::TcpPacket tcp = co_await async_read_socket_tcp(sock);
 	co_return tcp.payload();
 }
 
-Task<ip::TcpPacket> NetManager::async_read_socket_tcp(SocketDescriptor sock)
+Task<ip::TcpPacket> NetManager::async_read_socket_tcp(OpenSocketHandle sock)
 {
 	ip::IpPackage pak = co_await async_read_socket_raw(sock);
 	ip::TcpPacket tcp;
@@ -122,25 +126,23 @@ Task<ip::TcpPacket> NetManager::async_read_socket_tcp(SocketDescriptor sock)
 	co_return {};
 }
 
-Task<ip::IpPackage> NetManager::async_read_socket_raw(SocketDescriptor sock)
+Task<ip::IpPackage> NetManager::async_read_socket_raw(OpenSocketHandle sock)
 {
-	if (auto&& it = sockets_.find(sock); it != sockets_.end())
+	if (OpenSocketEntry* file = find_socket(sock))
 	{
-		std::shared_ptr<SocketFile> file = it->second;
 		co_return (co_await file->rx_queue.async_pop());
 	}
 
 	co_return {};
 }
 
-Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string bytes)
+Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string bytes)
 {
 	if (bytes.size() == 0)
 		co_return 0;
 		
-	if (auto&& it = sockets_.find(sock); it != sockets_.end())
+	if (OpenSocketEntry* file = find_socket(sock))
 	{
-		SocketFile* file = it->second.get();
 		ip::TcpPacket tcp;
 		tcp.set_dest_port(file->remote_endpoint.port);
 		tcp.set_src_port(file->local_endpoint.port);
@@ -165,16 +167,16 @@ Task<size_t> NetManager::async_write_socket(SocketDescriptor sock, std::string b
 	co_return 0;
 }
 
-int32_t NetManager::listen(SocketDescriptor sock)
+int32_t NetManager::listen(OpenSocketHandle sock)
 {
-	if (SocketFile* file = find_socket(sock))
+	if (OpenSocketEntry* file = find_socket(sock))
 	{
 		return 0;
 	}
 	return 1;
 }
 
-Task<SocketDescriptor> NetManager::async_accept_socket(SocketDescriptor sock)
+Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)
 {
 	while (true)
 	{
@@ -197,15 +199,15 @@ Task<SocketDescriptor> NetManager::async_accept_socket(SocketDescriptor sock)
 
 		if (syn.type() == ip::TcpType::Syn)
 		{
-			auto exp_fd = create_socket();
-			if (!exp_fd)
-				co_return 0;
+			auto exp_h = create_socket();
+			if (!exp_h)
+				co_return exp_h;
 
-			SocketFile* acceptor = find_socket(sock);
-			SocketFile* new_socket = find_socket(*exp_fd);
+			OpenSocketEntry* acceptor = find_socket(sock);
+			OpenSocketEntry* new_socket = find_socket(exp_h->first);
 			new_socket->local_endpoint = acceptor->local_endpoint;
 			new_socket->remote_endpoint = { src_addr, src_port };
-			create_session(*exp_fd);
+			create_session(exp_h->first);
 
 			ip::IpPackage reply;
 			reply.set_dest_ip(raw.src_ip());
@@ -222,12 +224,12 @@ Task<SocketDescriptor> NetManager::async_accept_socket(SocketDescriptor sock)
 			{
 				reply.set_payload(ack_data);
 				send(std::move(reply));
-				co_return *exp_fd;
+				co_return exp_h.value();
 			}
 		}
 	}
 
-	co_return 0;
+	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 }
 
 void NetManager::send(ip::IpPackage&& package)
@@ -342,7 +344,7 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 		{
 			/* If this is a data transfer, we need to have an established session 
 			-- use the full tuple. */
-			if (SocketFile* sock = find_socket(sess))
+			if (OpenSocketEntry* sock = find_socket(sess))
 			{
 				sock->rx_queue.push(std::move(outer));
 			}
@@ -357,7 +359,7 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 		case ip::TcpType::Syn:
 		{
 			/* If this is a connection request or reply, check for a socket based on binding. */
-			if (SocketFile* sock = find_socket(dest))
+			if (OpenSocketEntry* sock = find_socket(dest))
 			{
 				sock->rx_queue.push(std::move(outer));
 			}
@@ -394,18 +396,18 @@ Address6 NetManager::get_primary_ip() const
 	return nic_->get_ip();
 }
 
-bool NetManager::socket_is_open(SocketDescriptor fd) const
+bool NetManager::socket_is_open(OpenSocketHandle h) const
 {
-	return (sockets_.contains(fd));
+	return (sockets_.contains(h));
 }
 
-bool NetManager::create_session(SocketDescriptor fd)
+bool NetManager::create_session(OpenSocketHandle h)
 {
-	if (SocketFile* file = find_socket(fd))
+	if (OpenSocketEntry* file = find_socket(h))
 	{
 		const AddressPair& local = file->local_endpoint;
 		const AddressPair& remote = file->remote_endpoint;
-		sessions_.emplace(AddressTuple{local, remote}, fd);
+		sessions_.emplace(AddressTuple{local, remote}, h);
 		std::println("Created session {}:{} <-> {}:{}.", local.addr, local.port, remote.addr, remote.port);
 		return true;
 	}
@@ -413,28 +415,41 @@ bool NetManager::create_session(SocketDescriptor fd)
 	return false;
 }
 
-SocketFile* NetManager::find_socket(SocketDescriptor sock_fd)
+OpenSocketEntry* NetManager::find_socket(OpenSocketHandle h)
 {
-	if (auto it_sock = sockets_.find(sock_fd); it_sock != sockets_.end())
-		return it_sock->second.get();
+	if (auto it_sock = sockets_.find(h); it_sock != sockets_.end())
+		return &it_sock->second;
 
 	return nullptr;
 }
 
-SocketFile* NetManager::find_socket(const AddressPair& tuple)
+OpenSocketEntry* NetManager::find_socket(const AddressPair& tuple)
 {
-	if (auto it_fd = bindings_.find(tuple); it_fd != bindings_.end())
-		return find_socket(it_fd->second);
+	if (auto it_h = bindings_.find(tuple); it_h != bindings_.end())
+		return find_socket(it_h->second);
 
 	return nullptr;
 }
 
-SocketFile* NetManager::find_socket(const AddressTuple& tuple)
+OpenSocketEntry* NetManager::find_socket(const AddressTuple& tuple)
 {
-	if (auto it_fd = sessions_.find(tuple); it_fd != sessions_.end())
-		return find_socket(it_fd->second);
+	if (auto it_h = sessions_.find(tuple); it_h != sessions_.end())
+		return find_socket(it_h->second);
 
 	return nullptr;
+}
+
+OpenSocketHandle NetManager::get_handle()
+{
+	if (free_handles_.empty())
+		return handle_counter_++;
+
+	return free_handles_.extract(free_handles_.begin()).value();
+}
+
+void NetManager::return_handle(OpenSocketHandle h)
+{
+	free_handles_.insert(h);
 }
 
 LinkUpdateAwaiter NetManager::async_await_link()

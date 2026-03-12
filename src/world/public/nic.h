@@ -5,6 +5,7 @@
 #include "addr.h"
 #include "net_types.h"
 #include "link_srv.h"
+#include "link_awaiter.h"
 
 #include "proto/ip_packet.pb.h"
 

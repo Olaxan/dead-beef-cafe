@@ -1,7 +1,6 @@
-#include "net_types.h"
-#include "nic.h"
-#include "net_mgr.h"
+#include "link_awaiter.h"
 
+#include "nic.h"
 
 /* Begin LinkUpdateAwaiter --- */
 bool LinkUpdateAwaiter::await_ready()

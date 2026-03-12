@@ -2,6 +2,7 @@
 
 #include "os.h"
 #include "net_types.h"
+#include "link_awaiter.h"
 #include "filesystem.h"
 #include "net_mgr.h"
 

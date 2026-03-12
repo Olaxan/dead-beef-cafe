@@ -12,42 +12,24 @@
 #include <coroutine>
 #include <functional>
 #include <print>
-
+#include <tuple>
 
 class NIC;
 class NetManager;
 class SocketFile;
 
-using SocketDescriptor = int64_t;
 using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
 
-enum class LinkUpdateType : uint8_t
+using OpenSocketHandle = int64_t;
+
+struct OpenSocketEntry
 {
-	LinkAdded,
-	LinkRemoved,
-	LinkIdle
+	MessageQueue<ip::IpPackage> rx_queue{};
+	MessageQueue<ip::IpPackage> tx_queue{};
+
+	AddressPair local_endpoint{};
+	AddressPair remote_endpoint{};
 };
 
-using LinkUpdatePair = std::pair<Uid64, LinkUpdateType>;
-using LinkUpdateCallbackFn = std::move_only_function<void(const LinkUpdatePair&)>;
-
-struct LinkUpdateAwaiter
-{
-	LinkUpdateAwaiter(NIC* nic)
-		: nic_(nic) { }
-
-    LinkUpdateAwaiter(LinkUpdateAwaiter&) = delete;
-	LinkUpdateAwaiter(LinkUpdateAwaiter&&) = default;
-	~LinkUpdateAwaiter() = default;
-
-	bool await_ready();
-	void await_suspend(std::coroutine_handle<> h);
-	LinkUpdatePair await_resume() const;
-
-private:
-
-	NIC* nic_{nullptr};
-	LinkUpdatePair retval_{};
-
-};
+using OpenSocketPair = std::pair<OpenSocketHandle, OpenSocketEntry*>;

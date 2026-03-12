@@ -71,16 +71,16 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 	package.set_dest_ip(dest.data_str());
 	package.set_protocol(ip::Protocol::ICMP);
 
-	auto sock_res = net->create_socket();
+	auto sock_res = proc.net.create_socket();
 	if (!sock_res)
 	{
-		proc.errln("ping: {}.", sock_res.error().what());
+		proc.errln("ping: {}.", sock_res.error().message());
 		co_return 1;
 	}
 
 	co_await os.wait(1.f);
 
-	SocketDescriptor sock = sock_res.value();
+	FileDescriptor fd = sock_res.value();
 
 	//net->send(sock, std::move(package));
 

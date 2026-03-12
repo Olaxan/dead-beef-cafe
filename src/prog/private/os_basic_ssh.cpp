@@ -24,6 +24,9 @@
 #include <format>
 #include <ranges>
 #include <functional>
+#include <system_error>
+
+#include <iso646.h>
 
 ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 {
@@ -58,30 +61,29 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	proc.putln("SSH service started.");
 
 	auto exp_sock = netapi.create_socket();
-
 	if (!exp_sock)
 	{
-		proc.errln("Failed to open socket: {}.", exp_sock.error().what());
+		proc.errln("Failed to open socket: {}.", exp_sock.error().message());
 		co_return 2;
 	}
 
-	SocketDescriptor fd = *exp_sock;
+	FileDescriptor fd = *exp_sock;
 
-	if (netapi.bind_socket(fd, {local_ip, 22}) != 0)
+	if (netapi.bind_socket(fd, {local_ip, 22}))
 	{
 		proc.errln("Failed to bind socket 22 for reading.");
 		co_return 1;
 	}
 
-	if (net->listen(fd) != 0)
+	if (netapi.listen(fd) != 0)
 	{
 		proc.errln("Failed to set socket 22 as a listening connection.");
 	}
 
-	while (net->socket_is_open(fd))
+	while (netapi.socket_is_open(fd))
 	{
 		proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
-		SocketDescriptor con = co_await netapi.async_accept_socket(fd);
+		FileDescriptor con = co_await netapi.async_accept_socket(fd);
 		proc.putln("Connection established ({}).", con);
 	
 		auto sess_reader = [&netapi, con]() -> Task<std::string>

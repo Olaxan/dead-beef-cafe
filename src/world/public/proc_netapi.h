@@ -3,6 +3,7 @@
 #include "task.h"
 #include "addr.h"
 #include "proc_types.h"
+#include "net_types.h"
 
 #include "proto/ip_packet.pb.h"
 #include "proto/tcp_packet.pb.h"
@@ -25,14 +26,14 @@ public:
 	ProcNetApi(Proc* owner);
 	~ProcNetApi();
 
-	std::expected<FileDescriptor, std::runtime_error> create_socket();
+	std::expected<FileDescriptor, std::error_condition> create_socket();
 	std::error_condition close_socket(FileDescriptor sock);
 
-	int32_t bind_socket(FileDescriptor sock, AddressPair addr);
-	int32_t bind_socket(FileDescriptor sock, Address6 addr, int32_t port);
+	std::error_condition bind_socket(FileDescriptor sock, AddressPair addr);
+	std::error_condition bind_socket(FileDescriptor sock, Address6 addr, int32_t port);
 
-	Task<int32_t> async_connect_socket(FileDescriptor sock, AddressPair addr);
-	Task<int32_t> async_connect_socket(FileDescriptor sock, Address6 addr, int32_t port);
+	Task<std::error_condition> async_connect_socket(FileDescriptor sock, AddressPair addr);
+	Task<std::error_condition> async_connect_socket(FileDescriptor sock, Address6 addr, int32_t port);
 	
 	Task<FileDescriptor> async_accept_socket(FileDescriptor sock);
 
@@ -44,12 +45,14 @@ public:
 	
 	int32_t listen(FileDescriptor sock);
 
+	bool socket_is_open(FileDescriptor sock) const;
+
 protected:
 
 	Proc* owner_{nullptr};
 	OS* os_{nullptr};
 	NetManager* net_{nullptr};
 
-	std::set<FileDescriptor> open_sockets_{};
+	std::unordered_map<FileDescriptor, OpenSocketPair> fd_table_{};
 
 };

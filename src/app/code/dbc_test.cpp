@@ -166,7 +166,7 @@ std::string utf16_to_utf8(const std::wstring& wstr)
     return strTo;
 }
 
-EagerTask<int32_t> reader(NetManager* net_mgr, SocketDescriptor read_socket)
+EagerTask<int32_t> reader(NetManager* net_mgr, OpenSocketHandle read_socket)
 {
 	while (net_mgr->socket_is_open(read_socket))
 	{
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 	if (!sock)
 	return 1;
 	
-	SocketDescriptor fd = *sock;
+	OpenSocketHandle h = sock->first;
 	
 	client->start_host();
 	server->start_host();
@@ -259,12 +259,12 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	client_net_mgr->bind_socket(fd, local_addr, 49152);
-	client_net_mgr->async_connect_socket(fd, remote_addr, 22);
+	client_net_mgr->bind_socket(h, local_addr, 49152);
+	client_net_mgr->async_connect_socket(h, remote_addr, 22);
 
-	reader(client_net_mgr, fd);
+	reader(client_net_mgr, h);
 
-	while (client_net_mgr->socket_is_open(fd))
+	while (client_net_mgr->socket_is_open(h))
 	{
 		std::wstring wide_in = read_console_input_w();
 		std::string utf8_in = utf16_to_utf8(wide_in);
@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
 		
 		std::string str;
 		if (query.SerializeToString(&str))
-		 	client_net_mgr->async_write_socket(fd, str);
+		 	client_net_mgr->async_write_socket(h, str);
 
 	}
 

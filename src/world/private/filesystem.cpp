@@ -657,8 +657,12 @@ OpenFileTablePair FileSystem::open_file_entry(NodeIdx node, FileAccessFlags flag
 		std::println("Opening file {}, inode {}: mode {}.", h, node, static_cast<uint32_t>(flags));
 		return std::make_pair(h, &it->second);
 	}
+	else
+	{
+		return_handle(h);
+		return std::make_pair(-1, nullptr);
+	}
 
-	return std::make_pair(-1, nullptr);
 }
 
 void FileSystem::close_file_entry(OpenFileHandle h)
