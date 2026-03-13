@@ -20,6 +20,6 @@ public:
 
 protected:
 
-	Proc& owner_;
+	Proc& proc;
 	
 };

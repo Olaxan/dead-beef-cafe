@@ -38,12 +38,10 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 
 std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
-	std::println("Closing socket {}.", h);
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		return_handle(h);
 		sockets_.erase(it);
-		std::println("Closed socket {}.", h);
 		return {};
 	} 
 	else return std::error_condition{EBADF, std::generic_category()};
@@ -51,7 +49,6 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 
 Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
 {
-	std::println("Async closing socket {}.", h);
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		OpenSocketEntry* entry = &it->second;

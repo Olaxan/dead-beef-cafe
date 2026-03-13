@@ -133,6 +133,28 @@ std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescr
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
+OpenFileHandle ProcFsApi::get_file_handle(FileDescriptor fd) const
+{
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenFileTablePair& pair = it->second;
+		return pair.first;
+	}
+
+	return -1;
+}
+
+NodeIdx ProcFsApi::get_node(FileDescriptor fd) const
+{
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenFileTablePair& pair = it->second;
+		return pair.second->node;
+	}
+
+	return -1;
+}
+
 bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
 {
 	Proc& proc = *owner_;

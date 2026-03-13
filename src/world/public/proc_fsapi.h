@@ -30,6 +30,9 @@ public:
 	std::expected<ProcessFn, std::error_condition> read_exe(FileDescriptor fd);
 	std::expected<FileMeta*, std::error_condition> get_metadata(FileDescriptor fd);
 
+	OpenFileHandle get_file_handle(FileDescriptor fd) const;
+	NodeIdx get_node(FileDescriptor fd) const;
+
 	bool check_permission(NodeIdx node, FileAccessFlags mode);
 
 	void close_all();
