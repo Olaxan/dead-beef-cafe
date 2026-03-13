@@ -9,8 +9,27 @@
 
 struct SnakeData
 {
+	SnakeData(Proc& owner) : proc(owner) {}
+
+	Proc& proc;
 	bool stop{false};
+	bool reading{false};
 	std::optional<com::CommandQuery> query{};
+
+	EagerTask<int32_t> read_until()
+	{
+		reading = true;
+		while (!stop)
+		{
+			if (auto opt_query = co_await CmdInput::read_query(proc))
+			{
+				query = *opt_query;
+			}
+			else break;
+		}
+		reading = false;
+		co_return 0;
+	};
 };
 
 ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
@@ -57,20 +76,8 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	std::deque<SnakeCoord> snake_body{ { width / 2, height / 2 } };
 	SnakeCoord apple = snake_body.front() + SnakeCoord{10, 0};
 
-	auto runtime = std::make_shared<SnakeData>();
-
-	std::invoke([rt = runtime, &proc]() -> EagerTask<int32_t>
-	{
-		while (!rt->stop)
-		{
-			if (auto opt_query = co_await CmdInput::read_query(proc))
-			{
-				rt->query = *opt_query;
-			}
-			else break;
-		}
-		co_return 0;
-	});
+	auto runtime = std::make_shared<SnakeData>(proc);
+	runtime->read_until();
 
 	const std::string snake_str = "SNAKE";
 
@@ -171,11 +178,16 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	end_msg.set_reply(
 		END_ALT_SCREEN_BUFFER
 		SHOW_CURSOR 
-		"Exiting...\n");
+		"Press any key to exit...\n");
 
 	proc.write(end_msg);
 
+	/* Horrible hack. */
 	runtime->stop = true;
+	while (runtime->reading)
+	{
+		co_await proc.wait(0);
+	}
 
 	co_return 0;
 }
