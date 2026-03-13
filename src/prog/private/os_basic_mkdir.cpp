@@ -11,6 +11,7 @@
 #include <vector>
 #include <print>
 
+#include <iso646.h>
 
 ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 {
@@ -56,14 +57,16 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("PWD"));
 
-		// if (auto [fid, ptr, err] = FileUtils::open(proc, path, flags); err == FileSystemError::Success)
-		// {
-		// 	fs->file_set_directory_flag(fid, true);
-		// 	fs->file_set_permissions(fid, 7, 7, 7);
-		// 	++num_updated;
-		// }
+		if (auto exp_fd = proc.fs.open(path, flags))
+		{
+			NodeIdx h = proc.fs.get_node(*exp_fd);
+			fs->file_set_directory_flag(h, true);
+			fs->file_set_permissions(h, 7, 7, 7);
+			proc.fs.close(*exp_fd);
+			++num_updated;
+		}
 	}
 
 	proc.putln("Created {} directories.", num_updated);
-	co_return 0;
+	co_return (num_updated == 0);
 }
