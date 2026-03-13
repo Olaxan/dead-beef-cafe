@@ -38,8 +38,12 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 
 std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
+	std::println("Closing socket {}...", h);
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
+		OpenSocketEntry* entry = &it->second;
+		entry->rx_queue.broadcast_clear({});
+		entry->tx_queue.broadcast_clear({});
 		return_handle(h);
 		sockets_.erase(it);
 		return {};
@@ -373,9 +377,16 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			}
 			break;
 		}
-
-		case ip::TcpType::Ack:
-		case ip::TcpType::Syn:
+		case ip::TcpType::Fin:
+		{
+			std::println("Received FIN from {}.", src_addr);
+			if (auto it = sessions_.find(sess); it != sessions_.end())
+			{
+				close_socket(it->second);
+			}
+			break;
+		}
+		default:
 		{
 			/* If this is a connection request or reply, check for a socket based on binding. */
 			if (OpenSocketEntry* sock = find_socket(dest))

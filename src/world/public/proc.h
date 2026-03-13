@@ -245,7 +245,6 @@ protected:
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
 	
-	std::vector<FileDescriptor> descriptors_{};
 	std::set<FileDescriptor> returned_descriptors_{};
 	FileDescriptor descriptor_counter_{3};
 
