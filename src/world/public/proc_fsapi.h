@@ -32,7 +32,7 @@ public:
 
 	bool check_permission(NodeIdx node, FileAccessFlags mode);
 
-	Task<int32_t> close_all();
+	void close_all();
 
 protected:
 

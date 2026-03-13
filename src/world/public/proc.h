@@ -217,7 +217,7 @@ public:
 
 protected:
 
-	Task<int32_t> exit();
+	void exit();
 
 public:
 

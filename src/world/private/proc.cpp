@@ -165,11 +165,10 @@ void Proc::return_descriptor(FileDescriptor fs)
 	returned_descriptors_.emplace(fs);
 }
 
-Task<int32_t> Proc::exit()
+void Proc::exit()
 {
-	co_await fs.close_all();
-	co_await net.close_all();
-	co_return 0;
+	fs.close_all();
+	net.close_all();
 }
 
 int ProcCoutBuf::sync()

@@ -49,7 +49,7 @@ public:
 
 	bool socket_is_open(FileDescriptor sock) const;
 
-	Task<int32_t> close_all();
+	void close_all();
 
 protected:
 

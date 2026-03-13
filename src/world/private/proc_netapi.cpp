@@ -161,14 +161,11 @@ bool ProcNetApi::socket_is_open(FileDescriptor sock) const
 	else return false;
 }
 
-Task<int32_t> ProcNetApi::close_all()
+void ProcNetApi::close_all()
 {
-	int32_t count{0};
 	while (not fd_table_.empty())
 	{
 		auto front = fd_table_.begin();
-		co_await async_close_socket(front->first);
-		count++;
+		close_socket(front->first);
 	}
-	co_return count;
 }
