@@ -30,9 +30,22 @@ std::error_condition ProcNetApi::close_socket(FileDescriptor sock)
 		const OpenSocketPair& pair = it->second;
 		OpenSocketHandle h = pair.first;
 		fd_table_.erase(it);
-		return net_->close_socket(h);
+		net_->async_close_socket(h);
+		return {};
 	}
 	else return std::error_condition{EBADF, std::generic_category()};
+}
+
+Task<std::error_condition> ProcNetApi::async_close_socket(FileDescriptor fd)
+{
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenSocketPair& pair = it->second;
+		OpenSocketHandle h = pair.first;
+		fd_table_.erase(it);
+		co_return (co_await net_->async_close_socket(h));
+	}
+	else co_return std::error_condition{EBADF, std::generic_category()};
 }
 
 std::error_condition ProcNetApi::bind_socket(FileDescriptor sock, AddressPair addr)
@@ -82,7 +95,7 @@ Task<FileDescriptor> ProcNetApi::async_accept_socket(FileDescriptor sock)
 	else co_return -1;
 }
 
-Task<std::string> ProcNetApi::async_read_socket(FileDescriptor sock)
+Task<NetReadResult> ProcNetApi::async_read_socket(FileDescriptor sock)
 {
 	if (auto it = fd_table_.find(sock); it != fd_table_.end())
 	{
@@ -90,10 +103,10 @@ Task<std::string> ProcNetApi::async_read_socket(FileDescriptor sock)
 		OpenSocketHandle h = pair.first;
 		co_return (co_await net_->async_read_socket(h));
 	}
-	else co_return {};
+	else co_return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
-Task<ip::TcpPacket> ProcNetApi::async_read_socket_tcp(FileDescriptor sock)
+Task<NetReadResultTcp> ProcNetApi::async_read_socket_tcp(FileDescriptor sock)
 {
 	if (auto it = fd_table_.find(sock); it != fd_table_.end())
 	{
@@ -101,10 +114,10 @@ Task<ip::TcpPacket> ProcNetApi::async_read_socket_tcp(FileDescriptor sock)
 		OpenSocketHandle h = pair.first;
 		co_return (co_await net_->async_read_socket_tcp(h));
 	}
-	else co_return {};
+	else co_return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
-Task<ip::IpPackage> ProcNetApi::async_read_socket_raw(FileDescriptor sock)
+Task<NetReadResultIp> ProcNetApi::async_read_socket_raw(FileDescriptor sock)
 {
 	if (auto it = fd_table_.find(sock); it != fd_table_.end())
 	{
@@ -112,7 +125,7 @@ Task<ip::IpPackage> ProcNetApi::async_read_socket_raw(FileDescriptor sock)
 		OpenSocketHandle h = pair.first;
 		co_return (co_await net_->async_read_socket_raw(h));
 	}
-	else co_return {};
+	else co_return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
 Task<size_t> ProcNetApi::async_write_socket(FileDescriptor sock, std::string bytes)
@@ -148,11 +161,14 @@ bool ProcNetApi::socket_is_open(FileDescriptor sock) const
 	else return false;
 }
 
-void ProcNetApi::close_all()
+Task<int32_t> ProcNetApi::close_all()
 {
+	int32_t count{0};
 	while (not fd_table_.empty())
 	{
 		auto front = fd_table_.begin();
-		close_socket(front->first);	
+		co_await async_close_socket(front->first);
+		count++;
 	}
+	co_return count;
 }

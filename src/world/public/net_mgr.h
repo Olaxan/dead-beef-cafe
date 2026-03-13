@@ -34,7 +34,8 @@ public:
 	~NetManager();
 
 	std::expected<OpenSocketPair, std::error_condition> create_socket();
-	std::error_condition close_socket(OpenSocketHandle sock);
+	std::error_condition close_socket(OpenSocketHandle h);
+	Task<std::error_condition> async_close_socket(OpenSocketHandle h);
 
 	std::error_condition bind_socket(OpenSocketHandle sock, AddressPair addr);
 	std::error_condition bind_socket(OpenSocketHandle sock, Address6 addr, int32_t port);
@@ -44,9 +45,9 @@ public:
 	
 	Task<std::expected<OpenSocketPair, std::error_condition>> async_accept_socket(OpenSocketHandle sock);
 
-	Task<std::string> async_read_socket(OpenSocketHandle sock);
-	Task<ip::TcpPacket> async_read_socket_tcp(OpenSocketHandle sock);
-	Task<ip::IpPackage> async_read_socket_raw(OpenSocketHandle sock);
+	Task<NetReadResult> async_read_socket(OpenSocketHandle sock);
+	Task<NetReadResultTcp> async_read_socket_tcp(OpenSocketHandle sock);
+	Task<NetReadResultIp> async_read_socket_raw(OpenSocketHandle sock);
 
 	Task<size_t> async_write_socket(OpenSocketHandle sock, std::string bytes);
 	
@@ -62,9 +63,10 @@ public:
 	NetMessageAwaiter async_read_tx();
 
 	Address6 get_primary_ip() const;
-	bool socket_is_open(OpenSocketHandle fd) const;
+	bool socket_is_open(OpenSocketHandle h) const;
+	bool socket_has_data(OpenSocketHandle h) const;
 
-	bool create_session(OpenSocketHandle fd);
+	bool create_session(OpenSocketHandle h);
 
 	void arp_request();
 	void arp_request(Uid64 mac);
@@ -84,6 +86,9 @@ protected:
 	OpenSocketEntry* find_socket(OpenSocketHandle sock_fd);
 	OpenSocketEntry* find_socket(const AddressPair& tuple);
 	OpenSocketEntry* find_socket(const AddressTuple& tuple);
+
+	std::optional<ip::TcpPacket> make_tcp_query(OpenSocketHandle h, ip::TcpType type, std::string&& payload);
+	std::optional<ip::IpPackage> make_tcp_query_ip(OpenSocketHandle h, ip::TcpType type, std::string&& payload);
 
 	std::optional<ip::TcpPacket> make_tcp_reply(OpenSocketHandle h, ip::TcpType type, std::string&& payload);
 	std::optional<ip::IpPackage> make_tcp_reply_ip(OpenSocketHandle h, ip::TcpType type, std::string&& payload);

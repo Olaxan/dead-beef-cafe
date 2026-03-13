@@ -35,3 +35,7 @@ struct OpenSocketEntry
 using OpenSocketPair = std::pair<OpenSocketHandle, OpenSocketEntry*>;
 
 using NetCastFn = std::function<void(Uid64, NIC*)>;
+
+using NetReadResult = std::expected<std::string, std::error_condition>;
+using NetReadResultIp = std::expected<ip::IpPackage, std::error_condition>;
+using NetReadResultTcp = std::expected<ip::TcpPacket, std::error_condition>;

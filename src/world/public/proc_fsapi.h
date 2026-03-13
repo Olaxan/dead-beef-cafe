@@ -3,6 +3,7 @@
 #include "proc_types.h"
 #include "filesystem_types.h"
 #include "filepath.h"
+#include "task.h"
 
 #include <cstdint>
 #include <memory>
@@ -31,7 +32,7 @@ public:
 
 	bool check_permission(NodeIdx node, FileAccessFlags mode);
 
-	void close_all();
+	Task<int32_t> close_all();
 
 protected:
 

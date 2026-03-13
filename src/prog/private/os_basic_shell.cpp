@@ -127,7 +127,15 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 		};
 
-		std::string out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
+		auto exp_out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
+
+		if (not exp_out_cmd)
+		{
+			proc.putln("Read failure.");
+			co_return 1;
+		}
+
+		const std::string& out_cmd = *exp_out_cmd;
 
 		if (out_cmd.compare("exit") == 0)
 		{

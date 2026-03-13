@@ -19,6 +19,8 @@
 #include <format>
 #include <cctype>
 
+#include <iso646.h>
+
 
 EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Proc& proc, std::string prefix)
 {
@@ -32,7 +34,11 @@ EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Pro
 
 	while (true)
 	{
-		com::CommandQuery query_in = co_await CmdInput::read_query(proc);
+		auto opt_query = co_await CmdInput::read_query(proc);
+		if (not opt_query)
+			break;
+
+		const com::CommandQuery& query_in = *opt_query;
 		std::string str_in = query_in.command();
 		EditorState::HandlerReturn ret = substate.accept_input(str_in);
 
@@ -166,7 +172,11 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		com::CommandQuery com = co_await CmdInput::read_query(proc);
+		auto exp_com = co_await CmdInput::read_query(proc);
+		if (not exp_com)
+			break;
+
+		const com::CommandQuery& com = *exp_com;
 
 		/* First, update terminal parameters if we're being passed configuration data. */
 		if (com.has_screen_data())

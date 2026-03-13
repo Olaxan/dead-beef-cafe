@@ -63,7 +63,11 @@ ProcessTask Programs::CmdSnake(Proc& proc, std::vector<std::string> args)
 	{
 		while (!rt->stop)
 		{
-			rt->query = co_await CmdInput::read_query(proc);
+			if (auto opt_query = co_await CmdInput::read_query(proc))
+			{
+				rt->query = *opt_query;
+			}
+			else break;
 		}
 		co_return 0;
 	});

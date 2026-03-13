@@ -19,6 +19,7 @@
 #include <memory>
 
 #include <windows.h>
+#include <iso646.h>
 
 constexpr bool test_icmp = false;
 
@@ -170,16 +171,18 @@ EagerTask<int32_t> reader(NetManager* net_mgr, OpenSocketHandle read_socket)
 {
 	while (net_mgr->socket_is_open(read_socket))
 	{
-		std::string str = co_await net_mgr->async_read_socket(read_socket);
+		auto exp_str = co_await net_mgr->async_read_socket(read_socket);
+		if (not exp_str)
+			break;
 
 		com::CommandReply reply;
-		if (reply.ParseFromString(str))
+		if (reply.ParseFromString(*exp_str))
 		{
 			std::cout << reply.reply();
 		}
 		else
 		{
-			std::print(std::cerr, "Parse error: {0}.", str);
+			std::print(std::cerr, "Parse error: {0}.", *exp_str);
 		}
 	}
 	co_return 0;

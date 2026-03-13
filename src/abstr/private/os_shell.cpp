@@ -65,7 +65,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 			{
 				new_proc->set_writer([new_proc, fd = exp_fd.value()](const std::string& line)
 				{
-					new_proc->fs.write(fd, line);
+					std::ignore = new_proc->fs.write(fd, line);
 				});
 			}
 		}

@@ -40,19 +40,34 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
-		OpenSocketEntry* entry = &it->second;
-		
-		// if (auto opt_reply = make_tcp_reply(h, ip::TcpType::Fin, ""))
-		// {
-
-		// }
-
 		return_handle(h);
 		sockets_.erase(it);
 		return {};
 	} 
+	else return std::error_condition{EBADF, std::generic_category()};
+}
 
-	return std::error_condition{EBADF, std::generic_category()};
+Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
+{
+	if (auto it = sockets_.find(h); it != sockets_.end())
+	{
+		OpenSocketEntry* entry = &it->second;
+		
+		if (auto opt_reply = make_tcp_reply_ip(h, ip::TcpType::Fin, {}))
+		{
+			send(std::move(*opt_reply));
+		}
+
+		if (auto opt_query = make_tcp_query_ip(h, ip::TcpType::Fin, {}))
+		{
+			receive(std::move(*opt_query));
+		}
+
+		while (socket_has_data(h));
+
+		co_return close_socket(h);
+	}
+	else co_return std::error_condition{EBADF, std::generic_category()};
 }
 
 std::error_condition NetManager::bind_socket(OpenSocketHandle sock, AddressPair addr)
@@ -100,8 +115,15 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 		
 		while (true)
 		{
-			ip::TcpPacket reply = co_await async_read_socket_tcp(sock);
-			if (reply.type() == ip::TcpType::Ack)
+			auto exp_reply = co_await async_read_socket_tcp(sock);
+
+			if (!exp_reply)
+				break;
+
+			if (exp_reply->type() == ip::TcpType::Fin)
+				break;
+
+			if (exp_reply->type() == ip::TcpType::Ack)
 			{
 				std::println("Received ACK from {}.", dest.addr);
 				file->remote_endpoint = dest;
@@ -119,30 +141,36 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 	return async_connect_socket(sock, {addr, port});
 }
 
-Task<std::string> NetManager::async_read_socket(OpenSocketHandle sock)
+Task<NetReadResult> NetManager::async_read_socket(OpenSocketHandle sock)
 {
-	ip::TcpPacket tcp = co_await async_read_socket_tcp(sock);
-	co_return tcp.payload();
+	if (auto exp_pak = co_await async_read_socket_tcp(sock))
+	{
+		co_return exp_pak->payload();
+	}
+
+	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 }
 
-Task<ip::TcpPacket> NetManager::async_read_socket_tcp(OpenSocketHandle sock)
+Task<NetReadResultTcp> NetManager::async_read_socket_tcp(OpenSocketHandle sock)
 {
-	ip::IpPackage pak = co_await async_read_socket_raw(sock);
-	ip::TcpPacket tcp;
-	if (tcp.ParseFromString(pak.payload()))
-		co_return tcp;
+	if (auto exp_pak = co_await async_read_socket_raw(sock))
+	{
+		ip::TcpPacket tcp;
+		if (tcp.ParseFromString(exp_pak->payload()))
+			co_return tcp;
+	}
 
-	co_return {};
+	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 }
 
-Task<ip::IpPackage> NetManager::async_read_socket_raw(OpenSocketHandle sock)
+Task<NetReadResultIp> NetManager::async_read_socket_raw(OpenSocketHandle sock)
 {
 	if (OpenSocketEntry* file = find_socket(sock))
 	{
 		co_return (co_await file->rx_queue.async_pop());
 	}
 
-	co_return {};
+	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 }
 
 Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string bytes)
@@ -175,7 +203,12 @@ Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_acce
 {
 	while (true)
 	{
-		ip::IpPackage raw = co_await async_read_socket_raw(sock);
+		auto exp_raw = co_await async_read_socket_raw(sock);
+
+		if (!exp_raw)
+			co_return std::unexpected{exp_raw.error()};
+
+		const ip::IpPackage& raw = *exp_raw;
 
 		auto exp_src_addr = Address6::from_bytes(raw.src_ip());		// Remote, them
 		auto exp_dest_addr = Address6::from_bytes(raw.dest_ip()); 	// Local, us
@@ -196,7 +229,7 @@ Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_acce
 		{
 			auto exp_h = create_socket();
 			if (!exp_h)
-				co_return exp_h;
+				co_return std::unexpected{exp_h.error()};
 
 			OpenSocketEntry* acceptor = find_socket(sock);
 			OpenSocketEntry* new_socket = find_socket(exp_h->first);
@@ -384,6 +417,17 @@ bool NetManager::socket_is_open(OpenSocketHandle h) const
 	return (sockets_.contains(h));
 }
 
+bool NetManager::socket_has_data(OpenSocketHandle h) const
+{
+	if (auto it = sockets_.find(h); it != sockets_.end())
+	{
+		const OpenSocketEntry& sock = it->second;
+		bool no_data = (sock.rx_queue.empty() && sock.tx_queue.empty());
+		return !no_data;
+	}
+	else return false;
+}
+
 bool NetManager::create_session(OpenSocketHandle h)
 {
 	if (OpenSocketEntry* file = find_socket(h))
@@ -420,6 +464,48 @@ OpenSocketEntry* NetManager::find_socket(const AddressTuple& tuple)
 		return find_socket(it_h->second);
 
 	return nullptr;
+}
+
+std::optional<ip::TcpPacket> NetManager::make_tcp_query(OpenSocketHandle h, ip::TcpType type, std::string&& payload)
+{
+	OpenSocketEntry* entry = find_socket(h);
+	if (entry == nullptr)
+		return std::nullopt;
+
+	const AddressPair& local = entry->local_endpoint;
+	const AddressPair& remote = entry->remote_endpoint;
+
+	ip::TcpPacket pak;
+	pak.set_dest_port(local.port);
+	pak.set_src_port(remote.port);
+	pak.set_payload(std::move(payload));
+	pak.set_type(type);
+	return pak;
+}
+
+std::optional<ip::IpPackage> NetManager::make_tcp_query_ip(OpenSocketHandle h, ip::TcpType type, std::string&& payload)
+{
+	OpenSocketEntry* entry = find_socket(h);
+	if (entry == nullptr)
+		return std::nullopt;
+		
+	const AddressPair& local = entry->local_endpoint;
+	const AddressPair& remote = entry->remote_endpoint;
+
+	auto opt = make_tcp_query(h, type, std::move(payload));
+	if (not opt)
+		return std::nullopt;
+
+	std::string tcp_str;
+	opt->SerializeToString(&tcp_str);
+
+	ip::IpPackage pak;
+	pak.set_dest_ip(local.addr.raw);
+	pak.set_src_ip(remote.addr.raw);
+	pak.set_protocol(ip::Protocol::TCP);
+	pak.set_payload(std::move(tcp_str));
+
+	return pak;
 }
 
 std::optional<ip::TcpPacket> NetManager::make_tcp_reply(OpenSocketHandle h, ip::TcpType type, std::string&& payload)

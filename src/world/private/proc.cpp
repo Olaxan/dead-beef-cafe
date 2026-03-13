@@ -46,7 +46,7 @@ void Proc::set_reader(ReaderFn&& reader)
 	reader_ = std::move(reader);
 }
 
-Task<std::string> Proc::read(EnvVarAccessMode mode)
+Task<std::expected<std::string, std::error_condition>> Proc::read(EnvVarAccessMode mode)
 {
 	if (reader_)
 		co_return (co_await reader_());
@@ -54,7 +54,7 @@ Task<std::string> Proc::read(EnvVarAccessMode mode)
 	if (host && mode == EnvVarAccessMode::Inherit)
 		co_return (co_await host->read(mode));
 
-	co_return {};
+	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 }
 
 void Proc::set_writer(WriterFn&& writer)
@@ -165,10 +165,11 @@ void Proc::return_descriptor(FileDescriptor fs)
 	returned_descriptors_.emplace(fs);
 }
 
-void Proc::exit()
+Task<int32_t> Proc::exit()
 {
-	fs.close_all();
-	net.close_all();
+	co_await fs.close_all();
+	co_await net.close_all();
+	co_return 0;
 }
 
 int ProcCoutBuf::sync()

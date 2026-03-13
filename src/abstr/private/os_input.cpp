@@ -3,37 +3,44 @@
 #include "proto/query.pb.h"
 
 #include "proc.h"
+#include "proc_types.h"
 #include "net_types.h"
 
 #include <print>
 #include <optional>
 
-EagerTask<com::CommandQuery> CmdInput::read_query(Proc& proc)
+#include <iso646.h>
+
+EagerTask<ReadResultQuery> CmdInput::read_query(Proc& proc)
 {
 	while (true)
 	{
-		std::string str = co_await proc.read();
+		ReadResult str = co_await proc.read();
+		if (not str)
+			co_return std::unexpected{str.error()};
 	
 		com::CommandQuery query;
-		if (query.ParseFromString(str))
-			co_return query;
+		if (not query.ParseFromString(*str))
+			co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
+		
+		co_return query;
 	}
-
-	co_return {};
 }
 
-EagerTask<com::CommandReply> CmdInput::read_reply(Proc& proc)
+EagerTask<ReadResultReply> CmdInput::read_reply(Proc& proc)
 {
 	while (true)
 	{
-		std::string str = co_await proc.read();
+		ReadResult str = co_await proc.read();
+		if (not str)
+			co_return std::unexpected{str.error()};
 	
 		com::CommandReply reply;
-		if (reply.ParseFromString(str))
-			co_return reply;
+		if (not reply.ParseFromString(*str))
+			co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
+		
+		co_return reply;
 	}
-
-	co_return {};
 }
 
 void CmdInput::write_query(Proc& proc, const com::CommandQuery& query)
@@ -50,28 +57,30 @@ void CmdInput::write_reply(Proc& proc, const com::CommandReply& reply)
 	proc.write(out);
 }
 
-EagerTask<std::string> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
+EagerTask<ReadResult> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
 {
 
 	icu::UnicodeString buffer;
 
 	while (true)
 	{
-		std::optional<com::CommandQuery> query = co_await read_query(proc);
+		auto exp_query = co_await read_query(proc);
 
-		if (!query)
+		if (not exp_query)
 		{
 			proc.errln("Failed to establish reader.");
-			co_return {};
+			co_return std::unexpected{exp_query.error()};
 		}
+
+		const com::CommandQuery& query = *exp_query;
 
 		if (callback)
 		{
-			std::invoke(callback, *query);
+			std::invoke(callback, query);
 		}
 
 		/* Next, read the actual command and consider it based on first-byte. */
-		std::string str_in = query->command();
+		std::string str_in = query.command();
 
 		if (str_in.length() == 0)
 			continue;

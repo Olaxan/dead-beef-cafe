@@ -29,6 +29,7 @@ public:
 
 	std::expected<FileDescriptor, std::error_condition> create_socket();
 	std::error_condition close_socket(FileDescriptor sock);
+	Task<std::error_condition> async_close_socket(FileDescriptor fd);
 
 	std::error_condition bind_socket(FileDescriptor sock, AddressPair addr);
 	std::error_condition bind_socket(FileDescriptor sock, Address6 addr, int32_t port);
@@ -38,9 +39,9 @@ public:
 	
 	Task<FileDescriptor> async_accept_socket(FileDescriptor sock);
 
-	Task<std::string> async_read_socket(FileDescriptor sock);
-	Task<ip::TcpPacket> async_read_socket_tcp(FileDescriptor sock);
-	Task<ip::IpPackage> async_read_socket_raw(FileDescriptor sock);
+	Task<NetReadResult> async_read_socket(FileDescriptor sock);
+	Task<NetReadResultTcp> async_read_socket_tcp(FileDescriptor sock);
+	Task<NetReadResultIp> async_read_socket_raw(FileDescriptor sock);
 
 	Task<size_t> async_write_socket(FileDescriptor sock, std::string bytes);
 	
@@ -48,7 +49,7 @@ public:
 
 	bool socket_is_open(FileDescriptor sock) const;
 
-	void close_all();
+	Task<int32_t> close_all();
 
 protected:
 

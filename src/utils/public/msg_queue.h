@@ -73,7 +73,7 @@ public:
         return MessageQueueAwaiter<T>(this);
     }
 
-    bool empty()
+    bool empty() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         return queue_.empty();

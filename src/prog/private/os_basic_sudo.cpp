@@ -54,7 +54,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	while (true)
 	{
 		proc.put("[sudo] password for {}: ", username);
-		std::string password = co_await CmdInput::read_cmd_utf8(proc, pwd_params);
+		std::string password = *(co_await CmdInput::read_cmd_utf8(proc, pwd_params));
 
 		/* Success: we break out of the loop. */
 		if (users->authenticate(username, password)) 

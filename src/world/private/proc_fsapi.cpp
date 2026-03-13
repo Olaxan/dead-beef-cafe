@@ -196,14 +196,17 @@ bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
 	return false;
 }
 
-void ProcFsApi::close_all()
+Task<int32_t> ProcFsApi::close_all()
 {
+	int32_t errc{0};
 	while (!fd_table_.empty())
 	{
 		auto first = fd_table_.begin();
 		if (auto exp_close = close(first->first); exp_close.value() != 0)
 		{
 			owner_->errln("proc: Failed to close file: {}.", exp_close.message());
+			errc++;
 		}
 	}
+	co_return errc;
 }

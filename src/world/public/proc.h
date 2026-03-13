@@ -24,13 +24,11 @@
 #include <unordered_set>
 #include <sstream>
 #include <ostream>
+#include <expected>
+#include <system_error>
 
 class Proc;
 class OS;
-
-using WriterFn = std::move_only_function<void(const std::string&)>;
-using ReaderFn = std::move_only_function<Task<std::string>(void)>;
-using InvokeFn = std::function<void(Proc*)>;
 
 enum class EnvVarAccessMode
 {
@@ -121,7 +119,7 @@ public:
 
 	/* Try to read something from a reader function, if it has been provided. 
 	The data type must be specified and match, or an exception will be raised. */
-	Task<std::string> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
+	Task<ReadResult> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
 
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
@@ -219,7 +217,7 @@ public:
 
 protected:
 
-	void exit();
+	Task<int32_t> exit();
 
 public:
 

@@ -86,7 +86,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 		FileDescriptor con = co_await netapi.async_accept_socket(fd);
 		proc.putln("Connection established ({}).", con);
 	
-		auto sess_reader = [&netapi, con]() -> Task<std::string>
+		auto sess_reader = [&netapi, con]() -> Task<ReadResult>
 		{
 			return netapi.async_read_socket(con);
 		};
