@@ -58,10 +58,6 @@ public:
 	void receive(ip::IpPackage&& package);
 	void receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
 
-	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
-	void handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
-	void handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
-
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
 
@@ -80,10 +76,17 @@ public:
 	void link_broadcast(NetCastFn unicast_fn);
 
 protected:
+
+	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
+	void handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
+	void handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
 	
 	OpenSocketEntry* find_socket(OpenSocketHandle sock_fd);
 	OpenSocketEntry* find_socket(const AddressPair& tuple);
 	OpenSocketEntry* find_socket(const AddressTuple& tuple);
+
+	std::optional<ip::TcpPacket> make_tcp_reply(OpenSocketHandle h, ip::TcpType type, std::string&& payload);
+	std::optional<ip::IpPackage> make_tcp_reply_ip(OpenSocketHandle h, ip::TcpType type, std::string&& payload);
 
 	OpenSocketHandle get_handle();
 	void return_handle(OpenSocketHandle h);

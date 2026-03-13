@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <tuple>
 
+#include <iso646.h>
+
 NetManager::NetManager(OS* owner) 
 : os_(owner), nic_(owner->get_owner().get_device<NIC>()) { }
 
@@ -39,11 +41,16 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		OpenSocketEntry* entry = &it->second;
-		//entry->rx_queue.broadcast_clear()
+		
+		// if (auto opt_reply = make_tcp_reply(h, ip::TcpType::Fin, ""))
+		// {
+
+		// }
+
 		return_handle(h);
 		sockets_.erase(it);
 		return {};
-	}
+	} 
 
 	return std::error_condition{EBADF, std::generic_category()};
 }
@@ -145,26 +152,12 @@ Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string b
 		
 	if (OpenSocketEntry* file = find_socket(sock))
 	{
-		ip::TcpPacket tcp;
-		tcp.set_dest_port(file->remote_endpoint.port);
-		tcp.set_src_port(file->local_endpoint.port);
-		tcp.set_type(ip::TcpType::Data);
-		tcp.set_payload(bytes);
-
-		std::string tcp_data;
-		if (!tcp.SerializeToString(&tcp_data))
-			co_return 0;
-
-		ip::IpPackage pak;
-		pak.set_dest_ip(file->remote_endpoint.addr.raw);
-		pak.set_src_ip(file->local_endpoint.addr.raw);
-		pak.set_protocol(ip::Protocol::TCP);
-		pak.set_payload(tcp_data);
-
-		size_t tx_size = pak.ByteSizeLong();
-		send(std::move(pak));
-
-		co_return tx_size;
+		if (auto pak = make_tcp_reply_ip(sock, ip::TcpType::Data, std::move(bytes)))
+		{
+			size_t tx_size = pak->ByteSizeLong();
+			send(std::move(*pak));
+			co_return tx_size;
+		}
 	}
 	co_return 0;
 }
@@ -211,21 +204,9 @@ Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_acce
 			new_socket->remote_endpoint = { src_addr, src_port };
 			create_session(exp_h->first);
 
-			ip::IpPackage reply;
-			reply.set_dest_ip(raw.src_ip());
-			reply.set_src_ip(raw.dest_ip());
-			reply.set_protocol(ip::Protocol::TCP);
-
-			ip::TcpPacket ack;
-			ack.set_dest_port(syn.src_port());
-			ack.set_src_port(syn.dest_port());
-			ack.set_type(ip::TcpType::Ack);
-
-			std::string ack_data;
-			if (ack.SerializeToString(&ack_data))
+			if (auto opt_reply = make_tcp_reply_ip(exp_h->first, ip::TcpType::Ack, ""))
 			{
-				reply.set_payload(ack_data);
-				send(std::move(reply));
+				send(std::move(*opt_reply));
 				co_return exp_h.value();
 			}
 		}
@@ -439,6 +420,48 @@ OpenSocketEntry* NetManager::find_socket(const AddressTuple& tuple)
 		return find_socket(it_h->second);
 
 	return nullptr;
+}
+
+std::optional<ip::TcpPacket> NetManager::make_tcp_reply(OpenSocketHandle h, ip::TcpType type, std::string&& payload)
+{
+	OpenSocketEntry* entry = find_socket(h);
+	if (entry == nullptr)
+		return std::nullopt;
+
+	const AddressPair& local = entry->local_endpoint;
+	const AddressPair& remote = entry->remote_endpoint;
+
+	ip::TcpPacket pak;
+	pak.set_dest_port(remote.port);
+	pak.set_src_port(local.port);
+	pak.set_payload(std::move(payload));
+	pak.set_type(type);
+	return pak;
+}
+
+std::optional<ip::IpPackage> NetManager::make_tcp_reply_ip(OpenSocketHandle h, ip::TcpType type, std::string&& payload)
+{
+	OpenSocketEntry* entry = find_socket(h);
+	if (entry == nullptr)
+		return std::nullopt;
+		
+	const AddressPair& local = entry->local_endpoint;
+	const AddressPair& remote = entry->remote_endpoint;
+
+	auto opt = make_tcp_reply(h, type, std::move(payload));
+	if (not opt)
+		return std::nullopt;
+
+	std::string tcp_str;
+	opt->SerializeToString(&tcp_str);
+
+	ip::IpPackage pak;
+	pak.set_dest_ip(remote.addr.raw);
+	pak.set_src_ip(local.addr.raw);
+	pak.set_protocol(ip::Protocol::TCP);
+	pak.set_payload(std::move(tcp_str));
+
+	return pak;
 }
 
 OpenSocketHandle NetManager::get_handle()
