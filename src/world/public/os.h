@@ -83,6 +83,7 @@ public:
 	};
 
 	Proc* create_process(CreateProcessParams&& params = {});
+	void kill_process(int32_t pid);
 	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params = {});
 	void get_processes(std::function<void(const Proc&)> reader) const;
 

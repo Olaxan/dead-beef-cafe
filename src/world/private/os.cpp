@@ -124,6 +124,10 @@ Proc* OS::create_process(CreateProcessParams&& params)
     return proc;
 }
 
+void OS::kill_process(int32_t pid)
+{
+}
+
 EagerTask<int32_t> OS::run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params)
 {
     Proc* proc = create_process(std::forward<CreateProcessParams>(params));

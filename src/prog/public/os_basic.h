@@ -20,6 +20,7 @@ namespace Programs
 	ProcessTask CmdShell(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdSSH(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdSudo(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdKill(Proc& proc, std::vector<std::string> args);
 
 	/* User management task */
 	ProcessTask CmdLogin(Proc& proc, std::vector<std::string> args);
