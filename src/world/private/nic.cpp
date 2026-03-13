@@ -19,7 +19,7 @@ void NIC::set_ip(const std::string& new_ip)
 void NIC::on_linked(LinkServer* links, ILinkable* other)
 {
 	assert(other);
-	std::println("Linked {} to {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
+	//std::println("Linked {} to {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
 
 	NIC* other_nic{static_cast<NIC*>(other)};
 	Uid64 other_mac{reinterpret_cast<uint64_t>(other_nic)};
@@ -30,7 +30,8 @@ void NIC::on_linked(LinkServer* links, ILinkable* other)
 
 void NIC::on_unlinked(LinkServer* links, ILinkable* other)
 {
-	std::println("Unlinked {} from {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
+	assert(other);
+	//std::println("Unlinked {} from {}.", Uid64{reinterpret_cast<uint64_t>(this)}, Uid64{reinterpret_cast<uint64_t>(other)});
 
 	NIC* other_nic{static_cast<NIC*>(other)};
 	Uid64 other_mac{reinterpret_cast<uint64_t>(other_nic)};

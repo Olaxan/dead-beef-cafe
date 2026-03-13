@@ -66,18 +66,18 @@ public:
 	NetMessageAwaiter async_read_tx();
 
 	Address6 get_primary_ip() const;
-
 	bool socket_is_open(OpenSocketHandle fd) const;
 
 	bool create_session(OpenSocketHandle fd);
 
-	LinkUpdateAwaiter async_await_link();
 	void arp_request();
 	void arp_request(Uid64 mac);
+	std::optional<Uid64> arp_lookup(Address6 addr);
 	
+	LinkUpdateAwaiter async_await_link();
+
 	void link_unicast(Uid64 mac, NetCastFn unicast_fn);
 	void link_broadcast(NetCastFn unicast_fn);
-	std::optional<Uid64> arp_lookup(Address6 addr);
 
 protected:
 	

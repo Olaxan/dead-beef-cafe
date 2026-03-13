@@ -51,7 +51,7 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 std::error_condition NetManager::bind_socket(OpenSocketHandle sock, AddressPair addr)
 {
 	if (bindings_.contains(addr))
-		return std::error_condition{EALREADY, std::generic_category()};
+		return std::error_condition{EADDRINUSE, std::generic_category()};
 
 	bindings_[addr] = sock;
 

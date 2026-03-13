@@ -69,9 +69,9 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 
 	FileDescriptor fd = *exp_sock;
 
-	if (netapi.bind_socket(fd, {local_ip, 22}))
+	if (auto bind_err = netapi.bind_socket(fd, {local_ip, 22}))
 	{
-		proc.errln("Failed to bind socket 22 for reading.");
+		proc.errln("Failed to bind socket 22 for reading: {}.", bind_err.message());
 		co_return 1;
 	}
 
