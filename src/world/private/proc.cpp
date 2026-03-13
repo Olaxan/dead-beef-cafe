@@ -57,9 +57,9 @@ Task<std::string> Proc::read(EnvVarAccessMode mode)
 	co_return {};
 }
 
-void Proc::set_writer(WriterFn writer)
+void Proc::set_writer(WriterFn&& writer)
 {
-	writer_ = writer; 
+	writer_ = std::move(writer); 
 }
 
 bool Proc::write(const std::string& msg)

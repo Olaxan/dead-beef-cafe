@@ -4,6 +4,7 @@
 #include "addr.h"
 #include "proc_types.h"
 #include "net_types.h"
+#include "filesystem_types.h"
 
 #include "proto/ip_packet.pb.h"
 #include "proto/tcp_packet.pb.h"

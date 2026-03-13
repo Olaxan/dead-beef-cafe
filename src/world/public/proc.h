@@ -28,7 +28,7 @@
 class Proc;
 class OS;
 
-using WriterFn = std::function<void(const std::string&)>;
+using WriterFn = std::move_only_function<void(const std::string&)>;
 using ReaderFn = std::move_only_function<Task<std::string>(void)>;
 using InvokeFn = std::function<void(Proc*)>;
 
@@ -127,7 +127,7 @@ public:
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 
 	/* Register a writer of a certain type, to be used in put/write function calls instead of standard out. */
-    void set_writer(WriterFn writer);
+    void set_writer(WriterFn&& writer);
 
 	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
     bool write(const std::string& msg);

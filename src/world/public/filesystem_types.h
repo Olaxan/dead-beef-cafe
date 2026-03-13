@@ -9,6 +9,8 @@ class File;
 class FileSystem;
 class FilePath;
 
+using FileDescriptor = int64_t;
+
 enum class FileSystemError : uint32_t
 {
 	Success = 0,
