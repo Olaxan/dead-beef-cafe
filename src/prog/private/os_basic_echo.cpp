@@ -10,6 +10,11 @@
 
 ProcessTask Programs::CmdEcho(Proc& proc, std::vector<std::string> args)
 {
-	proc.putln("echo: {0}", args);
+	auto str = args
+	| std::views::drop(1)
+	| std::views::join_with(' ')
+	| std::ranges::to<std::string>();
+
+	proc.putln("{}", str);
 	co_return 0;
 }
