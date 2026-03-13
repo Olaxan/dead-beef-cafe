@@ -61,7 +61,7 @@ ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
 	proc.putln("SSH service started.");
 
 	auto exp_sock = netapi.create_socket();
-	if (!exp_sock)
+	if (not exp_sock)
 	{
 		proc.errln("Failed to open socket: {}.", exp_sock.error().message());
 		co_return 2;
