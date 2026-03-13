@@ -74,6 +74,9 @@ public:
 	LinkUpdateAwaiter async_await_link();
 	void arp_request();
 	void arp_request(Uid64 mac);
+	
+	void link_unicast(Uid64 mac, NetCastFn unicast_fn);
+	void link_broadcast(NetCastFn unicast_fn);
 	std::optional<Uid64> arp_lookup(Address6 addr);
 
 protected:

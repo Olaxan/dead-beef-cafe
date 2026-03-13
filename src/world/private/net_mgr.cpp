@@ -479,6 +479,16 @@ void NetManager::arp_request(Uid64 mac)
 	});
 }
 
+void NetManager::link_unicast(Uid64 mac, NetCastFn unicast_fn)
+{
+	nic_->unicast(mac, std::move(unicast_fn));
+}
+
+void NetManager::link_broadcast(NetCastFn unicast_fn)
+{
+	nic_->broadcast(std::move(unicast_fn));
+}
+
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr)
 {
 	if (auto it = arp_cache_.find(addr); it != arp_cache_.end())

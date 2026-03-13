@@ -33,3 +33,5 @@ struct OpenSocketEntry
 };
 
 using OpenSocketPair = std::pair<OpenSocketHandle, OpenSocketEntry*>;
+
+using NetCastFn = std::function<void(Uid64, NIC*)>;

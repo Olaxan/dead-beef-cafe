@@ -14,8 +14,6 @@
 #include <vector>
 
 
-using NetCastFn = std::function<void(Uid64, class NIC*)>;
-
 class NIC : public Device, public IEndpoint, public ILinkable
 {
 public:
