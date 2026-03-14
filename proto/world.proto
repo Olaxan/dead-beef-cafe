@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package world;
+
+import "host.proto";
+
+message World
+{
+	repeated Host hosts = 1;
+}

@@ -41,6 +41,11 @@ std::stringstream File::get_stream() const
 	return std::stringstream(content_);
 }
 
+const std::string& File::get_string() const
+{
+	return content_;
+}
+
 const ProcessFn& File::get_executable() const
 {
 	return executable_;

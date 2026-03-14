@@ -15,7 +15,7 @@
 #include <optional>
 
 ProcSysApi::ProcSysApi(Proc* owner)
-: owner_(*owner) { }
+: proc(*owner) { }
 
 ProcSysApi::~ProcSysApi() = default;
 

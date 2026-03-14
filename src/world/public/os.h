@@ -24,6 +24,8 @@ class FileSystem;
 class Host;
 class World;
 
+namespace world { class Host; }
+
 class OS
 {
 public:
@@ -124,6 +126,8 @@ public:
 	[[nodiscard]] TimerAwaiter wait(float seconds);
 	void schedule(float seconds, SchedulerFn callback);
 
+	bool serialize(world::Host* to);
+	bool deserialize(const world::Host& from);
 
 protected:
 

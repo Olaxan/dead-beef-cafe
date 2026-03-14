@@ -172,7 +172,9 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/usr/bin/edit", Programs::CmdEdit},
 		{"/lib/modules/kernel/drivers/cpu", Programs::InitCpu},
 		{"/lib/modules/kernel/drivers/net", Programs::InitNet},
-		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
+		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk},
+		{"/usr/bin/save", Programs::CmdSave},
+		{"/usr/bin/load", Programs::CmdLoad}
 	};
 
 	for (auto& fn : os_progs)

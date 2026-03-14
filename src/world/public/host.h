@@ -7,6 +7,8 @@
 #include <string>
 #include <memory>
 
+namespace world { class Host; }
+
 struct Command;
 
 class OS;
@@ -65,6 +67,9 @@ public:
 	}
 
 	void set_os(std::unique_ptr<OS>&& os);
+
+	bool serialize(world::Host* to);
+	bool deserialize(const world::Host& from);
 
 private:
 	

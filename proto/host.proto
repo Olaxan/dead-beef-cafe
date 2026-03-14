@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package world;
+
+import "files.proto";
+
+message Host
+{
+	uint64 uid = 1;
+	string hostname = 2;
+	bytes addr = 3;
+	FileSystem files = 4;
+}

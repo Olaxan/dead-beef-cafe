@@ -6,6 +6,9 @@
 #include "nic.h"
 #include "disk.h"
 
+#include "proto/host.pb.h"
+#include "proto/files.pb.h"
+
 #include <sstream>
 #include <string>
 #include <coroutine>
@@ -186,4 +189,28 @@ TimerAwaiter OS::wait(float seconds)
 void OS::schedule(float seconds, SchedulerFn callback)
 {
     get_world().get_timer_manager().set_timer(seconds, callback);
+}
+
+bool OS::serialize(world::Host* to)
+{
+    to->set_hostname(get_hostname());
+    to->set_addr(net_.get_primary_ip().raw);
+
+	world::FileSystem* to_fs = to->mutable_files();
+    if (FileSystem* fs = get_filesystem())
+        fs->serialize(to_fs);
+
+	return true;
+}
+
+bool OS::deserialize(const world::Host& from)
+{
+    hostname_ = from.hostname();
+    // Set Ip
+
+    const world::FileSystem& from_fs = from.files();
+    if (FileSystem* fs = get_filesystem())
+        fs->deserialize(from_fs);
+
+	return true;
 }

@@ -36,6 +36,7 @@ public:
 	
 	std::string_view get_view() const;
 	std::stringstream get_stream() const;
+	const std::string& get_string() const;
 	const ProcessFn& get_executable() const;
 
 protected:

@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package world;
+
+message File
+{
+	string path = 1;
+	string content = 2;
+	uint64 modified = 3;
+	int32 owner_uid = 4;
+	int32 owner_gid = 5;
+	uint32 perm_owner = 6;
+	uint32 perm_group = 7;
+	uint32 perm_users = 8;
+	uint32 extra = 9;
+}
+
+message FileSystem
+{
+	repeated File files = 1;
+}

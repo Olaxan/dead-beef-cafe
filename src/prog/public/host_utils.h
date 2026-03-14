@@ -9,6 +9,7 @@
 #include "filesystem.h"
 #include "cpu.h"
 #include "nic.h"
+#include "uuid.h"
 
 #include <concepts>
 
@@ -32,8 +33,11 @@ namespace HostUtils
         NIC& my_nic = skel.create_device<NIC>(100.f);
         FileSystem& fs = my_disk.create_fs();
 
+		std::size_t name_hash = std::hash<std::string>{}(hostname);
+		Uid64 id{static_cast<uint64_t>(name_hash)};
+
         HostUtils::create_os<T_OS>(skel);
 
-		return world.add_host(std::move(ptr));
+		return world.add_host(id, std::move(ptr));
 	}
 }

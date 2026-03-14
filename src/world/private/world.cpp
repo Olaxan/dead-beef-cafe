@@ -41,7 +41,39 @@ void World::launch()
 	});
 }
 
-Host* World::add_host(std::unique_ptr<Host>&& new_host)
+Host* World::add_host(Uid64 id, std::unique_ptr<Host>&& new_host)
 {
-	return hosts_.emplace_back(std::move(new_host)).get();
+	auto [it, success] = hosts_.emplace(id, std::move(new_host));
+	return (success) ? it->second.get() : nullptr;
+}
+
+bool World::serialize(world::World* to)
+{
+	for (auto& [id, host] : hosts_)
+	{
+		world::Host* ar = to->add_hosts();
+		ar->set_uid(id.num);
+		host->serialize(ar);
+	}
+
+	return true;
+}
+
+bool World::deserialize(const world::World* from)
+{
+	for (auto&& ar : from->hosts())
+	{
+		Uid64 id = ar.uid();
+		if (auto it = hosts_.find(id); it != hosts_.end())
+		{
+			Host* host = it->second.get();
+			host->deserialize(ar);
+		}
+		else
+		{
+			// ... Create host
+		}
+	}
+
+	return true;
 }

@@ -5,6 +5,9 @@
 #include "msg_queue.h"
 #include "link_srv.h"
 #include "host.h"
+#include "uuid.h"
+
+#include "proto/world.pb.h"
 
 #include <memory>
 #include <vector>
@@ -31,7 +34,10 @@ public:
     TimerManager& get_timer_manager() { return timers_; }
     IpManager& get_ip_manager() { return ip_; }
 
-    Host* add_host(std::unique_ptr<Host>&& new_host);
+    Host* add_host(Uid64 id, std::unique_ptr<Host>&& new_host);
+
+    bool serialize(world::World* to);
+    bool deserialize(const world::World* from);
 
 private:
 
@@ -40,7 +46,7 @@ private:
     bool run_{true};
     std::jthread worker_{};
     std::chrono::steady_clock::time_point last_update_{};
-    std::vector<std::unique_ptr<Host>> hosts_{};
+    std::unordered_map<Uid64, std::unique_ptr<Host>> hosts_{};
 
     TimerManager timers_{};
     IpManager ip_{};

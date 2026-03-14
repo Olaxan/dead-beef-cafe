@@ -16,6 +16,8 @@
 
 struct SessionData;
 
+namespace world { class FileSystem; }
+
 class FileSystem
 {
 public:
@@ -204,6 +206,9 @@ public:
 	std::expected<size_t, std::error_condition> write(OpenFileHandle h, std::string data);
 	std::expected<std::string_view, std::error_condition> read(OpenFileHandle h, size_t bytes);
 	std::expected<File*, std::error_condition> get(OpenFileHandle h);
+
+	bool serialize(world::FileSystem* to) const;
+	bool deserialize(const world::FileSystem& from);
 
 
 protected:

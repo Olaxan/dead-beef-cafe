@@ -8,6 +8,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "proto/files.pb.h"
+
 #include <iso646.h>
 
 /* --- File System --- */
@@ -737,6 +739,65 @@ std::expected<File*, std::error_condition> FileSystem::get(OpenFileHandle h)
 	}
 
 	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
+}
+
+bool FileSystem::serialize(world::FileSystem* to) const
+{
+	for (auto&& [h, file] : files_)
+	{
+		const FileMeta& meta = metadata_.at(h);
+		const FilePath& path = fid_to_path_.at(h);
+
+		world::File* arr = to->add_files();
+		arr->set_content(file->get_string());
+		arr->set_path(path.get_string());
+
+		arr->set_modified(meta.modified); 								//uint64_t modified{0};
+		arr->set_owner_uid(meta.owner_uid); 							//int32_t owner_uid{0};
+		arr->set_owner_gid(meta.owner_gid); 							//int32_t owner_gid{0};
+		arr->set_perm_owner(static_cast<uint32_t>(meta.perm_owner)); 	//FilePermissionTriad perm_owner{7};
+		arr->set_perm_group(static_cast<uint32_t>(meta.perm_group)); 	//FilePermissionTriad perm_group{0};
+		arr->set_perm_users(static_cast<uint32_t>(meta.perm_users)); 	//FilePermissionTriad perm_users{0};
+		arr->set_extra(static_cast<uint32_t>(meta.extra)); 				//ExtraFileFlags extra{};
+	}
+
+	return true;
+}
+
+bool FileSystem::deserialize(const world::FileSystem& from)
+{
+	for (auto&& file : from.files())
+	{
+		FileMeta ar_meta
+		{
+			.modified = file.modified(),
+			.owner_uid = file.owner_uid(),
+			.owner_gid = file.owner_gid(),
+			.perm_owner = static_cast<FilePermissionTriad>(file.perm_owner()),
+			.perm_group = static_cast<FilePermissionTriad>(file.perm_group()),
+			.perm_users = static_cast<FilePermissionTriad>(file.perm_users()),
+			.extra = static_cast<ExtraFileFlags>(file.extra())
+		};
+
+		FilePath path{file.path()};
+		if (auto it = path_to_fid_.find(path); it != path_to_fid_.end())
+		{
+			metadata_[it->second] = ar_meta;
+		}
+		else
+		{
+			CreateFileParams params
+			{
+				.recurse = true,
+				.meta = ar_meta,
+				.content = file.content(),
+			};
+
+			create_file(path, std::move(params));
+		}
+	}
+
+	return true;
 }
 
 OpenFileHandle FileSystem::get_handle()

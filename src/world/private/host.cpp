@@ -11,6 +11,8 @@
 #include "nic.h"
 #include "os.h"
 
+#include "proto/host.pb.h"
+
 #include <optional>
 #include <sstream>
 #include <string>
@@ -62,4 +64,14 @@ bool Host::shutdown_host()
 void Host::set_os(std::unique_ptr<OS>&& os)
 {
 	os_ = std::move(os);
+}
+
+bool Host::serialize(world::Host* to)
+{
+	return os_->serialize(to);
+}
+
+bool Host::deserialize(const world::Host& from)
+{
+	return os_->deserialize(from);
 }
