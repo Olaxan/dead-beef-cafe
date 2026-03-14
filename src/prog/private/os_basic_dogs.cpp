@@ -1,264 +1,52 @@
 #include "os_basic.h"
 
-#include <vector>
+#include "filesystem.h"
+#include "users_mgr.h"
+
+#include "CLI/CLI.hpp"
+
 #include <string>
+#include <vector>
+#include <print>
 
 ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 {
-	std::vector<std::string> dog_lines = 
-	{
-		ESC "[2J",
-		ESC "[1;25H          __ ",
-		ESC "[2;25H        _/ o\\__,",
-		ESC "[3;25H       /   ____/",
-		ESC "[4;25H      /   /",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H \\_/   /---\\\\-/ o\\__",
-		ESC "[7;25H    \\ |=  ___  ____/  ",
-		ESC "[8;25H    | /| /   ||",
-		ESC "[9;25H    ||_||    ||_",
-		ESC "[10;25H ~~~~~~~~~~~~~~~~~~~~~~~~~",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                          ",
-		ESC "[2;25H        _/ -\\__",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H     /   /\\\\   __",
-		ESC "[6;25H  \\_/   /--\\\\-/ O\\__ ",
-		ESC "[7;25H    |  /  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[5;25H    _-   /\\\\   __",
-		ESC "[6;25H  _/   /---\\\\-/ o\\__",
-		ESC "[7;25H /  \\ |=  ___  ____/  ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                          ",
-		ESC "[20;25H                                                        ",
-		ESC "[20;25H                   ",
-		ESC "[2;25H        _/ .\\__,  Arrrgh",
-		ESC "[3;25H       /   ____/    _/",
-		ESC "[4;25H      /   /",
-		ESC "[5;25H     /   /\\\\   __   ",
-		ESC "[6;25H  \\_/   /--\\\\-/ *\\__  Woof.",
-		ESC "[7;25H    |  /  ___  ____/  _/ ",
-		ESC "[21;25H",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[6;25H  \\",
-		ESC "[7;25H   ",
-		ESC "[20;25H                                                        ",
-		ESC "[6;25H   ",
-		ESC "[7;25H  /",
-		ESC "[21;25H"
-	};
-
 	OS& os = *proc.owning_os;
+	FileSystem* fs = proc.owning_os->get_filesystem();
+	FilePath pwd(proc.get_var("PWD"));
+
+	if (fs == nullptr)
+	{
+		proc.errln("No file system.");
+		co_return 2;
+	}
+
+	CLI::App app{"Watch VT100 animations straight in your terminal!"};
+	app.allow_windows_style_options(false);
+
+	struct RmArgs
+	{
+		FilePath path{};
+		float delay{0.05f};
+	} params{};
+
+
+	app.add_option("-p,--path,path", params.path, "The file to run (full or relative paths)")->required();
+	app.add_option("-d", params.delay, "The time to wait per count")->capture_default_str();
+
+	//app.add_flag("-r,--recurse", params.recurse, "Delete files recursively");
+
+	try
+	{
+		std::ranges::reverse(args);
+		args.pop_back();
+        app.parse(std::move(args));
+    }
+	catch(const CLI::ParseError& e)
+	{
+		int res = app.exit(e, proc.s_out, proc.s_err);
+        co_return res;
+    }
 
 	int32_t width = proc.get_var<int32_t>("TERM_W");
 	int32_t height = proc.get_var<int32_t>("TERM_H");
@@ -269,6 +57,9 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
+	if (params.path.is_relative())
+		params.path.make_absolute(pwd);
+
 	com::CommandReply begin_msg;
 	begin_msg.set_reply(
 		BEGIN_ALT_SCREEN_BUFFER 
@@ -276,19 +67,36 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 		CLEAR_SCREEN
 		HIDE_CURSOR);
 
-	proc.write(begin_msg);
-	
-	for (const std::string& line : dog_lines)
-	{
-		co_await os.wait(0.1f);
-		proc.put("{}", line);
-	}
-
 	com::CommandReply end_msg;
 	end_msg.set_reply(
 		END_ALT_SCREEN_BUFFER
 		SHOW_CURSOR 
 		"Dogs finished...\n");
+
+	auto exp_fd = proc.fs.open(params.path, FileAccessFlags::Read);
+	if (not exp_fd)
+	{
+		proc.errln("Failed to open file: {}.", exp_fd.error().message());
+		co_return 1;
+	}
+
+	auto exp_read = proc.fs.read(*exp_fd);
+	if (not exp_read)
+	{
+		proc.errln("Failed to read from file: {}.", exp_read.error().message());
+		co_return 1;
+	}
+
+	/* Valid read, begin program here: */
+	proc.write(begin_msg);
+
+	auto dog_lines = std::views::split(*exp_read, '\n');
+	
+	for (auto&& line : dog_lines)
+	{
+		co_await os.wait(params.delay);
+		proc.put("{}", std::string_view(line));
+	}
 
 	proc.write(end_msg);
 

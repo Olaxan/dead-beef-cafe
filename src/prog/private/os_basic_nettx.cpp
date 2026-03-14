@@ -57,7 +57,6 @@ entry:
 
 				if (dest_addr == local_addr)
 				{
-					proc.putln("Received {} bytes (dest. {}).", packet.ByteSizeLong(), dest_addr);
 					net->receive(std::move(packet));
 					continue;
 				}
@@ -66,7 +65,6 @@ entry:
 				{
 					if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 					{
-						proc.putln("Transmitting {} bytes (dest. {})...", bytes, dest_addr);
 						net->send(std::move(packet), *arp_entry);
 						goto entry;
 					}

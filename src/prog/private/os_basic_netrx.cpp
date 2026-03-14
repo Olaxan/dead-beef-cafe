@@ -59,12 +59,10 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 			if (dest_ip == local_ip)
 			{
-				proc.putln("Receiving {} bytes (dest. {})...", packet_size, dest_ip);
 				net->receive(std::move(packet), src_ip, dest_ip);
 			}
 			else
 			{
-				proc.putln("Forwarding {} bytes (dest. {})...", packet_size, dest_ip);
 				net->send(std::move(packet));
 			}
 		}
