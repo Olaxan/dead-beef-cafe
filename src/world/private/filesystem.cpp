@@ -783,6 +783,9 @@ bool FileSystem::deserialize(const world::FileSystem& from)
 		if (auto it = path_to_fid_.find(path); it != path_to_fid_.end())
 		{
 			metadata_[it->second] = ar_meta;
+			File* f = find(it->second);
+			assert(f);
+			f->write(file.content());
 		}
 		else
 		{

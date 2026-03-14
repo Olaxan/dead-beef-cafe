@@ -6,6 +6,8 @@
 #include <coroutine>
 #include <vector>
 
+#include <iso646.h>
+
 namespace Programs
 {
 	/* Regular tasks */
