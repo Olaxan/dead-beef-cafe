@@ -9,6 +9,17 @@
 #include <vector>
 #include <print>
 
+auto chunk_by_size(std::string_view sv, std::size_t chunk_size) 
+{
+    auto count = (sv.size() + chunk_size - 1) / chunk_size;
+
+    return std::views::iota(std::size_t{0}, count)
+	| std::views::transform([=](std::size_t i)
+	{
+		return sv.substr(i * chunk_size, chunk_size); 
+	});
+}
+
 ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
@@ -24,15 +35,23 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 	CLI::App app{"Watch VT100 animations straight in your terminal!"};
 	app.allow_windows_style_options(false);
 
-	struct RmArgs
+	struct DogsArgs
 	{
 		FilePath path{};
-		float delay{0.05f};
+		float delay{0};
+		float framerate{20.f};
+		float hold{2.f};
+		std::size_t chunk{0};
 	} params{};
 
 
 	app.add_option("-p,--path,path", params.path, "The file to run (full or relative paths)")->required();
-	app.add_option("-d", params.delay, "The time to wait per count")->capture_default_str();
+
+	auto framerate = app.add_option("-r", params.framerate, "The framerate of the app")->capture_default_str();
+	app.add_option("-d", params.delay, "The time to wait per frame")->excludes(framerate);
+
+	app.add_option("-w", params.hold, "The time to hold on the last frame")->capture_default_str();
+	app.add_option("-s", params.chunk, "Chunk the string based on a fixed line length instead");
 
 	//app.add_flag("-r,--recurse", params.recurse, "Delete files recursively");
 
@@ -87,17 +106,41 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
+	if (params.framerate == 0 && params.delay == 0)
+	{
+		proc.errln("You need to set a framerate above 0!");
+		co_return 1;
+	}
+
 	/* Valid read, begin program here: */
 	proc.write(begin_msg);
 
-	auto dog_lines = std::views::split(*exp_read, '\n');
-	
-	for (auto&& line : dog_lines)
+	float actual_delay = std::invoke([&]()
 	{
-		co_await os.wait(params.delay);
-		proc.put("{}", std::string_view(line));
+		if (params.delay > 0)
+			return params.delay;
+
+		return 1.f / params.framerate;
+	});
+
+	if (params.chunk > 0)
+	{
+		for (auto&& chunk : chunk_by_size(*exp_read, params.chunk))
+		{
+			co_await os.wait(actual_delay);
+        	proc.put("{}", std::string_view(chunk));
+    	}
+	}
+	else
+	{
+		for (auto&& line : std::views::split(*exp_read, '\n'))
+		{
+			co_await os.wait(actual_delay);
+			proc.put("{}", std::string_view(line));
+		}
 	}
 
+	co_await proc.wait(params.hold);
 	proc.write(end_msg);
 
 	co_return 0;
