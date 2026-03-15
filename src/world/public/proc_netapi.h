@@ -48,6 +48,7 @@ public:
 	int32_t listen(FileDescriptor sock);
 
 	bool socket_is_open(FileDescriptor sock) const;
+	Address6 get_primary_ip() const;
 
 	void close_all();
 

@@ -115,14 +115,14 @@ Proc* OS::create_process(CreateProcessParams&& params)
     {
         Proc* leader = ihost->second.get();
         proc->set_leader(leader);
-        std::println("Created process {} (uid {}, gid {}) under {} on {}.", 
-            pid, proc->get_uid(), proc->get_gid(), ihost->first, (int64_t)this);
+        // std::println("Created process {} (uid {}, gid {}) under {} on {}.", 
+        //     pid, proc->get_uid(), proc->get_gid(), ihost->first, (int64_t)this);
     }
-    else
-    {
-        std::println("Created process {} (uid {}, gid {}) on {}.", 
-            pid, proc->get_uid(), proc->get_gid(), (int64_t)this);
-    }
+    // else
+    // {
+    //     std::println("Created process {} (uid {}, gid {}) on {}.", 
+    //         pid, proc->get_uid(), proc->get_gid(), (int64_t)this);
+    // }
 
     return proc;
 }

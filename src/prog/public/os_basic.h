@@ -20,9 +20,10 @@ namespace Programs
 	ProcessTask CmdBoot(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdShutdown(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdShell(Proc& proc, std::vector<std::string> args);
-	ProcessTask CmdSSH(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdSudo(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdKill(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdSshServer(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdSshClient(Proc& proc, std::vector<std::string> args);
 
 	/* User management task */
 	ProcessTask CmdLogin(Proc& proc, std::vector<std::string> args);

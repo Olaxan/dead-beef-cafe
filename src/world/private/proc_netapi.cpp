@@ -161,6 +161,11 @@ bool ProcNetApi::socket_is_open(FileDescriptor sock) const
 	else return false;
 }
 
+Address6 ProcNetApi::get_primary_ip() const
+{
+	return net_->get_primary_ip();
+}
+
 void ProcNetApi::close_all()
 {
 	while (not fd_table_.empty())

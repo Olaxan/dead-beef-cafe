@@ -10,13 +10,6 @@
 
 #include "CLI/CLI.hpp"
 
-#include <unicode/utypes.h>
-#include <unicode/ucol.h>
-#include <unicode/usearch.h>
-#include <unicode/ustring.h>
-#include <unicode/ustream.h>
-#include <unicode/brkiter.h>
-
 #include <string>
 #include <vector>
 #include <print>
@@ -47,7 +40,7 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 	co_return (co_await ShellUtils::Exec(proc, {"/bin/shell"}));
 }
 
-ProcessTask Programs::CmdSSH(Proc& proc, std::vector<std::string> args)
+ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 {
 
 	OS& os = *proc.owning_os;
