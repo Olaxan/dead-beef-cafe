@@ -32,8 +32,16 @@ ProcessTask Programs::CmdCount(Proc& proc, std::vector<std::string> args)
 
 	for (int32_t i = 0; i < count; ++i)
 	{
-		co_await proc.owning_os->wait(delay);
-		proc.putln("{0}...", i + 1);
+		auto res = co_await proc.wait(delay);
+		if (res.value() > 0)
+		{
+			proc.errln("count: Aborted: {}.", res.message());
+			co_return 1;
+		}
+		else
+		{
+			proc.putln("{0}...", i + 1);
+		}
 	}
 
 	co_return 0;

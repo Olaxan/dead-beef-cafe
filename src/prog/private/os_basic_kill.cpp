@@ -36,7 +36,8 @@ ProcessTask Programs::CmdKill(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
+	proc.putln("Sending SIGTERM to {}.", params.pid);
 	os.kill_process(params.pid);
 
-	co_return 1;
+	co_return 0;
 }

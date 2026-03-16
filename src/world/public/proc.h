@@ -190,7 +190,11 @@ public:
 
 
 	/* --- FUNCTIONS THAT RELATE TO OS --- */
-	[[nodiscard]] TimerAwaiter wait(float seconds);
+	[[nodiscard]] Task<std::error_condition> wait(float seconds);
+
+	void add_signal_callback(SignalCallbackFn&& fn);
+
+	void signal(SignalType sig);
 
 
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
@@ -245,6 +249,9 @@ protected:
 	
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
+
+	SignalType signal_{-1};
+	std::vector<SignalCallbackFn> signal_callbacks_;
 	
 	std::set<FileDescriptor> returned_descriptors_{};
 	FileDescriptor descriptor_counter_{3};

@@ -19,3 +19,6 @@ using InvokeFn = std::function<void(Proc*)>;
 
 template <class... Ts> struct WriterOverload : Ts... { using Ts::operator()...; };
 template <class... Ts> WriterOverload(Ts...) -> WriterOverload<Ts...>;
+
+using SignalType = int32_t;
+using SignalCallbackFn = std::function<void(SignalType)>;

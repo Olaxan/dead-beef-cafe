@@ -1,12 +1,16 @@
 #include "proc.h"
 #include "os.h"
 #include "task.h"
+#include "race_awaiter.h"
+#include "proc_signal_awaiter.h"
 
 #include <coroutine>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <string>
+
+#include <signal.h>
 
 
 Proc::Proc(int32_t pid, OS* owner)
@@ -48,13 +52,28 @@ void Proc::set_reader(ReaderFn&& reader)
 
 Task<std::expected<std::string, std::error_condition>> Proc::read(EnvVarAccessMode mode)
 {
+
 	if (reader_)
-		co_return (co_await reader_());
+	{
+		auto res = co_await when_any(reader_(), ProcSignalAwaiter{this});
+		if (res.index == 0)
+		{
+			co_return std::get<1>(res.value);
+		}
+		else co_return std::unexpected{std::error_condition{EINTR, std::generic_category()}};
+	}
 
 	if (host && mode == EnvVarAccessMode::Inherit)
-		co_return (co_await host->read(mode));
+	{
+		auto res = co_await when_any(host->read(), ProcSignalAwaiter{this});
+		if (res.index == 0)
+		{
+			co_return std::get<1>(res.value);
+		}
+		else co_return std::unexpected{std::error_condition{EINTR, std::generic_category()}};
+	}
 
-	co_return std::unexpected{std::error_condition{EIO, std::generic_category()}};
+	co_return std::unexpected{std::error_condition{ENOSYS, std::generic_category()}};
 }
 
 void Proc::set_writer(WriterFn&& writer)
@@ -110,9 +129,26 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 	co_return (co_await *task);
 }
 
-TimerAwaiter Proc::wait(float seconds)
+Task<std::error_condition> Proc::wait(float seconds)
 {
-	return owning_os->wait(seconds);
+	auto res = co_await when_any(owning_os->wait(seconds), ProcSignalAwaiter{this});
+	co_return (res.index == 0) ? std::error_condition{} : std::error_condition{EINTR, std::generic_category()};
+}
+
+void Proc::add_signal_callback(SignalCallbackFn&& fn)
+{
+	signal_callbacks_.push_back(std::move(fn));
+}
+
+void Proc::signal(SignalType sig)
+{
+	std::vector<SignalCallbackFn> empty_{};
+	std::swap(signal_callbacks_, empty_);
+
+	for (auto&& fn : empty_)
+	{
+		fn(sig);
+	}
 }
 
 int32_t Proc::set_sid()
@@ -173,6 +209,7 @@ void Proc::copy_descriptors_from(const Proc& other)
 
 void Proc::exit()
 {
+	signal(SIGTERM);
 	fs.close_all();
 	net.close_all();
 }

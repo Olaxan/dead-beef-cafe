@@ -17,6 +17,8 @@
 #include <print>
 #include <unordered_set>
 
+#include <signal.h>
+
 OS::OS(Host& owner)
     : owner_(owner) 
 { 
@@ -114,6 +116,11 @@ Proc* OS::create_process(CreateProcessParams&& params)
 
 void OS::kill_process(int32_t pid)
 {
+    if (auto it = processes_.find(pid); it != processes_.end())
+    {
+        Proc* proc = it->second.get();
+        proc->signal(SIGTERM);
+    }
 }
 
 EagerTask<int32_t> OS::run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params)
