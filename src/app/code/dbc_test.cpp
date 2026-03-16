@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
 	server->start_host();
 	our_world.launch();
 	
-	server_os.run_process(Programs::CmdSSH, {"ssh"});
+	server_os.run_process(Programs::CmdSshServer, {"ssh"});
 	
 	links.link(client_nic, server_nic);
 
