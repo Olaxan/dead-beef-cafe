@@ -6,5 +6,5 @@ message UdpPacket
 {
 	int32 src_port = 1;
 	int32 dest_port = 2;
-	string payload = 3;
+	bytes payload = 3;
 }

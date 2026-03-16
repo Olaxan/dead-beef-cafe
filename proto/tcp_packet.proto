@@ -15,5 +15,5 @@ message TcpPacket
 	int32 src_port = 1;
 	int32 dest_port = 2;
 	TcpType type = 3;
-	string payload = 4;
+	bytes payload = 4;
 }

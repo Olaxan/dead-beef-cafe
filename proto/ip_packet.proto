@@ -14,5 +14,5 @@ message IpPackage
 	bytes src_ip = 1;
 	bytes dest_ip = 2;
 	Protocol protocol = 3;
-	string payload = 4;
+	bytes payload = 4;
 }
