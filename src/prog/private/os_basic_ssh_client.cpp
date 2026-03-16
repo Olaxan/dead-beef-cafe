@@ -21,6 +21,22 @@
 
 #include <iso646.h>
 
+EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
+{
+	while (proc.net.socket_is_open(fd))
+	{
+		auto exp_read = co_await proc.net.async_read_socket(fd);
+		if (not exp_read)
+		{
+			proc.putln("Null read ({}).", exp_read.error().message());
+			break;
+		}
+		proc.write(*exp_read);
+	}
+
+	co_return 0;
+}
+
 ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 {
 	
@@ -74,6 +90,10 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
+	proc.putln("Connected.");
+
+	SshReader(proc, fd);
+
 	while (proc.net.socket_is_open(fd))
 	{
 		auto exp_msg = co_await proc.read();
@@ -81,6 +101,26 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 		{
 			proc.errln("Read failure: {}. Exiting.", exp_msg.error().message());
 			co_return 2;
+		}
+
+		if (exp_msg->length() == 0)
+		{
+			continue;
+		}
+
+		if (exp_msg->at(0) == CTRL_KEY('q'))
+		{
+			std::error_condition err = co_await proc.net.async_close_socket(fd);
+			if (err)
+			{
+				proc.errln("Failed to close socket: {}.", err.message());
+				co_return err.value();
+			}
+			else
+			{		
+				proc.putln("Exiting...");
+				co_return 0;
+			}
 		}
 
 		co_await proc.net.async_write_socket(fd, *exp_msg);

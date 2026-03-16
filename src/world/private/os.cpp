@@ -86,29 +86,16 @@ Proc* OS::create_process(CreateProcessParams&& params)
     /* The invoker might have set up a writer,
     if not: check if one is set up in params,
     if not: use stdout. */
-    if (proc->writer_ == nullptr)
+    if (proc->writer_ == nullptr && params.writer)
     {
-        if (params.writer)
-        {
-            proc->set_writer(std::move(params.writer));
-        }
-        else
-        {
-            proc->set_writer([pid](const std::string& str)
-            {
-                std::cout << str;
-            });
-        }
+        proc->set_writer(std::move(params.writer));
     }
 
     /* The invoker might have setup the reader,
     if not, check if one is assigned to the params. */
-    if (proc->reader_ == nullptr)
+    if (proc->reader_ == nullptr && params.reader)
     {
-        if (params.reader)
-        {
-            proc->set_reader(std::move(params.reader));
-        }
+        proc->set_reader(std::move(params.reader));
     }
 
     if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())

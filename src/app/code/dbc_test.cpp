@@ -217,6 +217,8 @@ int main(int argc, char* argv[])
 	NIC* server_nic = server->get_device<NIC>();
 	assert(client_nic && server_nic);
 
+	//client_nic->set_ip("acad::");
+	//server_nic->set_ip("dead:beef:cafe::");
 	
 	OS& client_os = client->get_os();
 	OS& server_os = server->get_os();
@@ -242,32 +244,35 @@ int main(int argc, char* argv[])
 	
 	links.link(client_nic, server_nic);
 
-	/* Test ICMP */
-	if (test_icmp)
+	auto queue_ptr = std::make_shared<MessageQueue<std::string>>();
+
+	WriterFn local_writer = [](const std::string& str)
 	{
-		ip::IcmpPacket icmp;
-		std::string icmp_data{};
-		icmp.set_type(ip::IcmpType::EchoRequest);
-		icmp.set_code(0);
-	
-		if (icmp.SerializeToString(&icmp_data))
+		com::CommandReply rep;
+		if (rep.ParseFromString(str))
 		{
-			ip::IpPackage ip;
-			ip.set_dest_ip(remote_addr.raw);
-			ip.set_src_ip(local_addr.raw);
-			ip.set_protocol(ip::Protocol::ICMP);
-			ip.set_payload(icmp_data);
-		
-			client_net_mgr->send(std::move(ip));
+			std::cout << rep.reply();
 		}
-	}
+		else
+		{
+			std::cout << str;
+		}
+	};
 
-	client_net_mgr->bind_socket(h, local_addr, 49152);
-	client_net_mgr->async_connect_socket(h, remote_addr, 22);
+	ReaderFn local_reader = [q = queue_ptr]() -> Task<ReadResult>
+	{
+		co_return (co_await q->async_pop());
+	};
 
-	reader(client_net_mgr, h);
+	client_os.run_process(Programs::CmdShell, {"shell"}, OS::CreateProcessParams
+	{
+		.writer = std::move(local_writer),
+		.reader = std::move(local_reader),
+	});
 
-	while (client_net_mgr->socket_is_open(h))
+	//reader(client_net_mgr, h);
+
+	while (1)
 	{
 		std::wstring wide_in = read_console_input_w();
 		std::string utf8_in = utf16_to_utf8(wide_in);
@@ -283,7 +288,7 @@ int main(int argc, char* argv[])
 		
 		std::string str;
 		if (query.SerializeToString(&str))
-		 	client_net_mgr->async_write_socket(h, str);
+		 	queue_ptr->push(std::move(str));
 
 	}
 
