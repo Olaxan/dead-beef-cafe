@@ -34,7 +34,7 @@ ProcessTask Programs::CmdSave(Proc& proc, std::vector<std::string> args)
 
 	struct SaveArgs
 	{
-		std::filesystem::path path = std::filesystem::current_path().append("world.sav");
+		std::filesystem::path path{"world.sav"};
 	} params{};
 
 	app.add_option("-p,--path,path", params.path, "Location of the saved data");
@@ -70,6 +70,16 @@ ProcessTask Programs::CmdSave(Proc& proc, std::vector<std::string> args)
 	}
 
 	proc.putln("✓ Collated world data!");
+
+	if (params.path.is_relative())
+	{
+        std::error_code err;
+		if (params.path = std::filesystem::absolute(params.path, err); err)
+        {
+            proc.errln("Failed to make path absolute: {}.", err.message());
+            co_return 1;
+        }
+	}
 
 	std::ofstream f(params.path);
 	if (not f)
