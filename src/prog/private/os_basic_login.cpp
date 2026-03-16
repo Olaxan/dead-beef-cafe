@@ -3,7 +3,6 @@
 #include "os_fileio.h"
 
 #include "os.h"
-#include "filesystem.h"
 #include "sha256.h"
 #include "users_mgr.h"
 
@@ -17,14 +16,7 @@
 ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
-	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
-
-	if (fs == nullptr)
-	{
-		proc.errln("No filesystem!");
-		co_return 2;
-	}
 
 	CmdInput::CmdReaderParams usr_params{};
 	CmdInput::CmdReaderParams pwd_params{.password = true};

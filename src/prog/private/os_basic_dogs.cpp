@@ -123,12 +123,14 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 		return 1.f / params.framerate;
 	});
 
+	std::size_t frames = 0;
 	if (params.chunk > 0)
 	{
 		for (auto&& chunk : chunk_by_size(*exp_read, params.chunk))
 		{
 			co_await os.wait(actual_delay);
         	proc.put("{}", std::string_view(chunk));
+			++frames;
     	}
 	}
 	else
@@ -137,11 +139,17 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 		{
 			co_await os.wait(actual_delay);
 			proc.put("{}", std::string_view(line));
+			++frames;
 		}
 	}
 
 	co_await proc.wait(params.hold);
 	proc.write(end_msg);
+
+	if (frames <= 1)
+	{
+		proc.warnln("Splitting on newline gave only a single frame. Try running with -s <NUM> to split manually.");
+	}
 
 	co_return 0;
 }
