@@ -58,7 +58,7 @@ struct TimerAwaiter
 
 	bool await_ready() const { return false; }
 	void await_suspend(std::coroutine_handle<> h) const;
-	void await_resume() const {}
+	float await_resume() const { return time_; }
 
 private:
 
