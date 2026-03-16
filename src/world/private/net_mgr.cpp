@@ -4,6 +4,7 @@
 #include "host.h"
 #include "nic.h"
 #include "filesystem.h"
+#include "race_awaiter.h"
 
 #include "proto/ip_packet.pb.h"
 
@@ -118,26 +119,29 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 		ip.set_payload(tcp_data);
 		
 		send(std::move(ip));
-
-		std::println("Awaiting ACK from {}:{}...", dest.addr, dest.port);
 		
-		while (true)
+		auto race = co_await when_any(async_read_socket_tcp(sock), os_->wait(5.f));
+
+		if (race.index == 0)
 		{
-			auto exp_reply = co_await async_read_socket_tcp(sock);
+			auto exp_reply = std::get<1>(race.value);
 
 			if (not exp_reply)
-				break;
+				co_return std::error_condition{EIO, std::generic_category()};
 
 			if (exp_reply->type() == ip::TcpType::Fin)
-				break;
+				co_return std::error_condition{ECONNRESET, std::generic_category()};
 
 			if (exp_reply->type() == ip::TcpType::Ack)
 			{
-				std::println("Received ACK from {}.", dest.addr);
 				file->remote_endpoint = dest;
 				create_session(sock);
 				co_return {};
 			}
+		}
+		else
+		{
+			co_return std::error_condition{ETIMEDOUT, std::generic_category()};
 		}
 	}
 
