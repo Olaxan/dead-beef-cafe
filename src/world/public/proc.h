@@ -212,6 +212,7 @@ public:
 
 	FileDescriptor get_descriptor();
 	void return_descriptor(FileDescriptor fs);
+	void copy_descriptors_from(const Proc& other);
 
 	/* --- PUBLICALLY ACCESSIBLE API:s --- */
 

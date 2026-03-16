@@ -23,6 +23,8 @@ public:
 	ProcFsApi(Proc* owner);
 	~ProcFsApi();
 
+	void copy_descriptors_from(const ProcFsApi& other);
+
 	std::expected<FileDescriptor, std::error_condition> open(FilePath path, FileAccessFlags flags);
 	std::error_condition close(FileDescriptor fd);
 	std::expected<size_t, std::error_condition> write(FileDescriptor fd, std::string data);

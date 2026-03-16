@@ -165,6 +165,12 @@ void Proc::return_descriptor(FileDescriptor fs)
 	returned_descriptors_.emplace(fs);
 }
 
+void Proc::copy_descriptors_from(const Proc& other)
+{
+	fs.copy_descriptors_from(other.fs);
+	net.copy_descriptors_from(other.net);
+}
+
 void Proc::exit()
 {
 	fs.close_all();

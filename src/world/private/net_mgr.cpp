@@ -27,6 +27,7 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 
 	if (success)
 	{
+		it->second.open = true;
 		return std::make_pair(h, &it->second);
 	}
 	else
@@ -38,17 +39,17 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 
 std::error_condition NetManager::close_socket(OpenSocketHandle h)
 {
-	std::println("Closing socket {}...", h);
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		OpenSocketEntry* entry = &it->second;
 		entry->rx_queue.broadcast_clear({});
 		entry->tx_queue.broadcast_clear({});
 		return_handle(h);
-		sockets_.erase(it);
+		it->second.open = false;
+		//sockets_.erase(h);
 		return {};
 	} 
-	else return std::error_condition{EBADF, std::generic_category()};
+	else return std::error_condition{EIO, std::generic_category()};
 }
 
 Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
@@ -74,7 +75,7 @@ Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
 
 		co_return close_socket(h);
 	}
-	else co_return std::error_condition{EBADF, std::generic_category()};
+	else co_return std::error_condition{EIO, std::generic_category()};
 }
 
 std::error_condition NetManager::bind_socket(OpenSocketHandle sock, AddressPair addr)
@@ -428,7 +429,11 @@ Address6 NetManager::get_primary_ip() const
 
 bool NetManager::socket_is_open(OpenSocketHandle h) const
 {
-	return (sockets_.contains(h));
+	if (auto it = sockets_.find(h); it != sockets_.end())
+	{
+		return it->second.open;
+	}
+	else return false;
 }
 
 bool NetManager::socket_has_data(OpenSocketHandle h) const

@@ -23,6 +23,8 @@
 
 ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 {
+	FileDescriptor fd = proc.get_var<FileDescriptor>("SSHCON");
+
 	co_await proc.wait(1.f);
 
 	proc.putln("SecureShell version 5:");
@@ -37,7 +39,10 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD:BEEF:CAFE:: " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
 
-	co_return (co_await ShellUtils::Exec(proc, {"/bin/shell"}));
+	int32_t ret = co_await ShellUtils::Exec(proc, {"/bin/shell"});
+	proc.putln("Closing SSH session.");
+	auto status = co_await proc.net.async_close_socket(fd);
+	co_return ret;
 }
 
 ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
@@ -78,6 +83,7 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 		proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
 		FileDescriptor con = co_await netapi.async_accept_socket(fd);
 		proc.putln("Connection established ({}).", con);
+		proc.set_var("SSHCON", con);
 	
 		auto sess_reader = [&netapi, con]() -> Task<ReadResult>
 		{
@@ -98,6 +104,7 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 		{
 			.writer = std::move(sess_writer),
 			.reader = std::move(sess_reader),
+			.fork_pid = proc.get_pid()
 			//.leader_id = proc.get_pid()
 			/* The reason we don't provide a session leader, 
 			is that authentication would be given to the SSH host,

@@ -30,6 +30,8 @@ struct OpenSocketEntry
 
 	AddressPair local_endpoint{};
 	AddressPair remote_endpoint{};
+
+	bool open{false};
 };
 
 using OpenSocketPair = std::pair<OpenSocketHandle, OpenSocketEntry*>;

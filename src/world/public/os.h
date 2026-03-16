@@ -79,6 +79,7 @@ public:
 		InvokeFn invoke{nullptr};
 		WriterFn writer{nullptr};
 		ReaderFn reader{nullptr};
+		int32_t fork_pid{-1};
 		int32_t leader_id{-1};
 		int32_t uid{0};
 		int32_t gid{0};

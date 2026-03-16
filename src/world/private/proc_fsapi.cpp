@@ -11,6 +11,11 @@ ProcFsApi::ProcFsApi(Proc* owner)
 
 ProcFsApi::~ProcFsApi() = default;
 
+void ProcFsApi::copy_descriptors_from(const ProcFsApi& other)
+{
+	fd_table_ = other.fd_table_;
+}
+
 std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath path, FileAccessFlags flags)
 {
 	OS& os = *os_;

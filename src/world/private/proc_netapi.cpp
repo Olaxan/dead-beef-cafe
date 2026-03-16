@@ -10,6 +10,11 @@ ProcNetApi::ProcNetApi(Proc* owner)
 
 ProcNetApi::~ProcNetApi() = default;
 
+void ProcNetApi::copy_descriptors_from(const ProcNetApi& other)
+{
+	fd_table_ = other.fd_table_;
+}
+
 std::expected<FileDescriptor, std::error_condition> ProcNetApi::create_socket()
 {
 	Proc& proc = *owner_;

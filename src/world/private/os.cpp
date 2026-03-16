@@ -78,38 +78,36 @@ Proc* OS::create_process(CreateProcessParams&& params)
     proc->set_uid(params.uid);
     proc->set_gid(params.gid);
 
+    /* Run invoker, if set. */
     if (params.invoke)
     {
         params.invoke(proc);
     }
 
-    /* The invoker might have set up a writer,
-    if not: check if one is set up in params,
-    if not: use stdout. */
+    /* Setup writer, if none is set (eg. by invoker). */
     if (proc->writer_ == nullptr && params.writer)
     {
         proc->set_writer(std::move(params.writer));
     }
 
-    /* The invoker might have setup the reader,
-    if not, check if one is assigned to the params. */
+    /* Setup writer, if none is set (eg. by invoker). */
     if (proc->reader_ == nullptr && params.reader)
     {
         proc->set_reader(std::move(params.reader));
     }
 
+    /* Setup leader, if specified. */
     if (auto ihost = processes_.find(params.leader_id); ihost != processes_.end())
     {
         Proc* leader = ihost->second.get();
         proc->set_leader(leader);
-        // std::println("Created process {} (uid {}, gid {}) under {} on {}.", 
-        //     pid, proc->get_uid(), proc->get_gid(), ihost->first, (int64_t)this);
     }
-    // else
-    // {
-    //     std::println("Created process {} (uid {}, gid {}) on {}.", 
-    //         pid, proc->get_uid(), proc->get_gid(), (int64_t)this);
-    // }
+
+    /* Fork fd:s, if fork is specified. */
+    if (auto ifork = processes_.find(params.fork_pid); ifork != processes_.end())
+    {
+        proc->copy_descriptors_from(*ifork->second.get());
+    }
 
     return proc;
 }
