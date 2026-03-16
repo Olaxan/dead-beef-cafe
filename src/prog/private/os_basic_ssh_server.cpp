@@ -49,11 +49,6 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 {
 
 	OS& os = *proc.owning_os;
-	FileSystem* fs = os.get_filesystem();
-	UsersManager* users = os.get_users_manager();
-	NetManager* net = os.get_network_manager();
-	Address6 local_ip = net->get_primary_ip();
-
 	ProcNetApi& netapi = proc.net;
 
 	proc.putln("SSH service started.");
@@ -66,6 +61,7 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 	}
 
 	FileDescriptor fd = *exp_sock;
+	Address6 local_ip = netapi.get_primary_ip();
 
 	if (auto bind_err = netapi.bind_socket(fd, {local_ip, 22}))
 	{

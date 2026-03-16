@@ -115,21 +115,6 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 			continue;
 		}
 
-		if (exp_msg->at(0) == CTRL_KEY('q'))
-		{
-			std::error_condition err = co_await proc.net.async_close_socket(fd);
-			if (err)
-			{
-				proc.errln("Failed to close socket: {}.", err.message());
-				co_return err.value();
-			}
-			else
-			{		
-				proc.putln("Exiting...");
-				co_return 0;
-			}
-		}
-
 		co_await proc.net.async_write_socket(fd, *exp_msg);
 	}
 	
