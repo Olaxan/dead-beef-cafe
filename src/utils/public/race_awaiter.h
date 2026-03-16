@@ -106,10 +106,10 @@ private:
     template<size_t Index, typename Awaitable>
     void run_one(Awaitable& aw) 
 	{
-        auto state_copy = state;
-
-        auto runner = [state_copy, &aw]() -> detached_task
+        auto runner = [&aw](std::shared_ptr<state_type> local_state) -> Task<bool>
 		{
+            auto state_copy = std::move(local_state);
+
             try 
 			{
                 auto value = co_await aw;
@@ -133,10 +133,10 @@ private:
                 }
             }
 
-            co_return;
+            co_return true;
         };
 
-        runner();
+        runner(state);
     }
 };
 
