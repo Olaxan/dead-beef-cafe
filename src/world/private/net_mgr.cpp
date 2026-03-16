@@ -45,7 +45,7 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 		OpenSocketEntry* entry = &it->second;
 		entry->rx_queue.broadcast_clear({});
 		entry->tx_queue.broadcast_clear({});
-		return_handle(h);
+		//return_handle(h);
 		it->second.open = false;
 		//sockets_.erase(h);
 		return {};

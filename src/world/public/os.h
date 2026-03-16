@@ -89,6 +89,7 @@ public:
 	void kill_process(int32_t pid);
 	EagerTask<int32_t> run_process(ProcessFn program, std::vector<std::string> args, CreateProcessParams&& params = {});
 	void get_processes(std::function<void(const Proc&)> reader) const;
+	bool process_is_running(int32_t pid) const;
 
 	int32_t create_sid();
 

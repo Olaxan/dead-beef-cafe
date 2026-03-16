@@ -264,15 +264,23 @@ int main(int argc, char* argv[])
 		co_return (co_await q->async_pop());
 	};
 
+	int32_t shell_pid{-1};
+
+	InvokeFn local_invoke = [&shell_pid](Proc* proc) 
+	{
+		shell_pid = proc->get_pid();
+	};
+
 	client_os.run_process(Programs::CmdShell, {"shell"}, OS::CreateProcessParams
 	{
+		.invoke = std::move(local_invoke),
 		.writer = std::move(local_writer),
 		.reader = std::move(local_reader),
 	});
 
 	//reader(client_net_mgr, h);
 
-	while (1)
+	while (client_os.process_is_running(shell_pid))
 	{
 		std::wstring wide_in = read_console_input_w();
 		std::string utf8_in = utf16_to_utf8(wide_in);

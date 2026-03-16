@@ -143,6 +143,11 @@ void OS::get_processes(std::function<void(const Proc&)> reader) const
         std::invoke(reader, *proc);
 }
 
+bool OS::process_is_running(int32_t pid) const
+{
+	return processes_.contains(pid);
+}
+
 FileSystem* OS::get_filesystem() const
 {
 	if (Disk* disk = get_device<Disk>())

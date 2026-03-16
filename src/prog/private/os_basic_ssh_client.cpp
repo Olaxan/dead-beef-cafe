@@ -82,7 +82,14 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	FileDescriptor fd = *exp_sock;
 
-	proc.net.bind_socket(fd, proc.net.get_primary_ip(), 49152);
+	if (auto bind_err = proc.net.bind_socket(fd, proc.net.get_primary_ip(), 49152))
+	{
+		proc.errln("Failed to bind socket: {}.", bind_err.message());
+		co_return 1;
+	}
+
+	proc.putln("Connecting to {}:{}...", params.addr, params.port);
+
 	std::error_condition status = co_await proc.net.async_connect_socket(fd, *exp_remote_addr, params.port);
 	if (status.value() != 0)
 	{
