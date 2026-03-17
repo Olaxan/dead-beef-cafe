@@ -4,5 +4,5 @@ package com;
 
 message CommandReply
 {
-	string reply = 1;
+	bytes reply = 1;
 };

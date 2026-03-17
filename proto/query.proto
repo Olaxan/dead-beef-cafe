@@ -10,6 +10,6 @@ message ScreenData
 
 message CommandQuery 
 {
-	string command = 1;
+	bytes command = 1;
 	ScreenData screen_data = 2;
 };
