@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 		shell_pid = proc->get_pid();
 	};
 
-	server_os.run_process(Programs::CmdDbcServer, {"dbcroute"}, OS::CreateProcessParams
+	server_os.run_process(Programs::CmdDbcServer, {"host"}, OS::CreateProcessParams
 	{
 		.invoke = std::move(local_invoke),
 		.writer = std::move(local_writer),

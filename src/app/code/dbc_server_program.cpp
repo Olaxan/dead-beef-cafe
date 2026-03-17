@@ -173,8 +173,9 @@ private:
 				}
 			}
 		}
-		catch (const std::exception&)
+		catch (const std::exception& e)
 		{
+			proc_.errln("host: Read exception: {}.", e.what());
 			stop();
 		}
  	}
@@ -208,8 +209,9 @@ private:
 					proc_.errln("Write mismatch: wrote {0} bytes but expected {1}.", n, total_msg_size);
 			}
 		}
-		catch (std::exception&)
+		catch (std::exception& e)
 		{
+			proc_.errln("host: Write exception: {}.", e.what());
 			stop();
 		}
   	}
@@ -291,9 +293,9 @@ ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
 
 		co_await IoServiceAwaiter{io_context};
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	{
-		std::cerr << "Exception: " << e.what() << "\n";
+		proc.errln("join: Exception: {}.", e.what());
 	}
 
 	co_return 0;

@@ -60,6 +60,21 @@ namespace protoutils = google::protobuf::util;
 
 
 
+auto client_read_route(NetManager* net)
+{
+  	return asio::async_compose<decltype(asio::use_awaitable), void(ip::IpPackage)>(
+    	[net](auto&& self) -> EagerTask<int32_t>
+      	{
+			auto self_ptr = std::make_shared<std::decay_t<decltype(self)>>(std::move(self));
+			ip::IpPackage rep = co_await net->async_read_route();
+			self_ptr->complete(rep);
+			co_return 0;
+      	},
+      	asio::use_awaitable
+    );
+}
+
+
 /* Shell session -- represents a connection between this (real + fake) client and a (real + fake) server. */
 class ShellClient : public std::enable_shared_from_this<ShellClient>
 {
@@ -78,7 +93,7 @@ public:
 			[self = shared_from_this(), addr, service] { return self->resolve(addr, service); }, detached);
 	}
 
-	void write(com::CommandQuery&& query)
+	void write(ip::IpPackage&& query)
 	{
 		asio::post(context_, [this, query] mutable
 		{
@@ -165,7 +180,7 @@ public:
 		}
 		catch (const std::exception& e)
 		{
-			std::cerr << "Exception: " << e.what() << "\n";
+			proc_.errln("join: Read exception: {}.", e.what());
 			stop();
 		}
 	}
@@ -179,39 +194,32 @@ public:
 				asio::error_code ec;
 				asio::streambuf buffer{};
 				std::ostream output_stream(&buffer);
+
+				ip::IpPackage send = co_await client_read_route(net_mgr_);
 	
-				if (std::optional<com::CommandQuery> opt_query = write_queue_.pop(); opt_query.has_value())
-				{
-					com::CommandQuery query = opt_query.value();
-	
-					std::string coded_str;
-					bool success = query.SerializeToString(&coded_str);
-	
-					int32_t query_size = static_cast<int32_t>(coded_str.size());
-					int32_t header_size = static_cast<int32_t>(sizeof(query_size));
-					int32_t total_msg_size = query_size + header_size;
-					output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
-					output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
-	
-					std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
-					buffer.consume(n);
-				}
-				else
-				{
-					co_await timer_.async_wait(redirect_error(use_awaitable, ec));
-				}
+				std::string coded_str;
+				bool success = send.SerializeToString(&coded_str);
+
+				int32_t query_size = static_cast<int32_t>(coded_str.size());
+				int32_t header_size = static_cast<int32_t>(sizeof(query_size));
+				int32_t total_msg_size = query_size + header_size;
+				output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
+				output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
+
+				std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
+				buffer.consume(n);
 			}
 		}
 		catch(const std::exception& e)
 		{
-			std::cerr << "Exception: " << e.what() << "\n";
+			proc_.errln("join: Write exception: {}.", e.what());
 			stop();
 		}
 	}
 
 	void stop()
 	{
-		google::protobuf::ShutdownProtobufLibrary();
+		std::println("stop()");
 		socket_.close();
 		timer_.cancel();
 	}
@@ -221,7 +229,7 @@ public:
 	asio::io_context& context_;
 	asio::steady_timer timer_;
 	tcp::socket socket_;
-	MessageQueue<com::CommandQuery> write_queue_{};
+	NetQueue write_queue_{};
 
 };
 
@@ -234,12 +242,12 @@ ProcessTask Programs::CmdDbcClient(Proc& proc, std::vector<std::string> args)
 
 	struct DbcClientArgs
 	{
-		std::string addr;
+		std::string addr{"localhost"};
 		std::string service{"666"};
 	} params{};
 
-	app.add_option("-a,ADDR", params.addr, "Address for connection")->required();
-	app.add_option("-p,SERV", params.service, "Service or port for connection")->required()->capture_default_str();
+	app.add_option("-a,ADDR", params.addr, "Address for connection")->capture_default_str();
+	app.add_option("-p,SERV", params.service, "Service or port for connection")->capture_default_str();
 
 	try
 	{
@@ -255,13 +263,22 @@ ProcessTask Programs::CmdDbcClient(Proc& proc, std::vector<std::string> args)
 
 	asio::io_context io_context(1);
 
-	auto client = std::make_shared<ShellClient>(proc, io_context);
-	client->connect(params.addr, params.service);
+	try
+	{
+		auto client = std::make_shared<ShellClient>(proc, io_context);
+		client->connect(params.addr, params.service);
 
-	asio::signal_set signals(io_context, SIGINT, SIGTERM);
-	signals.async_wait([&](auto, auto) { io_context.stop(); });
-	
-	co_await IoServiceAwaiter{io_context};
+		asio::signal_set signals(io_context, SIGINT, SIGTERM);
+		signals.async_wait([&](auto, auto) { io_context.stop(); });
+
+		co_await IoServiceAwaiter{io_context};
+	}
+	catch (const std::exception& e)
+	{
+		proc.errln("join: Exception: {}.", e.what());
+	}
+
+	proc.putln("join: DBC link exited.");
 
     co_return 0;
 }

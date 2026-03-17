@@ -134,6 +134,7 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 		if (run_in_background)
 		{
+			proc.put("[&] ");
 			os.run_process(*prog, std::move(args), std::move(params));
 			co_return 0;
 		}
