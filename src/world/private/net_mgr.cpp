@@ -119,7 +119,7 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 		ip.set_payload(tcp_data);
 		
 		send(std::move(ip));
-		
+
 		auto race = co_await when_any(async_read_socket_tcp(sock), os_->wait(5.f));
 
 		if (race.index == 0)
@@ -199,6 +199,7 @@ Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string b
 			co_return tx_size;
 		}
 	}
+
 	co_return 0;
 }
 
@@ -214,6 +215,11 @@ int32_t NetManager::listen(OpenSocketHandle sock)
 void NetManager::route(ip::IpPackage&& package)
 {
 	routing_queue_.push(std::move(package));
+}
+
+void NetManager::safe_rx(ip::IpPackage&& package)
+{
+	nic_->get_rx_queue().push(std::move(package));
 }
 
 Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)

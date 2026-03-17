@@ -53,7 +53,9 @@ public:
 	
 	int32_t listen(OpenSocketHandle sock);
 
-	void route(ip::IpPackage && package);
+	void route(ip::IpPackage&& package);
+
+	void safe_rx(ip::IpPackage&& package);
 
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);

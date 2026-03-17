@@ -263,6 +263,8 @@ ProcessTask Programs::CmdDbcClient(Proc& proc, std::vector<std::string> args)
 
 	asio::io_context io_context(1);
 
+	proc.putln("Starting routing agent...");
+
 	try
 	{
 		auto client = std::make_shared<ShellClient>(proc, io_context);

@@ -21,6 +21,7 @@ void World::update_world(float delta_seconds)
 
 	/* Update routing. */
 	ip_.step(delta_seconds);
+
 }
 
 void World::launch()

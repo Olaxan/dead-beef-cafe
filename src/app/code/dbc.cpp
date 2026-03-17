@@ -16,4 +16,6 @@ void IoServiceAwaiter::await_suspend(std::coroutine_handle<> h)
 		count_ = srv_.run();
 		h.resume();
 	});
+	
+	runner.detach();
 }

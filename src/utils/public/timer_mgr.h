@@ -3,6 +3,7 @@
 #include <set>
 #include <coroutine>
 #include <vector>
+#include <mutex>
 
 #include "soa_helpers.h"
 #include "task.h"
@@ -99,6 +100,7 @@ private:
 	void reset_timer_internal(std::size_t idx);
 	void kill_timer_internal(std::size_t idx);
 
+	mutable std::mutex mutex_{};
 	TimerManagerContainer timers_{};
 	std::set<std::size_t> free_instances_{};
 };

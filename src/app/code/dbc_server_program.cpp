@@ -115,7 +115,7 @@ public:
 
 	void deliver(ip::IpPackage&& msg)
 	{
-		net_mgr_->receive(std::move(msg));
+		net_mgr_->safe_rx(std::move(msg));
 		timer_.cancel_one();
 	}
 
@@ -227,8 +227,6 @@ private:
 	asio::steady_timer timer_;
 	NIC* local_nic_{nullptr};
 	NetManager* net_mgr_{nullptr};
-
-	std::deque<com::CommandReply> replies_{};
 
 	asio::streambuf in_buf_{};
 	std::istream in_stream_{&in_buf_};

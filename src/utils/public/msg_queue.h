@@ -96,6 +96,7 @@ public:
 
     void add_awaiter(MessageCallbackFn<T>&& callback)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         callbacks_.push_back(std::move(callback));
     }
 

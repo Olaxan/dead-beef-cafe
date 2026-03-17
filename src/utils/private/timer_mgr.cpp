@@ -17,6 +17,8 @@ void TimerManager::step(float delta_seconds)
 
 		if (float& time = action.get_remaining().get() -= delta_seconds; time < 0.f)
 		{
+			std::lock_guard<std::mutex> lock(mutex_);
+
 			auto&& event = action.get_invoker().get();
 
 			if (action.get_looping())
@@ -35,6 +37,8 @@ void TimerManager::step(float delta_seconds)
 
 TimerHandle TimerManager::set_timer(float seconds, timer_callback_t event, bool looping)
 {
+	std::lock_guard<std::mutex> lock(mutex_);
+
 	const std::size_t new_idx = [this]
 	{
 		if (!free_instances_.empty())
@@ -57,6 +61,8 @@ TimerHandle TimerManager::set_timer(float seconds, timer_callback_t event, bool 
 
 void TimerManager::pause_timer(const TimerHandle& handle)
 {
+	std::lock_guard<std::mutex> lock(mutex_);
+
 	if (is_valid_handle(handle))
 	{
 		auto&& timer = timers_[handle.idx];
@@ -66,6 +72,8 @@ void TimerManager::pause_timer(const TimerHandle& handle)
 
 void TimerManager::cancel_timer(const TimerHandle &handle)
 {
+	std::lock_guard<std::mutex> lock(mutex_);
+
 	if (is_valid_handle(handle))
 	{
 		kill_timer_internal(handle.idx);
