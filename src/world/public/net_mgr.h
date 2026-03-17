@@ -53,6 +53,8 @@ public:
 	
 	int32_t listen(OpenSocketHandle sock);
 
+	void route(ip::IpPackage && package);
+
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);
 
@@ -61,6 +63,7 @@ public:
 
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
+	NetMessageAwaiter async_read_route();
 
 	Address6 get_primary_ip() const;
 	bool socket_is_open(OpenSocketHandle h) const;
@@ -103,6 +106,8 @@ protected:
 
 	uint64_t handle_counter_{1};
 	std::set<OpenSocketHandle> free_handles_{};
+
+	NetQueue routing_queue_{};
 
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
 	std::unordered_map<AddressTuple, OpenSocketHandle> sessions_;

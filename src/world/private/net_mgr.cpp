@@ -211,6 +211,11 @@ int32_t NetManager::listen(OpenSocketHandle sock)
 	return 1;
 }
 
+void NetManager::route(ip::IpPackage&& package)
+{
+	routing_queue_.push(std::move(package));
+}
+
 Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)
 {
 	while (true)
@@ -423,6 +428,11 @@ NetMessageAwaiter NetManager::async_read_tx()
 {
 	assert(nic_);
 	return nic_->get_tx_queue().async_pop();
+}
+
+NetMessageAwaiter NetManager::async_read_route()
+{
+	return routing_queue_.async_pop();
 }
 
 Address6 NetManager::get_primary_ip() const

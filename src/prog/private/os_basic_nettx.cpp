@@ -44,7 +44,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		* 3. Otherwise, perform an ARP request and try again (maybe skip, increase fail count?).
 		* 4. If fail count > N, discard package, maybe return a rejection package to source.
 		*/
-entry:
+
 		try
 		{
 			ip::IpPackage packet = co_await net->async_read_tx();
@@ -61,22 +61,18 @@ entry:
 					continue;
 				}
 
-				for (size_t arp_tries = 0; arp_tries < 3; ++arp_tries)
+				if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 				{
-					if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
-					{
-						net->send(std::move(packet), *arp_entry);
-						goto entry;
-					}
-					else
-					{
-						proc.putln("Performing ARP request (to find {})...", dest_addr);
-						net->arp_request();
-					}
+					net->send(std::move(packet), *arp_entry);
+					continue;
 				}
-
-				proc.warnln("ARP resolution failed for {}.", dest_addr);
-				
+				else
+				{
+					proc.putln("Performing ARP request (to find {})...", dest_addr);
+					net->arp_request();
+					net->route(std::move(packet));
+					continue;
+				}
 			}
 			else
 			{
