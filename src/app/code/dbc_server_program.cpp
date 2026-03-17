@@ -274,11 +274,13 @@ ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
+	proc.putln("Hosting DBC server on {}...", params.ports);
+	co_await proc.wait(1.f);
+
 	asio::io_context io_context(1);
 
 	try
 	{
-
 		for (unsigned short port : params.ports)
 		{
 			co_spawn(io_context, listener(proc, tcp::acceptor(io_context, {tcp::v4(), port})), detached);
@@ -287,19 +289,11 @@ ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
 		asio::signal_set signals(io_context, SIGINT, SIGTERM);
 		signals.async_wait([&](auto, auto){ io_context.stop(); });
 
-		io_context.run(); // Fix this - blocking!
+		co_await IoServiceAwaiter{io_context};
 	}
 	catch (std::exception& e)
 	{
 		std::cerr << "Exception: " << e.what() << "\n";
-	}
-
-	io_context.stop();
-
-	while (not io_context.stopped())
-	{
-		proc.putln("Stopping I/O service...");
-		co_await proc.wait(0.5f);
 	}
 
 	co_return 0;

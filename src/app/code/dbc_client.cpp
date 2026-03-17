@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 	
 	client->start_host();
 
-	client_fs->create_file("/bin/dbclink", 
+	client_fs->create_file("/bin/join", 
 	{
 		.recurse = true,
 		.meta = {
@@ -93,6 +93,17 @@ int main(int argc, char* argv[])
 			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
 		},
 		.executable = Programs::CmdDbcClient
+	});
+
+	client_fs->create_file("/bin/host", 
+	{
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		},
+		.executable = Programs::CmdDbcServer
 	});
 
 	our_world.launch();

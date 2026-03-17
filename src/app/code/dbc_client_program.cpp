@@ -261,7 +261,7 @@ ProcessTask Programs::CmdDbcClient(Proc& proc, std::vector<std::string> args)
 	asio::signal_set signals(io_context, SIGINT, SIGTERM);
 	signals.async_wait([&](auto, auto) { io_context.stop(); });
 	
-	std::jthread runner([&io_context] { io_context.run(); });
+	co_await IoServiceAwaiter{io_context};
 
     co_return 0;
 }
