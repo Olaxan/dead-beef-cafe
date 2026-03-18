@@ -27,35 +27,12 @@ EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
 {
 	while (proc.net.socket_is_open(fd))
 	{
-		auto res = co_await when_any(proc.net.async_read_socket(fd), proc.wait(2.f));
-
-		if (res.index == 0)
+		auto exp_read = co_await proc.net.async_read_socket(fd);
+		if (not exp_read)
 		{
-			/* Data received. */
-			auto exp_read = std::get<1>(res.value);
-			if (exp_read)
-			{
-				proc.write(*exp_read);
-			}
-			else
-			{
-				proc.errln("ssh: Read failure: {}. Exiting.", exp_read.error().message());
-				break;
-			}
+			break;
 		}
-		else
-		{
-			/* Case of timeout. */
-			if (co_await proc.net.async_socket_test_alive(fd, 3))
-			{
-				continue;
-			}
-			else
-			{
-				proc.warnln("ssh: Connection with server lost (3 attempts). Exiting.");
-				break;
-			}
-		}
+		proc.write(*exp_read);
 	}
 
 	proc.signal(SIGTERM);
@@ -129,12 +106,27 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	while (proc.net.socket_is_open(fd))
 	{
-		auto exp_msg = co_await proc.read();
+		auto exp_msg = co_await proc.read(3.f);
 
 		if (not exp_msg)
 		{
-			proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
-			co_return 2;
+			if (exp_msg.error().value() == ETIMEDOUT)
+			{
+				if (co_await proc.net.async_socket_test_alive(fd, 3))
+				{
+					continue;
+				}
+				else
+				{
+					proc.warnln("ssh: Connection with server lost (3 attempts). Exiting.");
+					co_return 2;
+				}
+			}
+			else
+			{
+				proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
+				co_return 2;
+			}
 		}
 
 		if (exp_msg->length() == 0)
