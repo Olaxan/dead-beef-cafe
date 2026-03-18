@@ -9,7 +9,7 @@ bool EditorState::set_file(FilePath path, std::string_view view)
 {
 	rows_.clear();
 	std::ranges::transform(std::views::split(view, '\n'), std::back_inserter(rows_), [](auto v){ return icu::UnicodeString::fromUTF8(v); });
-	std::println("Loaded {} row(s).", rows_.size());
+	//std::println("Loaded {} row(s).", rows_.size());
 	init_state();
 	
 	path_ = path;
@@ -195,7 +195,7 @@ void EditorState::insert_utf8(const std::string& input)
 {
 	icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 	int32_t num_points = u_in.countChar32();
-	std::println("Inserted {0} code point(s).", num_points);
+	//std::println("Inserted {0} code point(s).", num_points);
 	row_it_->chars.insert(col_, u_in);
 	col_ += num_points;
 	refresh_row();

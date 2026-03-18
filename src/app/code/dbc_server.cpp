@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 	
 	auto queue_ptr = std::make_shared<MessageQueue<std::string>>();
 
-	WriterFn local_writer = [](const std::string& str)
+	WriterFn local_writer = [](const Proc&, const std::string& str)
 	{
 		com::CommandReply rep;
 		if (rep.ParseFromString(str))

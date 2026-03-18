@@ -25,6 +25,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	auto exp_username = co_await CmdInput::read_cmd_utf8(proc, usr_params);
 	if (not exp_username)
 	{
+		std::println("login: Read error: {}.", exp_username.error().message());
 		proc.errln("login: Read error: {}.", exp_username.error().message());
 		co_return 1;
 	}
@@ -33,6 +34,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	auto exp_password = co_await CmdInput::read_cmd_utf8(proc, usr_params);
 	if (not exp_password)
 	{
+		std::println("login: Read error: {}.", exp_username.error().message());
 		proc.errln("login: Read error: {}.", exp_password.error().message());
 		co_return 1;
 	}

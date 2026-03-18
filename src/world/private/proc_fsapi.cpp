@@ -94,7 +94,7 @@ std::error_condition ProcFsApi::close(FileDescriptor fd)
 	return std::error_condition{EBADF, std::generic_category()};
 }
 
-std::expected<size_t, std::error_condition> ProcFsApi::write(FileDescriptor fd, std::string data)
+std::expected<size_t, std::error_condition> ProcFsApi::write(FileDescriptor fd, std::string data) const
 {
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())
 	{
@@ -107,7 +107,7 @@ std::expected<size_t, std::error_condition> ProcFsApi::write(FileDescriptor fd, 
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
-std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescriptor fd)
+std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescriptor fd) const
 {
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())
 	{
@@ -120,7 +120,7 @@ std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescri
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
-std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescriptor fd)
+std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescriptor fd) const
 {
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())
 	{
@@ -137,7 +137,7 @@ std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescripto
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
-std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescriptor fd)
+std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescriptor fd) const
 {
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())
 	{

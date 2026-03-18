@@ -219,9 +219,9 @@ public:
 
 	void stop()
 	{
-		std::println("stop()");
 		socket_.close();
 		timer_.cancel();
+		context_.stop();
 	}
 
 	Proc& proc_;

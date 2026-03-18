@@ -23,6 +23,7 @@
 
 ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 {
+	std::println("session: {}", proc.get_pid());
 	FileDescriptor fd = proc.get_var<FileDescriptor>("SSHCON");
 
 	co_await proc.wait(1.f);
@@ -33,6 +34,7 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 	
 	if (login_ret != 0)
 	{
+		std::println("Lame!");
 		proc.putln("Authentication failure.");
 		co_return 1;
 	}
@@ -81,19 +83,19 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 		proc.putln("Connection established ({}).", con);
 		proc.set_var("SSHCON", con);
 	
-		auto sess_reader = [&netapi, con]() -> Task<ReadResult>
+		auto sess_reader = [con](const Proc& rproc) -> Task<ReadResult>
 		{
-			return netapi.async_read_socket(con);
+			return rproc.net.async_read_socket(con);
 		};
 	
-		auto sess_writer = [&netapi, con](const std::string& str)
+		auto sess_writer = [con](const Proc& wproc, const std::string& str)
 		{
 			com::CommandReply rep;
 			rep.set_reply(str);
 			
 			std::string out_str;
 			if (rep.SerializeToString(&out_str))
-				netapi.async_write_socket(con, out_str);
+				wproc.net.async_write_socket(con, out_str);
 		};
 	
 		OS::CreateProcessParams params

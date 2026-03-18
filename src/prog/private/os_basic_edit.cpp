@@ -118,13 +118,6 @@ EagerTask<bool> handle_save(EditorState& state, Proc& proc)
 ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
-	FileSystem* fs = os.get_filesystem();
-
-	if (fs == nullptr)
-	{
-		proc.errln("No filesystem!");
-		co_return 1;
-	}
 
 	int32_t term_w = proc.get_var<int32_t>("TERM_W");
 	int32_t term_h = proc.get_var<int32_t>("TERM_H");

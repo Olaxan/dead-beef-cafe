@@ -42,11 +42,11 @@ public:
 	
 	Task<FileDescriptor> async_accept_socket(FileDescriptor sock);
 
-	Task<NetReadResult> async_read_socket(FileDescriptor sock);
-	Task<NetReadResultTcp> async_read_socket_tcp(FileDescriptor sock);
-	Task<NetReadResultIp> async_read_socket_raw(FileDescriptor sock);
+	Task<NetReadResult> async_read_socket(FileDescriptor sock) const;
+	Task<NetReadResultTcp> async_read_socket_tcp(FileDescriptor sock) const;
+	Task<NetReadResultIp> async_read_socket_raw(FileDescriptor sock) const;
 
-	Task<size_t> async_write_socket(FileDescriptor sock, std::string bytes);
+	Task<size_t> async_write_socket(FileDescriptor sock, std::string bytes) const;
 	
 	int32_t listen(FileDescriptor sock);
 

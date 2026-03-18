@@ -63,9 +63,9 @@ EagerTask<int32_t> ShellUtils::Exec(Proc& proc, std::vector<std::string>&& args)
 
 			if (auto exp_fd = new_proc->fs.open(*redirect_to, flags))
 			{
-				new_proc->set_writer([new_proc, fd = exp_fd.value()](const std::string& line)
+				new_proc->set_writer([fd = exp_fd.value()](const Proc& wproc, const std::string& line)
 				{
-					std::ignore = new_proc->fs.write(fd, line);
+					std::ignore = wproc.fs.write(fd, line);
 				});
 			}
 		}

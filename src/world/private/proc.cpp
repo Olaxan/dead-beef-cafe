@@ -55,7 +55,7 @@ Task<std::expected<std::string, std::error_condition>> Proc::read(EnvVarAccessMo
 
 	if (reader_)
 	{
-		auto res = co_await when_any(reader_(), ProcSignalAwaiter{this});
+		auto res = co_await when_any(reader_(*this), ProcSignalAwaiter{this});
 		if (res.index == 0)
 		{
 			co_return std::get<1>(res.value);
@@ -85,7 +85,7 @@ bool Proc::write(const std::string& msg)
 {
 	if (writer_)
 	{
-		writer_(msg);
+		writer_(*this, msg);
 		return true;
 	}
 
@@ -203,14 +203,12 @@ void Proc::return_descriptor(FileDescriptor fs)
 
 void Proc::copy_descriptors_from(const Proc& other)
 {
-	std::println("Copying descriptors from {}.", other.get_pid());
 	fs.copy_descriptors_from(other.fs);
 	net.copy_descriptors_from(other.net);
 }
 
 void Proc::enter()
 {
-	//std::println("enter({})", args.size() ? args[0] : "...");
 	fs.register_descriptors();
 	net.register_descriptors();
 }

@@ -28,10 +28,10 @@ public:
 
 	std::expected<FileDescriptor, std::error_condition> open(FilePath path, FileAccessFlags flags);
 	std::error_condition close(FileDescriptor fd);
-	std::expected<size_t, std::error_condition> write(FileDescriptor fd, std::string data);
-	std::expected<std::string_view, std::error_condition> read(FileDescriptor fd);
-	std::expected<ProcessFn, std::error_condition> read_exe(FileDescriptor fd);
-	std::expected<FileMeta*, std::error_condition> get_metadata(FileDescriptor fd);
+	std::expected<size_t, std::error_condition> write(FileDescriptor fd, std::string data) const;
+	std::expected<std::string_view, std::error_condition> read(FileDescriptor fd) const;
+	std::expected<ProcessFn, std::error_condition> read_exe(FileDescriptor fd) const;
+	std::expected<FileMeta*, std::error_condition> get_metadata(FileDescriptor fd) const;
 
 	OpenFileHandle get_file_handle(FileDescriptor fd) const;
 	NodeIdx get_node(FileDescriptor fd) const;

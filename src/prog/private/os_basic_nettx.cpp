@@ -29,7 +29,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 
 	FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
 	FileScope log{proc, "/var/log/tx.log", flags};
-	proc.set_writer([&proc, log = std::move(log)](const std::string& str)
+	proc.set_writer([log = std::move(log)](const Proc& wproc, const std::string& str)
 	{
 		std::ignore = log.write(str);
 	});
