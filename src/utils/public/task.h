@@ -144,7 +144,8 @@ struct Task
     // when ready return value to a consumer
     auto await_resume()
     {
-        return std::move(*(handle.promise().value));
+        auto&& val = handle.promise().value;
+        return (val.has_value()) ? *val : T{};
     }
 };
 
