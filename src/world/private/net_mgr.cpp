@@ -29,6 +29,7 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 	if (success)
 	{
 		it->second.open = true;
+		it->second.handle = h;
 		return std::make_pair(h, &it->second);
 	}
 	else
@@ -46,11 +47,19 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 		entry->rx_queue.broadcast_clear({});
 		entry->tx_queue.broadcast_clear({});
 		//return_handle(h);
-		it->second.open = false;
+		entry->open = false;
+		entry->sessions.clear();
+		entry->binding.reset();
 		//sockets_.erase(h);
+		std::println("Closed socket {}.", h);
 		return {};
 	} 
 	else return std::error_condition{EIO, std::generic_category()};
+}
+
+std::error_condition NetManager::close_socket(OpenSocketEntry* sock)
+{
+	return close_socket(sock->handle);
 }
 
 Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
@@ -81,15 +90,16 @@ Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
 
 std::error_condition NetManager::bind_socket(OpenSocketHandle sock, AddressPair addr)
 {
-	if (bindings_.contains(addr))
+	if (OpenSocketEntry* sock = find_socket(addr))
 		return std::error_condition{EADDRINUSE, std::generic_category()};
 
-	bindings_[addr] = sock;
-
-	if (OpenSocketEntry* file = find_socket(sock))
-		file->local_endpoint = addr;
-
-	return {};
+	if (OpenSocketEntry* bind = find_socket(sock))
+	{
+		bind->binding = addr;
+		bind->local_endpoint = addr;
+		return {};
+	}
+	else return std::error_condition{EIO, std::generic_category()};
 }
 
 std::error_condition NetManager::bind_socket(OpenSocketHandle sock, Address6 addr, int32_t port)
@@ -207,6 +217,7 @@ int32_t NetManager::listen(OpenSocketHandle sock)
 {
 	if (OpenSocketEntry* file = find_socket(sock))
 	{
+		file->listen = true;
 		return 0;
 	}
 	return 1;
@@ -255,7 +266,7 @@ Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_acce
 				co_return std::unexpected{exp_h.error()};
 
 			OpenSocketEntry* acceptor = find_socket(sock);
-			OpenSocketEntry* new_socket = find_socket(exp_h->first);
+			OpenSocketEntry* new_socket = exp_h->second;
 			new_socket->local_endpoint = acceptor->local_endpoint;
 			new_socket->remote_endpoint = { src_addr, src_port };
 			create_session(exp_h->first);
@@ -389,16 +400,18 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			}
 			else
 			{
-				std::println("Dropping packet (no session).");
+				std::println("DATA: Dropping packet (no session).");
 			}
 			break;
 		}
 		case ip::TcpType::Fin:
 		{
 			std::println("Received FIN from {}.", src_addr);
-			if (auto it = sessions_.find(sess); it != sessions_.end())
+			if (OpenSocketEntry* sock = find_socket(sess))
 			{
-				close_socket(it->second);
+				sock->sessions.erase(sess);
+				if (sock->sessions.empty() && not sock->listen)
+				 	close_socket(sock);
 			}
 			break;
 		}
@@ -473,8 +486,8 @@ bool NetManager::create_session(OpenSocketHandle h)
 	{
 		const AddressPair& local = file->local_endpoint;
 		const AddressPair& remote = file->remote_endpoint;
-		sessions_.emplace(AddressTuple{local, remote}, h);
-		std::println("Created session {}:{} <-> {}:{}.", local.addr, local.port, remote.addr, remote.port);
+		file->sessions.emplace(local, remote);
+		//std::println("Created session {}:{} <-> {}:{}.", local.addr, local.port, remote.addr, remote.port);
 		return true;
 	}
 
@@ -491,18 +504,22 @@ OpenSocketEntry* NetManager::find_socket(OpenSocketHandle h)
 
 OpenSocketEntry* NetManager::find_socket(const AddressPair& tuple)
 {
-	if (auto it_h = bindings_.find(tuple); it_h != bindings_.end())
-		return find_socket(it_h->second);
-
-	return nullptr;
+	auto it = std::ranges::find_if(sockets_, [&tuple](auto&& pair)
+	{
+		const OpenSocketEntry& sock = pair.second;
+		return sock.binding == tuple;
+	});
+	return (it != sockets_.end()) ? &it->second : nullptr;
 }
 
 OpenSocketEntry* NetManager::find_socket(const AddressTuple& tuple)
 {
-	if (auto it_h = sessions_.find(tuple); it_h != sessions_.end())
-		return find_socket(it_h->second);
-
-	return nullptr;
+	auto it = std::ranges::find_if(sockets_, [&tuple](auto&& pair)
+	{
+		const OpenSocketEntry& sock = pair.second;
+		return sock.sessions.contains(tuple);
+	});
+	return (it != sockets_.end()) ? &it->second : nullptr;
 }
 
 std::optional<ip::TcpPacket> NetManager::make_tcp_query(OpenSocketHandle h, ip::TcpType type, std::string&& payload)

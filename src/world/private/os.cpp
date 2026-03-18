@@ -130,11 +130,12 @@ EagerTask<int32_t> OS::run_process(ProcessFn program, std::vector<std::string> a
 
     if (proc == nullptr)
         co_return 1;
-
+        
     /* Now we actually run (and await) the process. */
+    proc->enter();
     int32_t ret = co_await proc->await_dispatch(program, std::move(args));
-
     proc->exit();
+
     processes_.erase(pid);
     co_return ret;
 }

@@ -35,6 +35,7 @@ public:
 
 	std::expected<OpenSocketPair, std::error_condition> create_socket();
 	std::error_condition close_socket(OpenSocketHandle h);
+	std::error_condition close_socket(OpenSocketEntry* sock);
 	Task<std::error_condition> async_close_socket(OpenSocketHandle h);
 
 	std::error_condition bind_socket(OpenSocketHandle sock, AddressPair addr);
@@ -112,8 +113,6 @@ protected:
 	NetQueue routing_queue_{};
 
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
-	std::unordered_map<AddressTuple, OpenSocketHandle> sessions_;
-	std::unordered_map<AddressPair, OpenSocketHandle> bindings_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
 
 	friend class ProcNetApi;

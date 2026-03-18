@@ -15,14 +15,25 @@ void ProcNetApi::copy_descriptors_from(const ProcNetApi& other)
 	fd_table_ = other.fd_table_;
 }
 
+void ProcNetApi::register_descriptors()
+{
+	for (auto&& [fd, pair] : fd_table_)
+	{
+		OpenSocketEntry* entry = pair.second;
+		++entry->instances;
+	}
+}
+
 std::expected<FileDescriptor, std::error_condition> ProcNetApi::create_socket()
 {
 	Proc& proc = *owner_;
 
 	if (auto exp_sock = net_->create_socket())
 	{
+		OpenSocketEntry* page = exp_sock->second;
 		FileDescriptor fd = proc.get_descriptor();
 		fd_table_[fd] = *exp_sock;
+		++page->instances;
 		return fd;
 	}
 	else return std::unexpected{exp_sock.error()};
@@ -34,8 +45,13 @@ std::error_condition ProcNetApi::close_socket(FileDescriptor sock)
 	{
 		const OpenSocketPair& pair = it->second;
 		OpenSocketHandle h = pair.first;
+		OpenSocketEntry* page = pair.second;
 		fd_table_.erase(it);
-		net_->async_close_socket(h);
+		if (--page->instances == 0)
+		{
+			std::println("NETAPI: really closing socket {}.", sock);
+			net_->async_close_socket(h);
+		}
 		return {};
 	}
 	else return std::error_condition{EBADF, std::generic_category()};
@@ -47,8 +63,14 @@ Task<std::error_condition> ProcNetApi::async_close_socket(FileDescriptor fd)
 	{
 		const OpenSocketPair& pair = it->second;
 		OpenSocketHandle h = pair.first;
+		OpenSocketEntry* page = pair.second;
 		fd_table_.erase(it);
-		co_return (co_await net_->async_close_socket(h));
+		if (--page->instances == 0)
+		{
+			std::println("NETAPI: really (async) closing socket {}.", fd);
+			co_return (co_await net_->async_close_socket(h));
+		}
+		else co_return {};
 	}
 	else co_return std::error_condition{EBADF, std::generic_category()};
 }
@@ -92,10 +114,14 @@ Task<FileDescriptor> ProcNetApi::async_accept_socket(FileDescriptor sock)
 	{
 		const OpenSocketPair& pair = it->second;
 		OpenSocketHandle h = pair.first;
-		auto exp_sock = co_await net_->async_accept_socket(h);
-		FileDescriptor fd = proc.get_descriptor();
-		fd_table_[fd] = *exp_sock;
-		co_return fd;
+		if (auto exp_sock = co_await net_->async_accept_socket(h))
+		{
+			FileDescriptor fd = proc.get_descriptor();
+			OpenSocketEntry* entry = exp_sock->second;
+			fd_table_[fd] = *exp_sock;
+			++entry->instances;
+			co_return fd;
+		}
 	}
 	else co_return -1;
 }

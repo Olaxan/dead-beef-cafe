@@ -106,7 +106,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 		auto exp_msg = co_await proc.read();
 		if (not exp_msg)
 		{
-			proc.errln("Read failure: {}. Exiting.", exp_msg.error().message());
+			proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
 			co_return 2;
 		}
 

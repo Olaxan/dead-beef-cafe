@@ -16,6 +16,15 @@ void ProcFsApi::copy_descriptors_from(const ProcFsApi& other)
 	fd_table_ = other.fd_table_;
 }
 
+void ProcFsApi::register_descriptors()
+{
+	for (auto&& [fd, page] : fd_table_)
+	{
+		OpenFileTableEntry* entry = page.second;
+		++entry->instance_count;
+	}
+}
+
 std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath path, FileAccessFlags flags)
 {
 	OS& os = *os_;
@@ -33,6 +42,7 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 
 		auto ret = fs.open_file_entry(fid, flags);
 		FileDescriptor fd = proc.get_descriptor();
+		++ret.second->instance_count;
 		fd_table_[fd] = ret;
 		return fd;
 	}
@@ -53,6 +63,7 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 		auto [node, ptr, err] = fs.create_file(path, params);
 		auto ret = fs.open_file_entry(node, flags);
 		FileDescriptor fd = proc.get_descriptor();
+		++ret.second->instance_count;
 		fd_table_[fd] = ret;
 		return fd;
 	}
@@ -67,8 +78,13 @@ std::error_condition ProcFsApi::close(FileDescriptor fd)
 	{
 		const OpenFileTablePair& pair = it->second;
 		OpenFileHandle h = pair.first;
+		OpenFileTableEntry* entry = pair.second;
 
-		fs_->close_file_entry(h);
+		if (--entry->instance_count == 0)
+		{
+			fs_->close_file_entry(h);
+		}
+
 		fd_table_.erase(it);
 		owner_->return_descriptor(fd);
 

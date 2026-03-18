@@ -28,6 +28,7 @@ public:
 	~ProcNetApi();
 
 	void copy_descriptors_from(const ProcNetApi& other);
+	void register_descriptors();
 
 	std::expected<FileDescriptor, std::error_condition> create_socket();
 	std::error_condition close_socket(FileDescriptor sock);

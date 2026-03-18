@@ -222,6 +222,7 @@ public:
 
 protected:
 
+	void enter();
 	void exit();
 
 public:

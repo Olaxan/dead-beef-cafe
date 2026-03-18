@@ -22,14 +22,24 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	CmdInput::CmdReaderParams pwd_params{.password = true};
 
 	proc.put(" | Username: ");
-	std::string username = *(co_await CmdInput::read_cmd_utf8(proc, usr_params));
+	auto exp_username = co_await CmdInput::read_cmd_utf8(proc, usr_params);
+	if (not exp_username)
+	{
+		proc.errln("login: Read error: {}.", exp_username.error().message());
+		co_return 1;
+	}
 
 	proc.put(" | Password: ");
-	std::string password = *(co_await CmdInput::read_cmd_utf8(proc, pwd_params));
+	auto exp_password = co_await CmdInput::read_cmd_utf8(proc, usr_params);
+	if (not exp_password)
+	{
+		proc.errln("login: Read error: {}.", exp_password.error().message());
+		co_return 1;
+	}
 
 	users->prepare();
 
-	if (std::optional<LoginPasswdData> passwd = users->authenticate(username, password); passwd.has_value())
+	if (std::optional<LoginPasswdData> passwd = users->authenticate(*exp_username, *exp_password); passwd.has_value())
 	{
 		/* Auth successful. */
 		Proc* leader = proc.get_session_leader();
@@ -41,7 +51,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 		proc.set_var("USER", passwd->username);
 		proc.set_var("PWD", passwd->home_path);
 
-		proc.putln("Welcome, {} ({}, {}).", username, passwd->uid, passwd->gid);
+		proc.putln("Welcome, {} ({}, {}).", *exp_username, passwd->uid, passwd->gid);
 		
 		co_return 0;
 	}

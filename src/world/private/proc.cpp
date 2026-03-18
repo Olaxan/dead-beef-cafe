@@ -203,8 +203,16 @@ void Proc::return_descriptor(FileDescriptor fs)
 
 void Proc::copy_descriptors_from(const Proc& other)
 {
+	std::println("Copying descriptors from {}.", other.get_pid());
 	fs.copy_descriptors_from(other.fs);
 	net.copy_descriptors_from(other.net);
+}
+
+void Proc::enter()
+{
+	//std::println("enter({})", args.size() ? args[0] : "...");
+	fs.register_descriptors();
+	net.register_descriptors();
 }
 
 void Proc::exit()

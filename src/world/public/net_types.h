@@ -11,6 +11,7 @@
 #include <memory>
 #include <coroutine>
 #include <functional>
+#include <optional>
 #include <print>
 #include <tuple>
 
@@ -22,19 +23,26 @@ using NetQueue = MessageQueue<ip::IpPackage>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
 
 using OpenSocketHandle = int64_t;
+using OpenSocketPair = std::pair<OpenSocketHandle, struct OpenSocketEntry*>;
 
 struct OpenSocketEntry
 {
+	OpenSocketHandle handle{-1};
+	int32_t instances{0};
+
 	MessageQueue<ip::IpPackage> rx_queue{};
 	MessageQueue<ip::IpPackage> tx_queue{};
 
 	AddressPair local_endpoint{};
 	AddressPair remote_endpoint{};
 
+	std::set<AddressTuple> sessions{};
+	std::optional<AddressPair> binding{};
+
 	bool open{false};
+	bool listen{false};
 };
 
-using OpenSocketPair = std::pair<OpenSocketHandle, OpenSocketEntry*>;
 
 using NetCastFn = std::function<void(Uid64, NIC*)>;
 

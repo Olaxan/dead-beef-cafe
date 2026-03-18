@@ -107,7 +107,8 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 			as opposed to the SSH session... for now.*/
 		};
 	
-		os.run_process(SSHSession, {std::format("ssh{}", con)}, std::move(params));	
+		os.run_process(SSHSession, {std::format("ssh{}", con)}, std::move(params));
+		netapi.close_socket(con); // As in, we release our claim on this fd.
 	}
 
 	co_return 0;
