@@ -8,6 +8,7 @@
 #include "os_fileio.h"
 #include "os_shell.h"
 #include "race_awaiter.h"
+#include "proc_signal_awaiter.h"
 
 #include "CLI/CLI.hpp"
 
@@ -25,14 +26,41 @@
 
 EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
 {
-	while (proc.net.socket_is_open(fd))
+	ProcNetApi& netapi = proc.net;
+
+	while (netapi.socket_is_open(fd))
 	{
-		auto exp_read = co_await proc.net.async_read_socket(fd);
-		if (not exp_read)
+		auto exp_read = co_await when_any(netapi.async_read_socket(fd), proc.wait(3));
+		if (exp_read.index == 0)
 		{
-			break;
+			if (auto res = std::get<1>(exp_read.value))
+			{
+				proc.write(*res);
+			}
+			else
+			{
+				proc.warnln("ssh: Reader error: {}. Exiting.", res.error().message());
+				break;
+			}
 		}
-		proc.write(*exp_read);
+		else if (exp_read.index == 1)
+		{
+			if (auto res = std::get<2>(exp_read.value))
+			{
+				proc.warnln("ssh: Reader abort: {}. Exiting.", res.message());
+				break;
+			}
+
+			if (co_await netapi.async_socket_test_alive(fd, 3))
+			{
+				continue;
+			}
+			else
+			{
+				proc.warnln("ssh: Connection with server lost (3 attempts). Exiting.");
+				break;
+			}
+		}
 	}
 
 	proc.signal(SIGTERM);
@@ -42,6 +70,8 @@ EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
 
 ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 {
+
+	ProcNetApi& netapi = proc.net;
 	
 	CLI::App app{"Open a secure remote shell on another host."};
 	app.allow_windows_style_options(false);
@@ -85,7 +115,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	FileDescriptor fd = *exp_sock;
 
-	if (auto bind_err = proc.net.bind_socket(fd, proc.net.get_primary_ip(), 49152))
+	if (auto bind_err = netapi.bind_socket(fd, netapi.get_primary_ip(), 49152))
 	{
 		proc.errln("Failed to bind socket: {}.", bind_err.message());
 		co_return 1;
@@ -93,7 +123,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("Connecting to {}:{}...", params.addr, params.port);
 
-	std::error_condition status = co_await proc.net.async_connect_socket(fd, *exp_remote_addr, params.port);
+	std::error_condition status = co_await netapi.async_connect_socket(fd, *exp_remote_addr, params.port);
 	if (status.value() != 0)
 	{
 		proc.errln("Connection failed: {}.", status.message());
@@ -104,29 +134,14 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	SshReader(proc, fd);
 
-	while (proc.net.socket_is_open(fd))
+	while (netapi.socket_is_open(fd))
 	{
-		auto exp_msg = co_await proc.read(3.f);
+		auto exp_msg = co_await proc.read();
 
 		if (not exp_msg)
 		{
-			if (exp_msg.error().value() == ETIMEDOUT)
-			{
-				if (co_await proc.net.async_socket_test_alive(fd, 3))
-				{
-					continue;
-				}
-				else
-				{
-					proc.warnln("ssh: Connection with server lost (3 attempts). Exiting.");
-					co_return 2;
-				}
-			}
-			else
-			{
-				proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
-				co_return 2;
-			}
+			proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
+			co_return 2;
 		}
 
 		if (exp_msg->length() == 0)
