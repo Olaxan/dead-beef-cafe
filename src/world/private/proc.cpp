@@ -50,9 +50,8 @@ void Proc::set_reader(ReaderFn&& reader)
 	reader_ = std::move(reader);
 }
 
-Task<std::expected<std::string, std::error_condition>> Proc::read(EnvVarAccessMode mode)
+Task<ReadResult> Proc::read(EnvVarAccessMode mode)
 {
-
 	if (reader_)
 	{
 		auto res = co_await when_any(reader_(*this), ProcSignalAwaiter{this});
@@ -74,6 +73,16 @@ Task<std::expected<std::string, std::error_condition>> Proc::read(EnvVarAccessMo
 	}
 
 	co_return std::unexpected{std::error_condition{ENOSYS, std::generic_category()}};
+}
+
+Task<ReadResult> Proc::read(float timeout, EnvVarAccessMode mode)
+{
+	auto res = co_await when_any(read(mode), wait(timeout));
+	if (res.index == 0)
+	{
+		co_return std::get<1>(res.value);
+	}
+	else co_return std::unexpected{std::error_condition{ETIMEDOUT, std::generic_category()}};
 }
 
 void Proc::set_writer(WriterFn&& writer)

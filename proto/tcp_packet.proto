@@ -8,6 +8,7 @@ enum TcpType
 	Syn = 1;
 	Ack = 2;
 	Fin = 3;
+	Test = 4;
 }
 
 message TcpPacket

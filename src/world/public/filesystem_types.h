@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
+#include <system_error>
 #include <functional>
 #include <tuple>
 #include <memory>
@@ -10,6 +12,7 @@ class FileSystem;
 class FilePath;
 
 using FileDescriptor = int64_t;
+using DescriptorResult = std::expected<FileDescriptor, std::error_condition>;
 
 enum class FileSystemError : uint32_t
 {

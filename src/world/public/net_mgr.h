@@ -51,6 +51,8 @@ public:
 	Task<NetReadResultIp> async_read_socket_raw(OpenSocketHandle sock);
 
 	Task<size_t> async_write_socket(OpenSocketHandle sock, std::string bytes);
+
+	Task<bool> async_socket_test_alive(OpenSocketHandle sock);
 	
 	int32_t listen(OpenSocketHandle sock);
 

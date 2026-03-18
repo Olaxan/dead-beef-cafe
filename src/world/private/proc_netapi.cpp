@@ -105,7 +105,7 @@ Task<std::error_condition> ProcNetApi::async_connect_socket(FileDescriptor sock,
 	return async_connect_socket(sock, {addr, port});
 }
 
-Task<FileDescriptor> ProcNetApi::async_accept_socket(FileDescriptor sock)
+Task<DescriptorResult> ProcNetApi::async_accept_socket(FileDescriptor sock)
 {
 	Proc& proc = *owner_;
 	if (auto it = fd_table_.find(sock); it != fd_table_.end())
@@ -120,8 +120,9 @@ Task<FileDescriptor> ProcNetApi::async_accept_socket(FileDescriptor sock)
 			++entry->instances;
 			co_return fd;
 		}
+		else co_return std::unexpected{exp_sock.error()};
 	}
-	else co_return -1;
+	else co_return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
 }
 
 Task<NetReadResult> ProcNetApi::async_read_socket(FileDescriptor sock) const
@@ -166,6 +167,32 @@ Task<size_t> ProcNetApi::async_write_socket(FileDescriptor sock, std::string byt
 		co_return (co_await net_->async_write_socket(h, std::move(bytes)));
 	}
 	else co_return 0;
+}
+
+Task<bool> ProcNetApi::async_socket_test_alive(FileDescriptor fd, size_t test_count) const
+{
+	if (auto it = fd_table_.find(fd); it != fd_table_.end())
+	{
+		const OpenSocketPair& pair = it->second;
+		OpenSocketHandle h = pair.first;
+
+		for (size_t i = 0; i < test_count; ++i)
+		{
+			bool connected = co_await net_->async_socket_test_alive(h);
+			if (connected)
+			{ 
+				co_return true; 
+			}
+			else
+			{
+				// Probably shouldn't write to our owner without asking.
+				owner_->warnln("Connection failure ({}/{} retries)...", i + 1, test_count);
+			}
+		}
+		
+		co_return false;
+	}
+	else co_return false;
 }
 
 int32_t ProcNetApi::listen(FileDescriptor sock)

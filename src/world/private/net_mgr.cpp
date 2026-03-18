@@ -44,13 +44,22 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		OpenSocketEntry* entry = &it->second;
-		entry->rx_queue.broadcast_clear({});
-		entry->tx_queue.broadcast_clear({});
-		//return_handle(h);
+
+		if (auto opt_reply = make_tcp_reply_ip(h, ip::TcpType::Fin, {}))
+		{
+			entry->tx_queue.broadcast_clear(std::move(*opt_reply));
+		}
+		
+		if (auto opt_query = make_tcp_query_ip(h, ip::TcpType::Fin, {}))
+		{
+			entry->rx_queue.broadcast_clear(std::move(*opt_query));
+		}
+
+		return_handle(h);
 		entry->open = false;
 		entry->sessions.clear();
 		entry->binding.reset();
-		//sockets_.erase(h);
+		sockets_.erase(h);
 		std::println("Closed socket {}.", h);
 		return {};
 	} 
@@ -67,21 +76,14 @@ Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
 	if (auto it = sockets_.find(h); it != sockets_.end())
 	{
 		OpenSocketEntry* entry = &it->second;
-		
+
 		if (auto opt_reply = make_tcp_reply_ip(h, ip::TcpType::Fin, {}))
 		{
 			send(std::move(*opt_reply));
 		}
-
-		if (auto opt_query = make_tcp_query_ip(h, ip::TcpType::Fin, {}))
-		{
-			receive(std::move(*opt_query));
-		}
-
+		
 		while (socket_has_data(h))
-		{
 			co_await os_->wait(0);
-		}
 
 		co_return close_socket(h);
 	}
@@ -211,6 +213,22 @@ Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string b
 	}
 
 	co_return 0;
+}
+
+Task<bool> NetManager::async_socket_test_alive(OpenSocketHandle sock)
+{
+	if (OpenSocketEntry* file = find_socket(sock))
+	{
+		auto pak = make_tcp_reply_ip(sock, ip::TcpType::Test, {});
+		if (not pak) { co_return false; }
+		
+		send(std::move(*pak));
+
+		auto res = co_await when_any(async_read_socket_tcp(sock), os_->wait(1.f));
+		co_return (res.index == 0);
+	}
+
+	co_return false;
 }
 
 int32_t NetManager::listen(OpenSocketHandle sock)
@@ -411,7 +429,19 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			{
 				sock->sessions.erase(sess);
 				if (sock->sessions.empty() && not sock->listen)
-				 	close_socket(sock);
+				{
+					close_socket(sock);
+				}
+			}
+			break;
+		}
+		case ip::TcpType::Test:
+		{
+			std::println("Received TEST from {}.", src_addr);
+			if (OpenSocketEntry* sock = find_socket(sess))
+			{
+				auto opt_rep = make_tcp_reply_ip(sock->handle, ip::TcpType::Ack, {});
+				send(std::move(*opt_rep));
 			}
 			break;
 		}

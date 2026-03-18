@@ -77,7 +77,16 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 	while (netapi.socket_is_open(fd))
 	{
 		proc.putln("Waiting for connections ({}:{})...", local_ip, 22);
-		FileDescriptor con = co_await netapi.async_accept_socket(fd);
+		DescriptorResult exp_con = co_await netapi.async_accept_socket(fd);
+
+		if (not exp_con)
+		{
+			proc.errln("Accept failed: {}.", exp_con.error().message());
+			continue;
+		}
+
+		FileDescriptor con = *exp_con;
+
 		proc.putln("Connection established ({}).", con);
 		proc.set_var("SSHCON", con);
 	

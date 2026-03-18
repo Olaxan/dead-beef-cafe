@@ -121,6 +121,9 @@ public:
 	The data type must be specified and match, or an exception will be raised. */
 	Task<ReadResult> read(EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
 
+	/* Optionally read with timeout. */
+	Task<ReadResult> read(float timeout, EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
+
 
 	/* ---- FUNCTIONS THAT RELATE TO PUTTING THINGS ON THE TERMINAL --- */
 

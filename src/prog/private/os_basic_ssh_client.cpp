@@ -7,6 +7,7 @@
 #include "os_input.h"
 #include "os_fileio.h"
 #include "os_shell.h"
+#include "race_awaiter.h"
 
 #include "CLI/CLI.hpp"
 
@@ -19,20 +20,45 @@
 #include <functional>
 #include <system_error>
 
+#include <signal.h>
 #include <iso646.h>
 
 EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
 {
 	while (proc.net.socket_is_open(fd))
 	{
-		auto exp_read = co_await proc.net.async_read_socket(fd);
-		if (not exp_read)
+		auto res = co_await when_any(proc.net.async_read_socket(fd), proc.wait(2.f));
+
+		if (res.index == 0)
 		{
-			proc.putln("Null read ({}).", exp_read.error().message());
-			break;
+			/* Data received. */
+			auto exp_read = std::get<1>(res.value);
+			if (exp_read)
+			{
+				proc.write(*exp_read);
+			}
+			else
+			{
+				proc.errln("ssh: Read failure: {}. Exiting.", exp_read.error().message());
+				break;
+			}
 		}
-		proc.write(*exp_read);
+		else
+		{
+			/* Case of timeout. */
+			if (co_await proc.net.async_socket_test_alive(fd, 3))
+			{
+				continue;
+			}
+			else
+			{
+				proc.warnln("ssh: Connection with server lost (3 attempts). Exiting.");
+				break;
+			}
+		}
 	}
+
+	proc.signal(SIGTERM);
 
 	co_return 0;
 }
@@ -104,6 +130,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 	while (proc.net.socket_is_open(fd))
 	{
 		auto exp_msg = co_await proc.read();
+
 		if (not exp_msg)
 		{
 			proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
