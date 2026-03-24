@@ -53,7 +53,7 @@ public:
 	[[nodiscard]] DeviceState get_state() const { return state_; }
 	void set_state(DeviceState new_state) { state_ = new_state; }
 
-	/* Get the uuid->device reference map. */
+	/* Get the uid64->device reference map. */
 	[[nodiscard]] auto& get_devices() { return devices_; }
 
 	/* Gets the world from the owning Host. */

@@ -9,7 +9,7 @@
 #include "filesystem.h"
 #include "cpu.h"
 #include "nic.h"
-#include "uuid.h"
+#include "uid64.h"
 
 #include <concepts>
 

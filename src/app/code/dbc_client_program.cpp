@@ -7,7 +7,7 @@
 #include "os.h"
 #include "os_basic.h"
 #include "os_input.h"
-#include "uuid.h"
+#include "uid64.h"
 #include "nic.h"
 #include "net_mgr.h"
 

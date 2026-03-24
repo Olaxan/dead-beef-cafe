@@ -8,7 +8,7 @@
 #include "os_basic.h"
 #include "os_input.h"
 #include "host_utils.h"
-#include "uuid.h"
+#include "uid64.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"

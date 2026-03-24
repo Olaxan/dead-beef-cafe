@@ -31,10 +31,10 @@ OS::~OS()
 
 std::size_t OS::register_devices()
 {
-    int32_t uuid = 0;
+    int32_t uid64 = 0;
     devices_.clear();
     for (auto& dev : owner_.get_devices())
-        devices_.emplace(++uuid, dev.get());
+        devices_.emplace(++uid64, dev.get());
     
     return devices_.size();
 }

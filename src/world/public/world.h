@@ -5,7 +5,7 @@
 #include "msg_queue.h"
 #include "link_srv.h"
 #include "host.h"
-#include "uuid.h"
+#include "uid64.h"
 
 #include "proto/world.pb.h"
 

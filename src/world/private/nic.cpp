@@ -4,7 +4,7 @@
 #include "host.h"
 #include "link_srv.h"
 #include "msg_queue.h"
-#include "uuid.h"
+#include "uid64.h"
 
 #include <print>
 #include <algorithm>
@@ -67,8 +67,8 @@ size_t NIC::transfer(Uid64 mac, ip::IpPackage&& packet)
 
 void NIC::broadcast(NetCastFn broadcast_fn)
 {
-	for (auto& [uuid, nic] : link_cache_)
-		broadcast_fn(uuid, nic);
+	for (auto& [uid64, nic] : link_cache_)
+		broadcast_fn(uid64, nic);
 }
 
 void NIC::unicast(Uid64 mac, NetCastFn unicast_fn)

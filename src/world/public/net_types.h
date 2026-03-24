@@ -2,7 +2,7 @@
 
 #include "msg_queue.h"
 #include "addr.h"
-#include "uuid.h"
+#include "uid64.h"
 
 #include "proto/ip_packet.pb.h"
 #include "proto/tcp_packet.pb.h"

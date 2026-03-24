@@ -48,9 +48,9 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 	std::size_t num_dev = os.register_devices();
 	std::println("Registered {} PCIE devices.", num_dev);
 
-	for (auto& [uuid, dev] : os.get_devices())
+	for (auto& [uid64, dev] : os.get_devices())
 	{
-		proc.putln("[INIT] -------- uuid={} '{}' -------- ", uuid, dev->get_device_id());
+		proc.putln("[INIT] -------- uid64={} '{}' -------- ", uid64, dev->get_device_id());
 		co_await os.wait(0.25f);
 
 		std::string driver = dev->get_driver_id();

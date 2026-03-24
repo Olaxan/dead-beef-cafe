@@ -1,5 +1,5 @@
 #include "net_mgr.h"
-#include "uuid.h"
+#include "uid64.h"
 #include "os.h"
 #include "host.h"
 #include "nic.h"
