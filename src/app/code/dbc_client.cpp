@@ -6,7 +6,6 @@
 #include "os.h"
 #include "msg_queue.h"
 #include "os_basic.h"
-#include "os_input.h"
 #include "host_utils.h"
 #include "uid64.h"
 

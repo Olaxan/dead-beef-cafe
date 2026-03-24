@@ -4,7 +4,6 @@
 #include "device.h"
 #include "net_types.h"
 #include "filesystem.h"
-#include "os_input.h"
 #include "os_fileio.h"
 #include "os_shell.h"
 
@@ -83,7 +82,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	};
 
 	icu::UnicodeString buffer;
-	CmdInput::CmdReaderParams read_params;
+	CmdReaderParams read_params;
 
 	if (proc.get_var("PWD").empty())
 		proc.set_var("PWD", "/");
@@ -127,7 +126,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 		};
 
-		auto exp_out_cmd = co_await CmdInput::read_cmd_utf8(proc, read_params, format);
+		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params, format);
 
 		if (not exp_out_cmd)
 		{

@@ -1,7 +1,6 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
-#include "os_input.h"
 #include "os_fileio.h"
 #include "editor.h"
 
@@ -34,7 +33,7 @@ EagerTask<std::optional<std::string>> write_in_statusbar(EditorState& state, Pro
 
 	while (true)
 	{
-		auto opt_query = co_await CmdInput::read_query(proc);
+		auto opt_query = co_await proc.io.read_query();
 		if (not opt_query)
 			break;
 
@@ -165,7 +164,7 @@ ProcessTask Programs::CmdEdit(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		auto exp_com = co_await CmdInput::read_query(proc);
+		auto exp_com = co_await proc.io.read_query();
 		if (not exp_com)
 			break;
 

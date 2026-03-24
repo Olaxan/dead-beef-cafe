@@ -3,6 +3,7 @@
 #include "task.h"
 #include "proc_types.h"
 #include "proc_fsapi.h"
+#include "proc_ioapi.h"
 #include "proc_netapi.h"
 #include "proc_sysapi.h"
 #include "term_utils.h"
@@ -239,6 +240,7 @@ public:
 	int32_t gid{0};
 
 	ProcFsApi fs{this};
+	ProcIoApi io{this};
 	ProcNetApi net{this};
 	ProcSysApi sys{this};
 

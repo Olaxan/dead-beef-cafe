@@ -1,5 +1,4 @@
 #include "os_basic.h"
-#include "os_input.h"
 #include "os_fileio.h"
 
 #include "os.h"
@@ -18,11 +17,11 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	UsersManager* users = os.get_users_manager();
 
-	CmdInput::CmdReaderParams usr_params{};
-	CmdInput::CmdReaderParams pwd_params{.password = true};
+	CmdReaderParams usr_params{};
+	CmdReaderParams pwd_params{.password = true};
 
 	proc.put(" | Username: ");
-	auto exp_username = co_await CmdInput::read_cmd_utf8(proc, usr_params);
+	auto exp_username = co_await proc.io.read_cmd_utf8(usr_params);
 	if (not exp_username)
 	{
 		proc.errln("login: Read error: {}.", exp_username.error().message());
@@ -30,7 +29,7 @@ ProcessTask Programs::CmdLogin(Proc& proc, std::vector<std::string> args)
 	}
 
 	proc.put(" | Password: ");
-	auto exp_password = co_await CmdInput::read_cmd_utf8(proc, pwd_params);
+	auto exp_password = co_await proc.io.read_cmd_utf8(pwd_params);
 	if (not exp_password)
 	{
 		proc.errln("login: Read error: {}.", exp_password.error().message());

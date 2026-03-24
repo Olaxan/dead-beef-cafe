@@ -7,7 +7,6 @@
 #include "host_utils.h"
 
 #include "os_basic.h"
-#include "os_input.h"
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 

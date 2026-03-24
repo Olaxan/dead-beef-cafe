@@ -1,4 +1,4 @@
-#include "os_input.h"
+#include "proc_ioapi.h"
 
 #include "proto/query.pb.h"
 
@@ -11,7 +11,12 @@
 
 #include <iso646.h>
 
-EagerTask<ReadResultQuery> CmdInput::read_query(Proc& proc)
+ProcIoApi::ProcIoApi(Proc* owner)
+: proc(*owner) { }
+
+ProcIoApi::~ProcIoApi() = default;
+
+EagerTask<ReadResultQuery> ProcIoApi::read_query()
 {
 	while (true)
 	{
@@ -27,7 +32,7 @@ EagerTask<ReadResultQuery> CmdInput::read_query(Proc& proc)
 	}
 }
 
-EagerTask<ReadResultReply> CmdInput::read_reply(Proc& proc)
+EagerTask<ReadResultReply> ProcIoApi::read_reply()
 {
 	while (true)
 	{
@@ -43,28 +48,28 @@ EagerTask<ReadResultReply> CmdInput::read_reply(Proc& proc)
 	}
 }
 
-void CmdInput::write_query(Proc& proc, const com::CommandQuery& query)
+void ProcIoApi::write_query(const com::CommandQuery& query)
 {
 	std::string out;
 	query.SerializeToString(&out);
 	proc.write(out);
 }
 
-void CmdInput::write_reply(Proc& proc, const com::CommandReply& reply)
+void ProcIoApi::write_reply(const com::CommandReply& reply)
 {
 	std::string out;
 	reply.SerializeToString(&out);
 	proc.write(out);
 }
 
-EagerTask<ReadResult> CmdInput::read_cmd_utf8(Proc& proc, CmdReaderParams params, CmdQueryFn callback)
+EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryFn callback)
 {
 
 	icu::UnicodeString buffer;
 
 	while (true)
 	{
-		auto exp_query = co_await read_query(proc);
+		auto exp_query = co_await read_query();
 
 		if (not exp_query)
 		{

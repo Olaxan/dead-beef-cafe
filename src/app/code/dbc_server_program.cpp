@@ -6,7 +6,6 @@
 #include "host.h"
 #include "os.h"
 #include "os_basic.h"
-#include "os_input.h"
 #include "uid64.h"
 #include "nic.h"
 #include "net_mgr.h"

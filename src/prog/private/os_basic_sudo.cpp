@@ -2,7 +2,6 @@
 
 #include "device.h"
 #include "filesystem.h"
-#include "os_input.h"
 #include "os_fileio.h"
 #include "os_shell.h"
 
@@ -35,7 +34,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		co_return 2;
 	}
 
-	CmdInput::CmdReaderParams pwd_params{.password = true};
+	CmdReaderParams pwd_params{.password = true};
 
 	Proc* session = proc.get_session_leader();
 	int32_t uid = session->get_uid();
@@ -54,7 +53,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	while (true)
 	{
 		proc.put("[sudo] password for {}: ", username);
-		std::string password = *(co_await CmdInput::read_cmd_utf8(proc, pwd_params));
+		std::string password = *(co_await proc.io.read_cmd_utf8(pwd_params));
 
 		/* Success: we break out of the loop. */
 		if (users->authenticate(username, password)) 

@@ -1,6 +1,5 @@
 #include "os_basic.h"
 #include "term_utils.h"
-#include "os_input.h"
 
 #include <unicode/ustring.h>
 
@@ -21,7 +20,7 @@ struct SnakeData
 		reading = true;
 		while (!stop)
 		{
-			if (auto opt_query = co_await CmdInput::read_query(proc))
+			if (auto opt_query = co_await proc.io.read_query())
 			{
 				query = *opt_query;
 			}
