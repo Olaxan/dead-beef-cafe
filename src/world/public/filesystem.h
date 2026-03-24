@@ -9,6 +9,7 @@
 #include <functional>
 #include <set>
 #include <unordered_map>
+#include <system_error>
 #include <expected>
 #include <concepts>
 #include <tuple>
@@ -23,8 +24,6 @@ class FileSystem
 public:
 
 	FileSystem();
-
-	static const char* get_fserror_name(FileSystemError code);
 
 	/* Returns whether file handle is valid. This is not the opposite of is_dir, as a directory is a file. */
 	bool is_file(NodeIdx fid) const;
@@ -96,8 +95,8 @@ public:
 	Returns the fid of the final folder. */
 	NodeIdx create_ensure_path(const FilePath& path, const CreateFileParams& params);
 
-	FileSystemError remove_file(NodeIdx fid, bool recurse = false);
-	FileSystemError remove_file(const FilePath& path, bool recurse = false);
+	std::error_condition remove_file(NodeIdx fid, bool recurse = false);
+	std::error_condition remove_file(const FilePath& path, bool recurse = false);
 
 	/* Version of remove_file that takes a deciding callback, which aborts the operation if returning false.
 	If true is returned, the operation should proceed even if an error is reported. */
@@ -156,7 +155,7 @@ public:
 		NodeIdx parent_fid = get_fid(parent);
 
 		if (parent_fid == 0)
-			return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+			return std::make_tuple(0, nullptr, std::error_condition{ENOENT, std::generic_category()});
 
 		NodeIdx fid = ++fid_counter_;
 		auto [it, success] = files_.emplace(fid, std::make_shared<T>(fid));
@@ -171,23 +170,23 @@ public:
 
 			file_set_modified_now(fid);
 
-			return std::make_tuple(fid, it->second, FileSystemError::Success);
+			return std::make_tuple(fid, it->second, std::error_condition{});
 		}
 
-		return std::make_tuple(fid, nullptr, FileSystemError::IOError);
+		return std::make_tuple(fid, nullptr, std::error_condition{EIO, std::generic_category()});
 	}
 
 	template<std::derived_from<File> T>
 	FileOpResult create_file(const FilePath& path, const CreateFileParams& params)
 	{
 		if (get_fid(path))
-			return std::make_tuple(0, nullptr, FileSystemError::FileExists);
+			return std::make_tuple(0, nullptr, std::error_condition{EEXIST, std::generic_category()});
 
 		if (params.recurse)
 			create_ensure_path(path, params);
 
 		auto res = add_file<T>(path, params.meta);
-		if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
+		if (auto [fid, ptr, err] = res; err.value() > 0)
 		{
 			if (!params.content.empty()) 
 				ptr->write(params.content);

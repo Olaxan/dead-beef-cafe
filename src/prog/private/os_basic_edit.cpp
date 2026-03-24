@@ -1,7 +1,6 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
-#include "os_fileio.h"
 #include "editor.h"
 
 #include <unicode/utypes.h>

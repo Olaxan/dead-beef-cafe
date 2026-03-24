@@ -26,23 +26,6 @@ FileSystem::FileSystem()
 	};
 }
 
-const char* FileSystem::get_fserror_name(FileSystemError code)
-{
-	switch (code)
-	{
-		case FileSystemError::FileNotFound: return "File not found";
-		case FileSystemError::FileExists: return "The file already exists";
-		case FileSystemError::FolderNotEmpty: return "Folder not empty";
-		case FileSystemError::InsufficientPermissions: return "Access denied";
-		case FileSystemError::InvalidFlags: return "Invalid file flags";
-		case FileSystemError::IOError: return "I/O error";
-		case FileSystemError::PreserveRoot: return "The operation can't be performed on the root directory";
-		case FileSystemError::Other: return "Unknown error";
-		case FileSystemError::Success: return "The operation completed successfully";
-		default: return "Unknown error";
-	}
-}
-
 bool FileSystem::is_file(NodeIdx fid) const
 {
 	return fid == get_root() || files_.contains(fid);
@@ -277,7 +260,7 @@ std::vector<NodeIdx> FileSystem::get_root_chain(NodeIdx fid) const
 FileOpResult FileSystem::create_directory(const FilePath& path, const CreateFileParams& params)
 {
 	FileOpResult res = create_file(path, params);
-	if (auto [fid, ptr, err] = res; err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = res; err.value() == 0)
 	{
 		file_set_directory_flag(fid, true);
 	}
@@ -309,7 +292,7 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 	NodeIdx fid = get_fid(path);
 
 	/* If this is the root directory, ensure we can operate on it. */
-	if (path == "/" && !func(*this, path, FileSystemError::PreserveRoot))
+	if (path == "/" && !func(*this, path, std::error_condition{EPERM, std::generic_category()}))
 	{
 		return false;
 	}
@@ -317,12 +300,12 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 	/* If this file doesn't exist, report it to callback and return. */
 	if (!is_file(fid))
 	{
-		func(*this, path, FileSystemError::FileNotFound);
+		func(*this, path, std::error_condition{ENOENT, std::generic_category()});
 		return false;
 	}
 
 	/* If we're not empty, and the callback doesn't say that's okay, fail. */
-	if (!(is_empty(fid) || func(*this, path, FileSystemError::FolderNotEmpty)))
+	if (!(is_empty(fid) || func(*this, path, std::error_condition{ENOTEMPTY, std::generic_category()})))
 	{
 		return false;
 	}
@@ -340,7 +323,7 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 	/* Even if callback requests resume, fail if not empty after recursion. */
 	if (!is_empty(fid))
 	{
-		func(*this, path, FileSystemError::FolderNotEmpty);
+		func(*this, path, std::error_condition{ENOTEMPTY, std::generic_category()});
 		return false;
 	}
 
@@ -374,14 +357,14 @@ bool FileSystem::remove_file(const FilePath& path, FileRemoverFn&& func)
 	/* Remove the file itself. */
 	files_.erase(fid);
 
-	return func(*this, path, FileSystemError::Success);
+	return func(*this, path, {});
 
 }
 
-FileSystemError FileSystem::remove_file(NodeIdx fid, bool recurse)
+std::error_condition FileSystem::remove_file(NodeIdx fid, bool recurse)
 {
 	if (!is_file(fid))
-		return FileSystemError::FileNotFound;
+		return {ENOENT, std::generic_category()};
 
 	if (is_empty(fid))
 	{
@@ -415,22 +398,22 @@ FileSystemError FileSystem::remove_file(NodeIdx fid, bool recurse)
 		/* Remove the file itself. */
 		files_.erase(fid);
 
-		return FileSystemError::Success;
+		return {};
 	}
 	else if (recurse)
 	{
 		for (NodeIdx child : get_files(fid))
 		{
-			if (FileSystemError err = remove_file(child, true); err != FileSystemError::Success)
+			if (auto err = remove_file(child, true); err.value() > 0)
 				return err;
 		}
 		return remove_file(fid, false);
 	}
 
-	return FileSystemError::FolderNotEmpty;
+	return {ENOTEMPTY, std::generic_category()};
 }
 
-FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
+std::error_condition FileSystem::remove_file(const FilePath& path, bool recurse)
 {
 	NodeIdx fid = get_fid(path);
 	return remove_file(fid, recurse);
@@ -439,12 +422,12 @@ FileSystemError FileSystem::remove_file(const FilePath& path, bool recurse)
 FileOpResult FileSystem::get_file(NodeIdx fid, FileAccessFlags flags)
 {
 	if (is_dir(fid) && has_flag<FileAccessFlags>(flags, FileAccessFlags::Write))
-		return std::make_tuple(fid, nullptr, FileSystemError::InvalidFlags);
+		return std::make_tuple(fid, nullptr, std::error_condition{EINVAL, std::generic_category()});
 	
 	if (auto it = files_.find(fid); it != files_.end())
-		return std::make_tuple(fid, it->second, FileSystemError::Success);
+		return std::make_tuple(fid, it->second, std::error_condition{});
 
-	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+	return std::make_tuple(0, nullptr, std::error_condition{ENOENT, std::generic_category()});
 }
 
 FileOpResult FileSystem::get_file(const FilePath& path, FileAccessFlags flags)
@@ -452,7 +435,7 @@ FileOpResult FileSystem::get_file(const FilePath& path, FileAccessFlags flags)
 	if (NodeIdx fid = get_fid(path); is_file(fid))
 		return get_file(fid, flags);
 
-	return std::make_tuple(0, nullptr, FileSystemError::FileNotFound);
+	return std::make_tuple(0, nullptr, std::error_condition{ENOENT, std::generic_category()});
 }
 
 File* FileSystem::find(NodeIdx fid)

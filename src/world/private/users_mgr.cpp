@@ -383,7 +383,7 @@ void UsersManager::get_passwd_data()
 
 	passwd_.clear();
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/passwd", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/passwd", FileAccessFlags::Read); err.value() == 0)
 	{
 		std::string_view f = ptr->get_view();
 		
@@ -406,7 +406,7 @@ void UsersManager::get_shadow_data()
 
 	shadow_.clear();
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/shadow", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/shadow", FileAccessFlags::Read); err.value() == 0)
 	{
 		std::string_view f = ptr->get_view();
 
@@ -431,7 +431,7 @@ void UsersManager::get_group_data()
 
 	groups_.clear();
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/group", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/group", FileAccessFlags::Read); err.value() == 0)
 	{
 		std::string_view f = ptr->get_view();
 
@@ -452,7 +452,7 @@ void UsersManager::write_passwd_data()
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/passwd", FileAccessFlags::Write); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/passwd", FileAccessFlags::Write); err.value() == 0)
 	{
 		ptr->write("");
 
@@ -485,7 +485,7 @@ void UsersManager::write_shadow_data()
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/shadow", FileAccessFlags::Write); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/shadow", FileAccessFlags::Write); err.value() == 0)
 	{
 		ptr->write("");
 
@@ -511,7 +511,7 @@ void UsersManager::write_group_data()
 	FileSystem* fs = os_.get_filesystem();
 	assert(fs);
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/group", FileAccessFlags::Write); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/group", FileAccessFlags::Write); err.value() == 0)
 	{
 		ptr->write("");
 

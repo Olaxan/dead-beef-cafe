@@ -6,8 +6,16 @@
 #include "proc.h"
 #include "os.h"
 
+/* --- Helpers --- */
+std::string replace(std::string_view input, std::string_view from, std::string_view to)
+{
+	return input | std::views::split(from) | std::views::join_with(to) | std::ranges::to<std::string>();
+}
+/* --- Helpers --- */
+
+
 ProcFsApi::ProcFsApi(Proc* owner) 
-: owner_(owner), os_(owner->owning_os), fs_(os_->get_filesystem()) { }
+: proc(*owner), os(*proc.owning_os), fs(*os.get_filesystem()) { }
 
 ProcFsApi::~ProcFsApi() = default;
 
@@ -27,9 +35,6 @@ void ProcFsApi::register_descriptors()
 
 std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath path, FileAccessFlags flags)
 {
-	OS& os = *os_;
-	Proc& proc = *owner_;
-	FileSystem& fs = *fs_;
 
 	if (path.is_relative())
 		path.make_absolute();
@@ -82,16 +87,28 @@ std::error_condition ProcFsApi::close(FileDescriptor fd)
 
 		if (--entry->instance_count == 0)
 		{
-			fs_->close_file_entry(h);
+			fs.close_file_entry(h);
 		}
 
 		fd_table_.erase(it);
-		owner_->return_descriptor(fd);
+		proc.return_descriptor(fd);
 
 		return {};
 	}
 
 	return std::error_condition{EBADF, std::generic_category()};
+}
+
+void ProcFsApi::close_all()
+{
+	while (!fd_table_.empty())
+	{
+		auto first = fd_table_.begin();
+		if (auto exp_close = close(first->first); exp_close.value() != 0)
+		{
+			proc.errln("proc: Failed to close file: {}.", exp_close.message());
+		}
+	}
 }
 
 std::expected<size_t, std::error_condition> ProcFsApi::write(FileDescriptor fd, std::string data) const
@@ -101,7 +118,7 @@ std::expected<size_t, std::error_condition> ProcFsApi::write(FileDescriptor fd, 
 		const OpenFileTablePair& pair = it->second;
 		OpenFileHandle h = pair.first;
 
-		return fs_->write(h, data);
+		return fs.write(h, data);
 	}
 	
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
@@ -114,7 +131,7 @@ std::expected<std::string_view, std::error_condition> ProcFsApi::read(FileDescri
 		const OpenFileTablePair& pair = it->second;
 		OpenFileHandle h = pair.first;
 		
-		return fs_->read(h, 0); // TODO: Add support for reading some bytes only.
+		return fs.read(h, 0); // TODO: Add support for reading some bytes only.
 	}
 	
 	return std::unexpected{std::error_condition{EBADF, std::generic_category()}};
@@ -127,7 +144,7 @@ std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescripto
 		const OpenFileTablePair& pair = it->second;
 		OpenFileHandle h = pair.first;
 		
-		if (auto exp_file = fs_->get(h))
+		if (auto exp_file = fs.get(h))
 		{
 			File* file = exp_file.value();
 			return file->get_executable();
@@ -144,7 +161,7 @@ std::expected<FileMeta*, std::error_condition> ProcFsApi::get_metadata(FileDescr
 		const OpenFileTablePair& pair = it->second;
 		OpenFileTableEntry* entry = pair.second;
 		
-		FileMeta* meta = fs_->get_metadata(entry->node);
+		FileMeta* meta = fs.get_metadata(entry->node);
 
 		if (meta) { return meta; }
 
@@ -178,9 +195,6 @@ NodeIdx ProcFsApi::get_node(FileDescriptor fd) const
 
 bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
 {
-	Proc& proc = *owner_;
-	OS& os = *proc.owning_os;
-	FileSystem& fs = *os.get_filesystem();
 	UsersManager& users = *os.get_users_manager();
 
 	int32_t uid = proc.get_uid();
@@ -239,14 +253,95 @@ bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
 	return false;
 }
 
-void ProcFsApi::close_all()
+FilePath ProcFsApi::resolve(FilePath path)
 {
-	while (!fd_table_.empty())
+	FilePath pwd(proc.get_var("PWD"));
+	std::string_view home = proc.get_var_or("HOME", "/");
+
+	/* cd ~/../hello */
+	path.substitute("~", home);
+	/* cd /usr/home/fredr/../hello */
+	
+	/* cd ../../hello */
+	if (path.is_relative())
+		path.make_absolute(pwd);
+	/* cd /usr/home/fredr/../../hello */
+
+	/* Split the path into segments, removing delimitors, filtering out empty segments. */
+	auto&& split_range = path.get_view() | std::views::split('/') | std::views::filter([](const auto& f){ return !std::string_view(f).empty(); });
+	/* usr, home, fredr, .., .., hello */
+
+	std::deque<std::string_view> path_stack{};
+
+	for (auto&& part : split_range)
 	{
-		auto first = fd_table_.begin();
-		if (auto exp_close = close(first->first); exp_close.value() != 0)
+		std::string_view dir(part);
+
+		if (dir == "..")
 		{
-			owner_->errln("proc: Failed to close file: {}.", exp_close.message());
+			path_stack.pop_back();
+			continue;
 		}
+		
+		if (dir == ".")
+			continue;
+
+		path_stack.push_back(dir);
 	}
+	
+	FilePath out{ path_stack | std::views::join_with('/') | std::ranges::to<std::string>() };
+	out.make_absolute();
+	return out;
+}
+
+FileQueryResult ProcFsApi::query(const FilePath& path, FileAccessFlags flags)
+{
+	if (NodeIdx fid = fs.get_fid(path))
+	{
+		/* The file exists -- check if we can read it. */
+		if (!check_permission(fid, flags))
+			return std::unexpected{std::error_condition{EACCES, std::generic_category()}};
+
+		return fid;
+	}
+	else if (FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Create))
+	{
+		return std::unexpected{std::error_condition{EINVAL, std::generic_category()}};
+	}
+
+	/* The file was not found -- return nothing. */
+	return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
+}
+
+std::error_condition ProcFsApi::remove(const FilePath& path, bool recurse)
+{
+	FileSystem& fs = *os.get_filesystem();
+
+	if (NodeIdx fid = fs.get_fid(path))
+	{
+		if (!check_permission(fid, FileAccessFlags::Read | FileAccessFlags::Execute))
+			return std::error_condition{EACCES, std::generic_category()};
+
+		return {};
+		//return fs.remove_file(path, recurse);
+	}
+
+	return std::error_condition{ENOENT, std::generic_category()};
+}
+
+bool ProcFsApi::remove_internal(const FilePath& path, FileRemoverFn&& func)
+{
+	if (NodeIdx fid = fs.get_fid(path))
+	{
+		if (!check_permission(fid, FileAccessFlags::Write | FileAccessFlags::Execute))
+		{
+			func(fs, path, std::error_condition{EACCES, std::generic_category()});
+			return false;
+		}
+
+		return fs.remove_file(path, std::move(func));
+	}
+
+	func(fs, path, std::error_condition{ENOENT, std::generic_category()});
+	return false;
 }

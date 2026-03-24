@@ -15,6 +15,8 @@ class Proc;
 class OS;
 class FileSystem;
 
+using FileQueryResult = std::expected<NodeIdx, std::error_condition>;
+
 class ProcFsApi
 {
 public:
@@ -33,18 +35,28 @@ public:
 	std::expected<ProcessFn, std::error_condition> read_exe(FileDescriptor fd) const;
 	std::expected<FileMeta*, std::error_condition> get_metadata(FileDescriptor fd) const;
 
+	FilePath resolve(FilePath path);
+	std::expected<NodeIdx, std::error_condition> query(const FilePath& path, FileAccessFlags flags);
+	std::error_condition remove(const FilePath& path, bool recurse = false);
+
 	OpenFileHandle get_file_handle(FileDescriptor fd) const;
 	NodeIdx get_node(FileDescriptor fd) const;
-
+	
 	bool check_permission(NodeIdx node, FileAccessFlags mode);
 
 	void close_all();
 
 protected:
 
-	Proc* owner_{nullptr};
-	OS* os_{nullptr};
-	FileSystem* fs_{nullptr};
+	bool remove_internal(const FilePath& path, FileRemoverFn&& func);
+
+protected:
+
+	Proc& proc;
+	OS& os;
+	FileSystem& fs;
+
+protected:
 
 	std::unordered_map<FileDescriptor, OpenFileTablePair> fd_table_{};
 

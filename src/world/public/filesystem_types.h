@@ -14,19 +14,6 @@ class FilePath;
 using FileDescriptor = int64_t;
 using DescriptorResult = std::expected<FileDescriptor, std::error_condition>;
 
-enum class FileSystemError : uint32_t
-{
-	Success = 0,
-	FileNotFound,
-	FileExists,
-	InsufficientPermissions,
-	InvalidFlags,
-	FolderNotEmpty,
-	IOError,
-	PreserveRoot,
-	Other
-};
-
 
 /* --- File Permission Category --- */
 
@@ -113,9 +100,8 @@ inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
 /* --- Definitions --- */
 
 using NodeIdx = int64_t;
-using FileOpResult = std::tuple<NodeIdx, std::shared_ptr<File>, FileSystemError>;
-using FileQueryResult = std::pair<NodeIdx, FileSystemError>;
-using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, FileSystemError)>;
+using FileOpResult = std::tuple<NodeIdx, std::shared_ptr<File>, std::error_condition>;
+using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, std::error_condition)>;
 
 
 /* --- File Meta-data --- */

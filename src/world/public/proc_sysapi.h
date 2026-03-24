@@ -7,6 +7,8 @@
 #include <cstdint>
 
 class Proc;
+class OS;
+class FileSystem;
 
 class ProcSysApi
 {
@@ -21,5 +23,7 @@ public:
 protected:
 
 	Proc& proc;
+	OS& os;
+	FileSystem& fs;
 	
 };
