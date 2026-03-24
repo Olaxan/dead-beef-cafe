@@ -19,6 +19,7 @@ public:
 	~ProcSysApi();
 
 	EagerTask<int32_t> exec(std::vector<std::string>&& args);
+	EagerTask<int32_t> exec(std::string argstr);
 
 protected:
 

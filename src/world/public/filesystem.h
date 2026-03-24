@@ -186,7 +186,7 @@ public:
 			create_ensure_path(path, params);
 
 		auto res = add_file<T>(path, params.meta);
-		if (auto [fid, ptr, err] = res; err.value() > 0)
+		if (auto [fid, ptr, err] = res; err.value() == 0)
 		{
 			if (!params.content.empty()) 
 				ptr->write(params.content);

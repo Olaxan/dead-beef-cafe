@@ -315,21 +315,18 @@ FileQueryResult ProcFsApi::query(const FilePath& path, FileAccessFlags flags)
 
 std::error_condition ProcFsApi::remove(const FilePath& path, bool recurse)
 {
-	FileSystem& fs = *os.get_filesystem();
-
 	if (NodeIdx fid = fs.get_fid(path))
 	{
 		if (!check_permission(fid, FileAccessFlags::Read | FileAccessFlags::Execute))
 			return std::error_condition{EACCES, std::generic_category()};
 
-		return {};
-		//return fs.remove_file(path, recurse);
+		return fs.remove_file(path, recurse);
 	}
 
 	return std::error_condition{ENOENT, std::generic_category()};
 }
 
-bool ProcFsApi::remove_internal(const FilePath& path, FileRemoverFn&& func)
+bool ProcFsApi::remove_using(const FilePath& path, FileRemoverFn&& func)
 {
 	if (NodeIdx fid = fs.get_fid(path))
 	{

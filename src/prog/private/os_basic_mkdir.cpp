@@ -3,7 +3,6 @@
 #include "device.h"
 #include "disk.h"
 #include "filesystem.h"
-#include "os_fileio.h"
 
 #include "CLI/CLI.hpp"
 

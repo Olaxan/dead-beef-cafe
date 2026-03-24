@@ -4,8 +4,6 @@
 #include "device.h"
 #include "net_types.h"
 #include "filesystem.h"
-#include "os_fileio.h"
-#include "os_shell.h"
 #include "race_awaiter.h"
 #include "proc_signal_awaiter.h"
 

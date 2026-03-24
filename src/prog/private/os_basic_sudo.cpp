@@ -2,8 +2,6 @@
 
 #include "device.h"
 #include "filesystem.h"
-#include "os_fileio.h"
-#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -71,7 +69,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 		}
 	}
 
-	if (auto [fid, ptr, err] = fs->get_file("/etc/sudoers", FileAccessFlags::Read); err == FileSystemError::Success)
+	if (auto [fid, ptr, err] = fs->get_file("/etc/sudoers", FileAccessFlags::Read); err.value() == 0)
 	{
 		std::string_view view = ptr->get_view();
 		if (!view.contains(username))
@@ -82,7 +80,7 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	}
 	else
 	{
-		proc.errln("sudo: fatal: cannot open sudoers file: {}.", FileSystem::get_fserror_name(err));
+		proc.errln("sudo: fatal: cannot open sudoers file: {}.", err.message());
 		co_return 2;
 	}
 
@@ -93,6 +91,6 @@ ProcessTask Programs::CmdSudo(Proc& proc, std::vector<std::string> args)
 	if (subargs.empty())
 		co_return 1;
 
-	int32_t ret = co_await ShellUtils::Exec(proc, std::move(subargs));
+	int32_t ret = co_await proc.sys.exec(std::move(subargs));
 	co_return ret;
 }

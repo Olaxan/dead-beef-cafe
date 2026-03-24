@@ -38,6 +38,7 @@ public:
 	FilePath resolve(FilePath path);
 	std::expected<NodeIdx, std::error_condition> query(const FilePath& path, FileAccessFlags flags);
 	std::error_condition remove(const FilePath& path, bool recurse = false);
+	bool remove_using(const FilePath& path, FileRemoverFn&& func);
 
 	OpenFileHandle get_file_handle(FileDescriptor fd) const;
 	NodeIdx get_node(FileDescriptor fd) const;
@@ -48,7 +49,6 @@ public:
 
 protected:
 
-	bool remove_internal(const FilePath& path, FileRemoverFn&& func);
 
 protected:
 

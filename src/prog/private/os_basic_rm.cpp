@@ -1,7 +1,6 @@
 #include "os_basic.h"
 
 #include "filesystem.h"
-#include "os_fileio.h"
 
 #include "CLI/CLI.hpp"
 
@@ -55,17 +54,17 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	auto remover = [&proc, &files_removed, &params](const FileSystem& fs, const FilePath& path, FileSystemError code) -> bool
+	auto remover = [&proc, &files_removed, &params](const FileSystem& fs, const FilePath& path, std::error_condition code) -> bool
 	{
-		switch (code)
+		switch (code.value())
 		{
-			case (FileSystemError::Success):
+			case (0):
 			{
 				++files_removed;
 				if (params.verbose) { proc.putln("Removed '{}'.", path); }
 				return true;
 			}
-			case (FileSystemError::FolderNotEmpty):
+			case (ENOTEMPTY):
 			{
 				if (params.recurse)
 				{
@@ -74,7 +73,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 				}
 				else break;
 			}
-			case (FileSystemError::PreserveRoot):
+			case (EPERM):
 			{
 				if (params.no_preserve_root)
 				{
@@ -85,12 +84,12 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 			}
 			default:
 			{
-				if (params.verbose) { proc.warnln("Failed to remove file '{}': {}.", path, FileSystem::get_fserror_name(code)); }
+				if (params.verbose) { proc.warnln("Failed to remove file '{}': {}.", path, code.message()); }
 				return params.force;
 			}
 		}
 
-		proc.warnln("Failed to remove file '{}': {}.", path, FileSystem::get_fserror_name(code));
+		proc.warnln("Failed to remove file '{}': {}.", path, code.message());
 		return false;
 	};
 
@@ -99,7 +98,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("PWD"));
 
-		FileUtils::remove(proc, path, remover);
+		proc.fs.remove_using(path, remover);
 	}
 
 	proc.putln("Removed {0} file(s).", files_removed);

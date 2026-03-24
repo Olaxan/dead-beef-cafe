@@ -4,8 +4,6 @@
 #include "device.h"
 #include "net_types.h"
 #include "filesystem.h"
-#include "os_fileio.h"
-#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -67,16 +65,16 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		/* Filepath resolution */
-		FilePath new_path = FileUtils::resolve(proc, params.path);
+		FilePath new_path = proc.fs.resolve(params.path);
 		
-		if (auto [fid, err] = FileUtils::query(proc, new_path, FileAccessFlags::Execute); err == FileSystemError::Success)
+		if (auto exp_fid = proc.fs.query(new_path, FileAccessFlags::Execute))
 		{
-			proc.set_var("PWD", fs->get_path(fid));
+			proc.set_var("PWD", fs->get_path(*exp_fid));
 			return 0;
 		}
 		else
 		{
-			proc.warnln("cd '{}': {}.", new_path, FileSystem::get_fserror_name(err));
+			proc.warnln("cd '{}': {}.", new_path, exp_fid.error().message());
 			return 1;
 		}
 	};
@@ -94,7 +92,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		FilePath path(proc.get_var("PWD"));
 		std::string_view home_dir = proc.get_var("HOME");
 
-		if (auto [fid, err] = FileUtils::query(proc, path, FileAccessFlags::Read | FileAccessFlags::Execute); err != FileSystemError::Success)
+		if (auto exp_fid = proc.fs.query(path, FileAccessFlags::Read | FileAccessFlags::Execute))
 		{
 			path = "/";
 			proc.set_var("PWD", "/");
@@ -166,7 +164,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 			else
 			{
-				co_return (co_await ShellUtils::Exec(proc, std::move(args)));
+				co_return (co_await proc.sys.exec(std::move(args)));
 			}
 
 		}, out_cmd);

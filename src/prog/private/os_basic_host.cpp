@@ -61,26 +61,27 @@ ProcessTask Programs::CmdBoot(Proc& proc, std::vector<std::string> args)
 		{
 			FilePath driver_path(std::format("/lib/modules/kernel/drivers/{}", driver_name));
 
-			if (auto [fid, ptr, err] = fs->get_file(driver_path); err == FileSystemError::Success)
-			{
-				// if (auto& prog = ptr->get_executable())
-				// {
-				// 	int32_t ret = co_await os.create_process(prog, {}, &proc);
-				// 	co_return ret;
-				// }
-				// else
-				// {
-				// 	proc.errln("Access violation.");
-				// 	co_return 1;
-				// }
-				co_return 0;
-			}
-			else
-			{
-				proc.errln("Failed to open driver module '{}'.", driver_path);
-				co_return 1;
-			}
+			// if (auto [fid, ptr, err] = fs->get_file(driver_path); err == FileSystemError::Success)
+			// {
+			// 	// if (auto& prog = ptr->get_executable())
+			// 	// {
+			// 	// 	int32_t ret = co_await os.create_process(prog, {}, &proc);
+			// 	// 	co_return ret;
+			// 	// }
+			// 	// else
+			// 	// {
+			// 	// 	proc.errln("Access violation.");
+			// 	// 	co_return 1;
+			// 	// }
+			// 	co_return 0;
+			// }
+			// else
+			// {
+			// 	proc.errln("Failed to open driver module '{}'.", driver_path);
+			// 	co_return 1;
+			// }
 
+			co_return 1;
 		}, driver);
 
 		if (ret != 0)

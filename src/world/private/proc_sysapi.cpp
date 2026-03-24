@@ -21,8 +21,6 @@ ProcSysApi::~ProcSysApi() = default;
 
 EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 {
-	OS& os = *proc.owning_os;
-
 	std::string_view name{*std::begin(args)};
 
 	/* If the last argument is &, run this process in the background. */
@@ -37,37 +35,43 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	});
 
 	/* If >> FILENAME is in the arguments, try to open the file as a output redirector. */
-	WriterFn redirect_writer = std::invoke([&]
+	auto redirect_to = std::invoke([&]() -> std::optional<FilePath>
 	{
-		WriterFn out{nullptr};
-
 		auto begin_find = std::ranges::find(args, ">>");		
 
 		if (begin_find == args.end())
-			return out;
+			return std::nullopt;
 
 		auto end_find = std::ranges::next(begin_find);
 
-		if (end_find != args.end())
-		{
-			FilePath where{*end_find};
+		if (end_find == args.end())
+			return std::nullopt;
 
-			if (where.is_relative())
-				where.make_absolute(proc.get_var("PWD"));
+		FilePath where{*end_find};
 
-			if (auto [fid, ptr, err] = fs.open(std::move(where), FileAccessFlags::Create | FileAccessFlags::Write); err.value() == 0)
-			{
-				out = [file = std::move(ptr)](const std::string& line)
-				{
-					file->append(line);
-				};
-			}
-		}
+		if (where.is_relative())
+			where.make_absolute(proc.get_var("PWD"));
 
 		args.erase(begin_find, std::ranges::next(end_find));
 
-		return out;
+		return where;
 	});
+
+	InvokeFn invoker = [redirect_to](Proc* new_proc)
+	{
+		if (redirect_to)
+		{
+			FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
+
+			if (auto exp_fd = new_proc->fs.open(*redirect_to, flags))
+			{
+				new_proc->set_writer([fd = exp_fd.value()](const Proc& wproc, const std::string& line)
+				{
+					std::ignore = wproc.fs.write(fd, line);
+				});
+			}
+		}
+	};
 
 	/* Try to find a file that matches on the PATH (or directly specified) */
 	auto match = std::invoke([&]() -> std::optional<FilePath>
@@ -81,9 +85,9 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 
 		for (auto&& path : candidates)
 		{
-			if (auto [fid, err] = proc.fs.query(path, FileAccessFlags::Execute))
+			if (auto exp_file = proc.fs.query(path, FileAccessFlags::Execute))
 			{
-				return fs->get_path(fid);
+				return fs.get_path(*exp_file);
 			}
 		}
 
@@ -96,46 +100,75 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 		co_return 1;
 	}
 
-	if (auto [fid, ptr, err] = fs.open(*match, FileAccessFlags::Execute); err.value() == 0)
+	if (auto exp_fd = proc.fs.open(*match, FileAccessFlags::Execute))
 	{
-		FileMeta* meta = fs.get_metadata(fid);
-		assert(meta);
+		FileDescriptor fd = exp_fd.value();
 
+		auto exp_meta = proc.fs.get_metadata(fd);
+		if (!exp_meta)
+		{
+			proc.errln("exec: failed to retrieve program metadata: {}.", exp_meta.error().message());
+			co_return 1;
+		}
+
+		FileMeta* meta = exp_meta.value();
 		bool setuid = fs.has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetUid);
 		bool setgid = fs.has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetGid);
 		int32_t exec_uid = setuid ? meta->owner_uid : proc.get_uid();
 		int32_t exec_gid = setgid ? meta->owner_gid : proc.get_gid();
-
+	
 		OS::CreateProcessParams params
 		{
-			.writer = std::move(redirect_writer),
+			.invoke = std::move(invoker),
 			.leader_id = proc.get_pid(),
 			.uid = exec_uid,
 			.gid = exec_gid
 		};
 
-		auto&& prog = ptr->get_executable();
+		auto&& prog = proc.fs.read_exe(fd);
 		if (!prog)
 		{
 			proc.errln("exec: no program entry point detected.");
 			co_return 1;
 		}
 
+		proc.fs.close(fd);
+
 		if (run_in_background)
 		{
-			os.run_process(prog, std::move(args), std::move(params));
+			proc.put("[&] ");
+			os.run_process(*prog, std::move(args), std::move(params));
 			co_return 0;
 		}
 		else
 		{
-			co_return (co_await os.run_process(prog, std::move(args), std::move(params)));
+			co_return (co_await os.run_process(*prog, std::move(args), std::move(params)));
 		}
 	}
 	else
 	{
-		proc.warnln("exec: failed to open '{}': {}.", *match, FileSystem::get_fserror_name(err));
+		proc.warnln("exec: failed to open '{}': {}.", *match, exp_fd.error().message());
 		co_return 1;
 	}
 	
 	co_return 1;
+}
+
+EagerTask<int32_t> ProcSysApi::exec(std::string argstr)
+{
+	std::string temp{};
+	std::vector<std::string> args{};
+	std::stringstream ss(argstr);
+
+	while (ss >> std::quoted(temp))
+	{
+		args.push_back(std::move(temp));
+	}
+
+	if (args.empty())
+		co_return 1;
+
+	std::string_view name = *std::begin(args);
+
+	co_return (co_await proc.sys.exec(std::move(args)));
 }

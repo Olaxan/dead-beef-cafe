@@ -132,6 +132,7 @@ void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resu
 
 EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::string> args)
 {
+	assert(program);
 	this->args = std::move(args);
 	task = std::move(std::invoke(program, *this, this->args));
 	task->handle.resume();

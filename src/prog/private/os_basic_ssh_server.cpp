@@ -4,8 +4,6 @@
 #include "device.h"
 #include "net_types.h"
 #include "filesystem.h"
-#include "os_fileio.h"
-#include "os_shell.h"
 
 #include "CLI/CLI.hpp"
 
@@ -28,7 +26,7 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("SecureShell version 5:");
 
-	int32_t login_ret = co_await ShellUtils::Exec(proc, {"/sbin/login"});
+	int32_t login_ret = co_await proc.sys.exec("/sbin/login");
 	
 	if (login_ret != 0)
 	{
@@ -38,7 +36,7 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD:BEEF:CAFE:: " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
 
-	int32_t ret = co_await ShellUtils::Exec(proc, {"/bin/shell"});
+	int32_t ret = co_await proc.sys.exec("/bin/shell");
 	proc.putln("Closing SSH session.");
 	auto status = co_await proc.net.async_close_socket(fd);
 	co_return ret;
