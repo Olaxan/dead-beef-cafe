@@ -8,7 +8,6 @@
 #include "proc_sysapi.h"
 #include "term_utils.h"
 #include "session.h"
-#include "timer_mgr.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"

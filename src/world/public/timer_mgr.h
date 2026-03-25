@@ -1,16 +1,16 @@
 #pragma once
 
+#include "timer_base.h"
+#include "timer_awaiter.h"
+#include "soa_helpers.h"
+#include "task.h"
+
 #include <set>
 #include <coroutine>
 #include <vector>
 #include <mutex>
 
-#include "soa_helpers.h"
-#include "task.h"
-
 class TimerManager;
-
-using timer_callback_t = std::function<void(void)>;
 
 template<typename T>
 using timer_container_t = std::vector<T, std::allocator<T>>;
@@ -40,35 +40,14 @@ struct TimerManagerData : public std::tuple<T ...>
 using TimerManagerDataTypes = TimerManagerData<
 	float,
 	float,
-	timer_callback_t, 
+	TimerCallbackFn, 
 	uint8_t, 
 	uint8_t,
 	uint8_t>;
 
 using TimerManagerContainer = BaseContainer<timer_container_t, DataLayout::SoA, TimerManagerDataTypes>;
 
-struct TimerHandle
-{
-	int32_t idx{-1};
-};
-
-struct TimerAwaiter
-{
-	explicit TimerAwaiter(TimerManager* mgr, float seconds)
-		: mgr_(mgr), time_(seconds) { }
-
-	bool await_ready() const { return false; }
-	void await_suspend(std::coroutine_handle<> h) const;
-	float await_resume() const { return time_; }
-
-private:
-
-	TimerManager* mgr_;
-	float time_{0};
-
-};
-
-class TimerManager
+class TimerManager : public ITimerBase
 {
 public:
 
@@ -78,7 +57,7 @@ public:
 
 	/* Set a timer (in seconds), giving a timer handle back. 
 	The event callback will be called once the timer reaches 0. */
-	TimerHandle set_timer(float seconds, timer_callback_t event, bool looping = false);
+	TimerHandle set_timer(float seconds, TimerCallbackFn event, bool looping = false) override;
 
 	/* Pause a set timer without cancelling it. 
 	If the handle is invalid, nothing happens. */
@@ -93,7 +72,7 @@ public:
 		return (handle.idx >= 0 && handle.idx < static_cast<int32_t>(timers_.size()));
 	};
 
-	TimerAwaiter wait(float seconds) { return TimerAwaiter{this, seconds}; }
+	TimerAwaiter wait(float seconds);
 
 private:
 

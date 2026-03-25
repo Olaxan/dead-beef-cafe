@@ -62,11 +62,6 @@ namespace Programs
 	/* Networks programs */
 	ProcessTask CmdPing(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdNetMap(Proc& proc, std::vector<std::string> args);
-
-	/* Out-of-world programs */
-	ProcessTask CmdSave(Proc& proc, std::vector<std::string> args);
-	ProcessTask CmdLoad(Proc& proc, std::vector<std::string> args);
-
 }
 
 class BasicOS : public OS

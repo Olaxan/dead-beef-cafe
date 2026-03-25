@@ -25,7 +25,7 @@ namespace HostUtils
 	template<std::derived_from<OS> T_OS>
 	Host* create_host(World& world, std::string hostname)
 	{
-		std::unique_ptr<Host> ptr = std::make_unique<Host>(world, hostname);
+		std::unique_ptr<Host> ptr = std::make_unique<Host>(hostname);
         Host& skel = *ptr;
 
         Disk& my_disk = skel.create_device<Disk>(500);

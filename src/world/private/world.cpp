@@ -8,6 +8,14 @@
 #include <cmath>
 #include <thread>
 
+void World::init_world()
+{
+	for (auto&& [id, host] : hosts_)
+	{
+		host->init(&services_);
+	}
+}
+
 void World::update_world(float delta_seconds)
 {
 	/* Apply thread-safe updates. */
@@ -18,9 +26,6 @@ void World::update_world(float delta_seconds)
 
 	/* Update timers. */
     timers_.step(delta_seconds);
-
-	/* Update routing. */
-	ip_.step(delta_seconds);
 
 }
 

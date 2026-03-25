@@ -1,11 +1,11 @@
 #pragma once
 
 #include "timer_mgr.h"
-#include "net_srv.h"
+#include "game_srv.h"
 #include "msg_queue.h"
 #include "link_srv.h"
-#include "host.h"
 #include "uid64.h"
+#include "host.h"
 
 #include "proto/world.pb.h"
 
@@ -25,6 +25,7 @@ public:
 
 public:
 
+    void init_world();
     void update_world(float delta_seconds);
 
     void launch();
@@ -32,7 +33,6 @@ public:
     LinkServer& get_link_server() { return net_; }
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
-    IpManager& get_ip_manager() { return ip_; }
 
     Host* add_host(Uid64 id, std::unique_ptr<Host>&& new_host);
 
@@ -49,10 +49,13 @@ private:
     std::unordered_map<Uid64, std::unique_ptr<Host>> hosts_{};
 
     TimerManager timers_{};
-    IpManager ip_{};
-
+    LinkServer net_{};
     WorldUpdateQueue queue_{};
 
-    LinkServer net_{};
+    GameServices services_
+    {
+        .timers = timers_
+    };
+
 
 };

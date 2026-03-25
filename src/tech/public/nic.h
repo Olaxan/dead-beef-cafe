@@ -1,7 +1,6 @@
 #pragma once
 
 #include "device.h"
-#include "endpoint.h"
 #include "addr.h"
 #include "net_types.h"
 #include "link_srv.h"
@@ -14,7 +13,7 @@
 #include <vector>
 
 
-class NIC : public Device, public IEndpoint, public ILinkable
+class NIC : public Device, public ILinkable
 {
 public:
 
@@ -35,11 +34,9 @@ public:
 	float get_physical_bandwidth() const { return bandwidth_; }
 	void set_physical_bandwidth(float gbps) { bandwidth_ = gbps; }
 
-	/* Endpoint IF */
-	void set_ip(const std::string& new_ip) override;
-	void set_ip(const Address6& new_ip) override { address_ = new_ip; }
-	const Address6& get_ip() const override { return address_; }
-	/* Endpoint IF */
+	void set_ip(const std::string& new_ip);
+	void set_ip(const Address6& new_ip) { address_ = new_ip; }
+	const Address6& get_ip() const { return address_; }
 
 	/* Linkable IF */
 	void on_linked(LinkServer* links, ILinkable* other) override;

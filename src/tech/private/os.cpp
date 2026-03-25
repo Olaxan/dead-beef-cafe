@@ -1,10 +1,12 @@
 #include "os.h"
+
 #include "host.h"
-#include "world.h"
 #include "proc.h"
-#include "net_srv.h"
 #include "nic.h"
 #include "disk.h"
+
+#include "game_srv.h"
+#include "timer_base.h"
 
 #include "proto/host.pb.h"
 #include "proto/files.pb.h"
@@ -25,9 +27,12 @@ OS::OS(Host& owner)
     register_devices(); 
 }
 
-OS::~OS()
+void OS::init(GameServices* services)
 {
+    services_ = services;
 }
+
+OS::~OS() = default;
 
 std::size_t OS::register_devices()
 {
@@ -52,11 +57,6 @@ void OS::shutdown_os()
 const std::string& OS::get_hostname() const
 {
 	return owner_.get_hostname();
-}
-
-World& OS::get_world()
-{
-    return owner_.get_world();
 }
 
 Host& OS::get_owner()
@@ -181,12 +181,12 @@ NetManager* OS::get_network_manager()
 
 TimerAwaiter OS::wait(float seconds)
 {
-	return get_world().get_timer_manager().wait(seconds);
+	return services_->timers.wait(seconds);
 }
 
 void OS::schedule(float seconds, SchedulerFn callback)
 {
-    get_world().get_timer_manager().set_timer(seconds, callback);
+    services_->timers.set_timer(seconds, callback);
 }
 
 bool OS::serialize(world::Host* to)

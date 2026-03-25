@@ -13,8 +13,5 @@ SOURCE_GROUP("world" FILES ${files_world})
 
 ADD_LIBRARY(world STATIC ${files_world})
 
-FIND_PACKAGE(Protobuf REQUIRED)
-FIND_PACKAGE(ICU COMPONENTS uc io i18n REQUIRED)
-
-TARGET_LINK_LIBRARIES(world PUBLIC utils proto protobuf::libprotobuf ICU::uc ICU::io ICU::i18n)
+TARGET_LINK_LIBRARIES(world PUBLIC tech services utils proto common)
 TARGET_INCLUDE_DIRECTORIES(world PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)

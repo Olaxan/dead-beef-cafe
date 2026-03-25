@@ -9,6 +9,7 @@
 
 namespace world { class Host; }
 
+struct GameServices;
 struct Command;
 
 class OS;
@@ -20,12 +21,13 @@ class Host
 public:
 
 	Host() = delete;
-	Host(World& world, std::string Hostname);
+	Host(std::string Hostname);
 	~Host();
+
+	void init(GameServices* services);
 
 	const std::string& get_hostname() const { return hostname_; }
 	OS& get_os();
-	World& get_world() { return world_; }
 	DeviceState get_state() const { return state_; }
 
 	bool start_host();
@@ -73,7 +75,7 @@ public:
 
 private:
 	
-	World& world_;	
+	GameServices* services_{nullptr};
 	std::string hostname_ = {};
 	std::unique_ptr<OS> os_{nullptr};
 	std::vector<std::unique_ptr<Device>> devices_{};

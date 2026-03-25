@@ -1,6 +1,5 @@
 #include "nic.h"
 
-#include "world.h"
 #include "host.h"
 #include "link_srv.h"
 #include "msg_queue.h"
@@ -42,14 +41,14 @@ void NIC::on_unlinked(LinkServer* links, ILinkable* other)
 
 void NIC::on_start(Host* owner)
 {
-	LinkServer& internet = owner->get_world().get_link_server();
-	internet.register_node(this);
+	//LinkServer& internet = owner->get_world().get_link_server();
+	//internet.register_node(this);
 }
 
 void NIC::on_shutdown(Host* owner)
 {
-	LinkServer& internet = owner->get_world().get_link_server();
-	internet.unregister_node(this);
+	//LinkServer& internet = owner->get_world().get_link_server();
+	//internet.unregister_node(this);
 }
 
 size_t NIC::transfer(Uid64 mac, ip::IpPackage&& packet)

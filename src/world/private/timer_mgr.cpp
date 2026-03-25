@@ -35,7 +35,7 @@ void TimerManager::step(float delta_seconds)
 	}
 }
 
-TimerHandle TimerManager::set_timer(float seconds, timer_callback_t event, bool looping)
+TimerHandle TimerManager::set_timer(float seconds, TimerCallbackFn event, bool looping)
 {
 	std::lock_guard<std::mutex> lock(mutex_);
 
@@ -80,6 +80,11 @@ void TimerManager::cancel_timer(const TimerHandle &handle)
 	}
 }
 
+TimerAwaiter TimerManager::wait(float seconds)
+{
+	return TimerAwaiter{this, seconds};
+}
+
 void TimerManager::reset_timer_internal(std::size_t idx)
 {
 	auto&& timer = timers_[idx];
@@ -94,10 +99,3 @@ void TimerManager::kill_timer_internal(std::size_t idx)
 	timer.get_alive().get() = false;
 	free_instances_.insert(idx);
 }
-
-/* Timer awaiter */
-void TimerAwaiter::await_suspend(std::coroutine_handle<> h) const
-{
-	mgr_->set_timer(time_, [h]{ h.resume(); });
-}
-/* Timer awaiter */

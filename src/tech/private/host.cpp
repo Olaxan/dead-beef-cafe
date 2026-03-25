@@ -1,8 +1,8 @@
 #include "host.h"
 
+#include "game_srv.h"
 #include "task.h"
 #include "proc.h"
-#include "world.h"
 #include "device.h"
 #include "disk.h"
 #include "file.h"
@@ -19,10 +19,16 @@
 #include <iostream>
 #include <chrono>
 
-Host::Host(World& world, std::string Hostname)
-: world_(world), hostname_(Hostname) { }
+Host::Host(std::string Hostname)
+: hostname_(Hostname) { }
 
 Host::~Host() = default;
+
+void Host::init(GameServices* services)
+{
+    services_ = services;
+    os_->init(services); // Horrible, OOP, fix later.
+}
 
 OS& Host::get_os()
 {

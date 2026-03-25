@@ -2,16 +2,14 @@
 
 #include "task.h"
 #include "proc.h"
-#include "timer_mgr.h"
+#include "timer_awaiter.h"
 #include "net_types.h"
 #include "net_mgr.h"
-#include "world.h"
 #include "device.h"
 #include "device_state.h"
 #include "session.h"
 #include "session_mgr.h"
 #include "users_mgr.h"
-#include "net_srv.h"
 
 #include <memory>
 #include <vector>
@@ -19,10 +17,10 @@
 #include <unordered_set>
 #include <concepts>
 
-//class Host;
+struct GameServices;
+
 class FileSystem;
 class Host;
-class World;
 
 namespace world { class Host; }
 
@@ -35,6 +33,8 @@ public:
 	OS() = delete;
 
 	OS(Host& owner);
+
+	void init(GameServices* services);
 
 	virtual ~OS();
 
@@ -55,9 +55,6 @@ public:
 
 	/* Get the uid64->device reference map. */
 	[[nodiscard]] auto& get_devices() { return devices_; }
-
-	/* Gets the world from the owning Host. */
-	[[nodiscard]] World& get_world();
 
 	/* Gets the owning host of the OS. */
 	[[nodiscard]] Host& get_owner();
@@ -132,6 +129,8 @@ public:
 	bool deserialize(const world::Host& from);
 
 protected:
+
+	GameServices* services_{nullptr};
 
 	Host& owner_;
 	int32_t pid_counter_{0};
