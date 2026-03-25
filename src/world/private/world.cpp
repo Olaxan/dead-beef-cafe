@@ -31,6 +31,8 @@ void World::update_world(float delta_seconds)
 
 void World::launch()
 {
+	init_world();
+	
 	worker_ = std::jthread([this]
 	{
 		while (run_)
