@@ -17,8 +17,6 @@ void TimerManager::step(float delta_seconds)
 
 		if (float& time = action.get_remaining().get() -= delta_seconds; time < 0.f)
 		{
-			//std::lock_guard<std::mutex> lock(mutex_);
-
 			auto&& event = action.get_invoker().get();
 
 			if (action.get_looping())

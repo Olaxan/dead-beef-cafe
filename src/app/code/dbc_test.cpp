@@ -129,8 +129,6 @@ int main(int argc, char* argv[])
 		.reader = std::move(local_reader),
 	});
 
-	//reader(client_net_mgr, h);
-
 	while (client_os.process_is_running(shell_pid))
 	{
 		std::wstring wide_in = DbcWin::read_console_input_w();
