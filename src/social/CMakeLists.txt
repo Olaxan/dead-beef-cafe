@@ -11,5 +11,5 @@ SET(files_social ${social_headers} ${social_sources})
 SOURCE_GROUP("social" FILES ${files_social})
 
 ADD_LIBRARY(social STATIC ${files_social})
-TARGET_LINK_LIBRARIES(social PUBLIC common)
+TARGET_LINK_LIBRARIES(social PUBLIC common services)
 TARGET_INCLUDE_DIRECTORIES(social PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
