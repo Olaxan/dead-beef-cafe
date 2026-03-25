@@ -1,7 +1,6 @@
 #pragma once
 
 #include "addr.h"
-#include "file_socket.h"
 #include "msg_queue.h"
 #include "net_types.h"
 #include "link_awaiter.h"
