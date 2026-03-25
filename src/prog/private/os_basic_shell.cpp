@@ -92,7 +92,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		FilePath path(proc.get_var("PWD"));
 		std::string_view home_dir = proc.get_var("HOME");
 
-		if (auto exp_fid = proc.fs.query(path, FileAccessFlags::Read | FileAccessFlags::Execute))
+		if (not proc.fs.query(path, FileAccessFlags::Read | FileAccessFlags::Execute))
 		{
 			path = "/";
 			proc.set_var("PWD", "/");

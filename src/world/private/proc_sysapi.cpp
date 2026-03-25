@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <functional>
 #include <optional>
+#include <system_error>
+
+#include <iso646.h>
 
 ProcSysApi::ProcSysApi(Proc* owner)
 : proc(*owner), os(*proc.owning_os), fs(*os.get_filesystem()) { }
@@ -74,7 +77,7 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	};
 
 	/* Try to find a file that matches on the PATH (or directly specified) */
-	auto match = std::invoke([&]() -> std::optional<FilePath>
+	auto match = std::invoke([&]() -> std::expected<FilePath, std::error_condition>
 	{
 		std::vector<std::string> candidates = proc.get_var("PATH")
 		| std::views::split(';')
@@ -91,12 +94,12 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 			}
 		}
 
-		return std::nullopt;
+		return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
 	});
 	
-	if (!match)
+	if (not match)
 	{
-		proc.warnln("'{}': No such file or directory.", name);
+		proc.warnln("'{}': {}.", name, match.error().message());
 		co_return 1;
 	}
 

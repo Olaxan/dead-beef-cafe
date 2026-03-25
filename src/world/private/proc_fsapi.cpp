@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "os.h"
 
+#include <iso646.h>
+
 /* --- Helpers --- */
 std::string replace(std::string_view input, std::string_view from, std::string_view to)
 {
@@ -42,7 +44,7 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 	if (NodeIdx fid = fs.get_fid(path))
 	{
 		/* The file exists -- check if we can read it. */
-		if (!check_permission(fid, flags))
+		if (not check_permission(fid, flags))
 			return std::unexpected(std::error_condition{EACCES, std::generic_category()});
 
 		auto ret = fs.open_file_entry(fid, flags);
@@ -60,7 +62,7 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 				.owner_uid = proc.get_uid(),
 				.owner_gid = proc.get_gid(),
 				.perm_owner = FilePermissionTriad::Read | FilePermissionTriad::Write,
-				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Write,
+				.perm_group = FilePermissionTriad::Read,
 				.perm_users = FilePermissionTriad::Read
 			}
 		}; //TODO: Add a 'mode' parameter to open(), which allows the user to specify this stuff.
@@ -101,7 +103,7 @@ std::error_condition ProcFsApi::close(FileDescriptor fd)
 
 void ProcFsApi::close_all()
 {
-	while (!fd_table_.empty())
+	while (not fd_table_.empty())
 	{
 		auto first = fd_table_.begin();
 		if (auto exp_close = close(first->first); exp_close.value() != 0)
@@ -299,7 +301,7 @@ FileQueryResult ProcFsApi::query(const FilePath& path, FileAccessFlags flags)
 	if (NodeIdx fid = fs.get_fid(path))
 	{
 		/* The file exists -- check if we can read it. */
-		if (!check_permission(fid, flags))
+		if (not check_permission(fid, flags))
 			return std::unexpected{std::error_condition{EACCES, std::generic_category()}};
 
 		return fid;
@@ -317,7 +319,9 @@ std::error_condition ProcFsApi::remove(const FilePath& path, bool recurse)
 {
 	if (NodeIdx fid = fs.get_fid(path))
 	{
-		if (!check_permission(fid, FileAccessFlags::Read | FileAccessFlags::Execute))
+		NodeIdx parent_fid = fs.get_parent_folder(fid);
+
+		if (not check_permission(parent_fid, FileAccessFlags::Write | FileAccessFlags::Execute))
 			return std::error_condition{EACCES, std::generic_category()};
 
 		return fs.remove_file(path, recurse);
@@ -330,7 +334,9 @@ bool ProcFsApi::remove_using(const FilePath& path, FileRemoverFn&& func)
 {
 	if (NodeIdx fid = fs.get_fid(path))
 	{
-		if (!check_permission(fid, FileAccessFlags::Write | FileAccessFlags::Execute))
+		NodeIdx parent_fid = fs.get_parent_folder(fid);
+
+		if (not check_permission(parent_fid, FileAccessFlags::Write | FileAccessFlags::Execute))
 		{
 			func(fs, path, std::error_condition{EACCES, std::generic_category()});
 			return false;

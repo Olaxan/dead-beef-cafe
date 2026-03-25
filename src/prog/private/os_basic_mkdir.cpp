@@ -60,7 +60,7 @@ ProcessTask Programs::CmdMakeDir(Proc& proc, std::vector<std::string> args)
 		{
 			NodeIdx h = proc.fs.get_node(*exp_fd);
 			fs->file_set_directory_flag(h, true);
-			fs->file_set_permissions(h, 7, 7, 7);
+			fs->file_set_permissions(h, 7, 5, 5);
 			proc.fs.close(*exp_fd);
 			++num_updated;
 		}
