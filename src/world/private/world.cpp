@@ -10,7 +10,7 @@
 
 void World::init_world()
 {
-	for (auto&& [id, host] : hosts_)
+	for (auto&& [id, host] : data.hosts)
 	{
 		host->init(&services_);
 	}
@@ -51,13 +51,13 @@ void World::launch()
 
 Host* World::add_host(Uid64 id, std::unique_ptr<Host>&& new_host)
 {
-	auto [it, success] = hosts_.emplace(id, std::move(new_host));
+	auto [it, success] = data.hosts.emplace(id, std::move(new_host));
 	return (success) ? it->second.get() : nullptr;
 }
 
 bool World::serialize(world::World* to)
 {
-	for (auto& [id, host] : hosts_)
+	for (auto& [id, host] : data.hosts)
 	{
 		world::Host* ar = to->add_hosts();
 		ar->set_uid(id.num);
@@ -72,7 +72,7 @@ bool World::deserialize(const world::World* from)
 	for (auto&& ar : from->hosts())
 	{
 		Uid64 id = ar.uid();
-		if (auto it = hosts_.find(id); it != hosts_.end())
+		if (auto it = data.hosts.find(id); it != data.hosts.end())
 		{
 			Host* host = it->second.get();
 			host->deserialize(ar);

@@ -28,3 +28,9 @@ TARGET_LINK_LIBRARIES(dbc_client PRIVATE world programs proto common asio::asio)
 ADD_EXECUTABLE(dbc_server ${files_server_app})
 ADD_DEPENDENCIES(dbc_server programs)
 TARGET_LINK_LIBRARIES(dbc_server PRIVATE world programs proto common asio::asio)
+
+ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    $<TARGET_FILE_DIR:dbc_client>/assets
+)
