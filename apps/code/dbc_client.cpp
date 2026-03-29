@@ -9,6 +9,7 @@
 #include "uid64.h"
 
 #include "os_basic.h"
+#include "prog_basic.h"
 #include "prog_net.h"
 #include "prog_world.h"
 

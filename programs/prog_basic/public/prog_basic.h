@@ -63,15 +63,3 @@ namespace Programs
 	ProcessTask CmdPing(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdNetMap(Proc& proc, std::vector<std::string> args);
 }
-
-class BasicOS : public OS
-{
-public:
-
-	BasicOS() = delete;
-	BasicOS(Host& owner);
-	~BasicOS();
-
-	virtual void start_os() override;
-	
-};

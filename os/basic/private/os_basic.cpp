@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "filesystem.h"
 
+#include "prog_basic.h"
+
 #include <string>
 #include <cstdlib>
 #include <print>
