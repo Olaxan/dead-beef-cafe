@@ -11,4 +11,5 @@
 namespace Programs
 {
 	ProcessTask CmdRadio(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdSpeak(Proc& proc, std::vector<std::string> args);
 };

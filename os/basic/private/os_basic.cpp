@@ -177,6 +177,7 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 		{"/usr/bin/dogs", Programs::CmdDogs},
 		{"/usr/bin/edit", Programs::CmdEdit},
 		{"/usr/bin/radio", Programs::CmdRadio},
+		{"/usr/bin/speak", Programs::CmdSpeak},
 		{"/lib/modules/kernel/drivers/cpu", Programs::InitCpu},
 		{"/lib/modules/kernel/drivers/net", Programs::InitNet},
 		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
