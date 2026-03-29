@@ -11,7 +11,7 @@ ProcessTask Programs::CmdRadio(Proc& proc, std::vector<std::string> args)
 
 	SoLoud::Openmpt chip;
 
-    chip.load("assets/mod/aryx.s3m");
+    chip.load("assets/mod/searching_for_truth.mod");
 
 	SoLoud::handle h = gSoloud.play(chip);
 
