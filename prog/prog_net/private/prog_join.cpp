@@ -2,7 +2,6 @@
 
 #include "msg_queue.h"
 #include "task.h"
-#include "world.h"
 #include "host.h"
 #include "os.h"
 #include "uid64.h"
