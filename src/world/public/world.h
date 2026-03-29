@@ -62,6 +62,7 @@ public:
 
     GameServices services_
     {
+        .outer = this,
         .timers = timers_
     };
 

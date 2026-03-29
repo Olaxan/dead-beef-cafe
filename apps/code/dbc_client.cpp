@@ -6,6 +6,7 @@
 #include "os.h"
 #include "msg_queue.h"
 #include "os_basic.h"
+#include "wprograms.h"
 #include "host_utils.h"
 #include "uid64.h"
 
@@ -103,6 +104,28 @@ int main(int argc, char* argv[])
 			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
 		},
 		.executable = Programs::CmdDbcServer
+	});
+
+	client_fs->create_file("/bin/save", 
+	{
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		},
+		.executable = Programs::CmdSave
+	});
+
+	client_fs->create_file("/bin/load", 
+	{
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		},
+		.executable = Programs::CmdLoad
 	});
 
 	our_world.launch();

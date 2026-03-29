@@ -1,17 +1,17 @@
 #--------------------------------------------------------------------------
-# WorldProg
-# This module emulates the living worldprog and contains all network simulation,
+# WPrograms
+# This module emulates the living wprograms and contains all network simulation,
 # that can exist without the player's involvement.
 #--------------------------------------------------------------------------
 
-PROJECT(WorldProg)
-FILE(GLOB worldprog_headers public/*.h)
-FILE(GLOB worldprog_sources private/*.cpp)
+PROJECT(WPrograms)
+FILE(GLOB wprograms_headers public/*.h)
+FILE(GLOB wprograms_sources private/*.cpp)
 
-SET(files_worldprog ${worldprog_headers} ${worldprog_sources})
-SOURCE_GROUP("worldprog" FILES ${files_worldprog})
+SET(files_wprograms ${wprograms_headers} ${wprograms_sources})
+SOURCE_GROUP("wprograms" FILES ${files_wprograms})
 
-ADD_LIBRARY(worldprog STATIC ${files_worldprog})
+ADD_LIBRARY(wprograms STATIC ${files_wprograms})
 
-TARGET_LINK_LIBRARIES(worldprog PUBLIC world)
-TARGET_INCLUDE_DIRECTORIES(worldprog PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
+TARGET_LINK_LIBRARIES(wprograms PUBLIC world)
+TARGET_INCLUDE_DIRECTORIES(wprograms PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)

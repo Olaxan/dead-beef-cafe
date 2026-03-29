@@ -10,12 +10,14 @@
 #include "session.h"
 #include "session_mgr.h"
 #include "users_mgr.h"
+#include "game_srv.h"
 
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <concepts>
+#include <any>
 
 struct GameServices;
 
@@ -70,6 +72,22 @@ public:
 
 	/* Gets the network manager. */
 	[[nodiscard]] NetManager* get_network_manager();
+
+	template <typename T>
+	[[nodiscard]] T get_outer_as()
+	{
+		if (services_ == nullptr)
+			return nullptr;
+
+		try
+		{
+			return std::any_cast<T>(services_->outer);
+		}
+		catch (const std::bad_any_cast&)
+		{
+			return nullptr;
+		}
+	}
 
 	struct CreateProcessParams
 	{
