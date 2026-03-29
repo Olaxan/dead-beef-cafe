@@ -32,7 +32,7 @@ ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
 	app.add_option("-f,--freq", params.base_freq, "Frequency of the spoken line")->capture_default_str();
 	app.add_option("-s,--speed", params.base_speed, "Speed of the spoken line")->capture_default_str();
 	app.add_option("-d,--declination", params.base_declination, "Declination of the spoken line")->capture_default_str();
-	app.add_option("-w,--wave", params.base_freq, "Waveform of the spoken line")->capture_default_str();
+	app.add_option("-w,--wave", params.waveform, "Waveform of the spoken line")->capture_default_str();
 
 	try
 	{
@@ -48,26 +48,19 @@ ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
 
 	// Define a couple of variables
 	SoLoud::Soloud soloud;  // SoLoud engine core
-	SoLoud::Speech speech;  // A sound source (speech, in this case)
+	soloud.init();
 
-	// Configure sound source
+	SoLoud::Speech speech;  // A sound source (speech, in this case)
 	speech.setText(params.line.c_str());
 	speech.setParams(params.base_freq, params.base_speed, params.base_declination, params.waveform);
 
-	// initialize SoLoud.
-	soloud.init();
+	SoLoud::handle h = soloud.play(speech);
 
-	// Play the sound source (we could do this several times if we wanted)
-	soloud.play(speech);
-
-	// Wait until sounds have finished
-	while (soloud.getActiveVoiceCount() > 0)
+	while (soloud.isValidVoiceHandle(h))
 	{
-		// Still going, sleep for a bit
-		co_await proc.wait(0.5f);
+		co_await proc.wait(0.1f);
 	}
 
-	// Clean up SoLoud
 	soloud.deinit();
 
     co_return 0;
