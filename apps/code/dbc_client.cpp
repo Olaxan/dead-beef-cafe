@@ -5,10 +5,12 @@
 #include "host.h"
 #include "os.h"
 #include "msg_queue.h"
-#include "os_basic.h"
-#include "wprograms.h"
 #include "host_utils.h"
 #include "uid64.h"
+
+#include "os_basic.h"
+#include "prog_net.h"
+#include "prog_world.h"
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
@@ -26,15 +28,6 @@
 #include <asio.hpp>
 
 #include <windows.h>
-
-using asio::ip::tcp;
-using asio::awaitable;
-using asio::co_spawn;
-using asio::detached;
-using asio::redirect_error;
-using asio::use_awaitable;
-
-
 
 
 com::ScreenData* get_screen_data()

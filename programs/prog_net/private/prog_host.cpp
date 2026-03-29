@@ -1,11 +1,10 @@
-#include "dbc.h"
+#include "prog_net.h"
 
 #include "msg_queue.h"
 #include "task.h"
 #include "world.h"
 #include "host.h"
 #include "os.h"
-#include "os_basic.h"
 #include "uid64.h"
 #include "nic.h"
 #include "net_mgr.h"
@@ -57,18 +56,9 @@ using namespace google;
 
 namespace protoutils = google::protobuf::util;
 
-class DbcParticipant
-{
-public:
-	virtual ~DbcParticipant() = default;
-	virtual void deliver(ip::IpPackage&& msg) = 0;
-};
-
-typedef std::shared_ptr<DbcParticipant> DbcParticipantPtr;
 
 
-/* This nasty function converts from a DBC task to an ASIO awaitable. */
-auto read_route(NetManager* net)
+auto client_read_route(NetManager* net)
 {
   	return asio::async_compose<decltype(asio::use_awaitable), void(ip::IpPackage)>(
     	[net](auto&& self) -> EagerTask<int32_t>
@@ -83,52 +73,68 @@ auto read_route(NetManager* net)
 }
 
 
-/* Shell session -- represents a connection between a (real + fake) client and this (real + fake) server. */
-class ShellSession : public DbcParticipant, public std::enable_shared_from_this<ShellSession>
+/* Shell session -- represents a connection between this (real + fake) client and a (real + fake) server. */
+class ShellClient : public std::enable_shared_from_this<ShellClient>
 {
 public:
 
-	ShellSession(Proc& proc, tcp::socket socket)
-	: proc_(proc), socket_(std::move(socket)), timer_(socket_.get_executor())
+	ShellClient(Proc& proc, asio::io_context& context)
+	: proc_(proc), context_(context), timer_(context), socket_(tcp::socket(context))
 	{
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
-		local_nic_ = proc.owning_os->get_device<NIC>();
-		net_mgr_ = proc.owning_os->get_network_manager();
-		assert(local_nic_);
+		net_mgr_ = proc_.owning_os->get_network_manager();
 	}
 
-	~ShellSession() = default;
-
-	void start()
+	void connect(std::string addr, std::string service)
 	{
-		proc_.putln("Client joined from {}.", socket_.remote_endpoint().address().to_string());
-		
-		co_spawn(socket_.get_executor(),
-			[self = shared_from_this()]{ return self->reader(); },
-			detached);
+		co_spawn(context_, 
+			[self = shared_from_this(), addr, service] { return self->resolve(addr, service); }, detached);
+	}
 
-		co_spawn(socket_.get_executor(),
-			[self = shared_from_this()]{ return self->writer(); },
-			detached);
+	void write(ip::IpPackage&& query)
+	{
+		asio::post(context_, [this, query] mutable
+		{
+			write_queue_.push(std::move(query));
+			timer_.cancel_one();
+		});
 	}
 
 	void deliver(ip::IpPackage&& msg)
 	{
-		net_mgr_->safe_rx(std::move(msg));
+		net_mgr_->receive(std::move(msg));
 		timer_.cancel_one();
 	}
 
-private:
+	awaitable<void> resolve(std::string addr, std::string service)
+	{
+		std::error_code ec;
+		tcp::resolver res(context_);
+
+		proc_.putln("Connecting to {0}:{1}...", addr, service);
+		
+		auto resolved = co_await res.async_resolve(addr, service, asio::redirect_error(asio::use_awaitable, ec));
+		co_await asio::async_connect(socket_, resolved, asio::redirect_error(asio::use_awaitable, ec));
+
+		if (!ec)
+		{
+			proc_.putln("Connected to {}.", socket_.remote_endpoint().address().to_string());
+		}
+
+		co_spawn(context_, 
+			[self = shared_from_this()] { return self->reader(); }, detached);
+		co_spawn(context_, 
+			[self = shared_from_this()] { return self->writer(); }, detached);
+	}
 
 	awaitable<void> reader()
 	{
+		constexpr std::size_t header_size = sizeof(int32_t);
+
 		try
 		{
-			constexpr std::size_t header_size = sizeof(int32_t);
-
-			while (true)
+			while (socket_.is_open())
 			{
-
 				int32_t body_size = co_await std::invoke([this] -> awaitable<int32_t>
 				{
 					asio::streambuf stream{};
@@ -137,16 +143,14 @@ private:
 
 					auto header_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(header_size), use_awaitable);
 					stream.commit(header_size);
-	
+
 					int32_t bytes_to_read = 0;
 					input_stream.read(reinterpret_cast<char*>(&bytes_to_read), sizeof(bytes_to_read));
-					
 					co_return bytes_to_read;
 				});
 
 				if (body_size == 0)
 				{
-					std::println("Warning: body size of 0 bytes.");	
 					continue;
 				}
 
@@ -157,7 +161,7 @@ private:
 				auto body_bytes = co_await asio::async_read(socket_, buffer, asio::transfer_exactly(body_size), use_awaitable);
 				stream.commit(body_size);
 
-				std::string received_str = DbcUtils::make_string(stream);
+				std::string received_str = DbcNetUtils::make_string(stream);
 
 				ip::IpPackage pak;
 				if (pak.ParseFromString(received_str))
@@ -174,92 +178,74 @@ private:
 		}
 		catch (const std::exception& e)
 		{
-			proc_.errln("host: Read exception: {}.", e.what());
+			proc_.errln("join: Read exception: {}.", e.what());
 			stop();
 		}
- 	}
+	}
 
 	awaitable<void> writer()
 	{
 		try
 		{
-			constexpr std::size_t header_size = sizeof(int32_t);
-
-			std::error_code ec;
-			asio::streambuf buffer{};
-			std::ostream output_stream(&buffer);
-
 			while (socket_.is_open())
 			{
-				ip::IpPackage reply = co_await read_route(net_mgr_);
+				asio::error_code ec;
+				asio::streambuf buffer{};
+				std::ostream output_stream(&buffer);
 
+				ip::IpPackage send = co_await client_read_route(net_mgr_);
+	
 				std::string coded_str;
-				bool success = reply.SerializeToString(&coded_str);
-				int32_t reply_size = static_cast<int32_t>(coded_str.size());
-				int32_t header_size = static_cast<int32_t>(sizeof(reply_size));
-				int32_t total_msg_size = reply_size + header_size;
-				output_stream.write(reinterpret_cast<char*>(&reply_size), sizeof(reply_size));
-				output_stream.write(reinterpret_cast<char*>(coded_str.data()), reply_size);
+				bool success = send.SerializeToString(&coded_str);
+
+				int32_t query_size = static_cast<int32_t>(coded_str.size());
+				int32_t header_size = static_cast<int32_t>(sizeof(query_size));
+				int32_t total_msg_size = query_size + header_size;
+				output_stream.write(reinterpret_cast<char*>(&query_size), sizeof(query_size));
+				output_stream.write(reinterpret_cast<char*>(coded_str.data()), query_size);
 
 				std::size_t n = co_await asio::async_write(socket_, buffer, asio::transfer_exactly(total_msg_size), asio::redirect_error(use_awaitable, ec));
 				buffer.consume(n);
-
-				if (static_cast<int32_t>(n) != total_msg_size)
-					proc_.errln("Write mismatch: wrote {0} bytes but expected {1}.", n, total_msg_size);
 			}
 		}
-		catch (std::exception& e)
+		catch(const std::exception& e)
 		{
-			proc_.errln("host: Write exception: {}.", e.what());
+			proc_.errln("join: Write exception: {}.", e.what());
 			stop();
 		}
-  	}
+	}
 
 	void stop()
 	{
 		socket_.close();
 		timer_.cancel();
+		context_.stop();
 	}
 
 	Proc& proc_;
-	tcp::socket socket_;
-	asio::steady_timer timer_;
-	NIC* local_nic_{nullptr};
 	NetManager* net_mgr_{nullptr};
-
-	asio::streambuf in_buf_{};
-	std::istream in_stream_{&in_buf_};
-
-	asio::streambuf out_buf_{};
-	std::ostream out_stream_{&out_buf_};
+	asio::io_context& context_;
+	asio::steady_timer timer_;
+	tcp::socket socket_;
+	NetQueue write_queue_{};
 
 };
 
 
-/* Listener, sets up a shell session for every joining client! */
-awaitable<void> listener(Proc& proc, tcp::acceptor acceptor)
-{
-	for (;;)
-	{
-		auto ptr = std::make_shared<ShellSession>(proc, co_await acceptor.async_accept(use_awaitable));
-		ptr->start();
-	}
-}
-
-/* This program can be run on a node in the host network to set it up as a 
-real listening server in the fake internet, allowing users to connect and route traffic through it. */
-ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
+ProcessTask Programs::CmdDbcClient(Proc& proc, std::vector<std::string> args)
 {
 
-	CLI::App app{"An out-of-world utility for hosting a DEAD:BEEF:CAFE:: routing host!"};
+	CLI::App app{"An out-of-world utility for connecting to a DEAD:BEEF:CAFE:: routing host!"};
 	app.allow_windows_style_options(false);
 
-	struct DbcServerArgs
+	struct DbcClientArgs
 	{
-		std::vector<unsigned short> ports{666};
+		std::string addr{"localhost"};
+		std::string service{"666"};
 	} params{};
 
-	app.add_option("-p,PORTS", params.ports, "Ports upon which to listen for joining clients")->capture_default_str();
+	app.add_option("-a,ADDR", params.addr, "Address for connection")->capture_default_str();
+	app.add_option("-p,SERV", params.service, "Service or port for connection")->capture_default_str();
 
 	try
 	{
@@ -273,20 +259,17 @@ ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	proc.putln("Hosting DBC server on {}...", params.ports);
-	co_await proc.wait(1.f);
-
 	asio::io_context io_context(1);
+
+	proc.putln("Starting routing agent...");
 
 	try
 	{
-		for (unsigned short port : params.ports)
-		{
-			co_spawn(io_context, listener(proc, tcp::acceptor(io_context, {tcp::v4(), port})), detached);
-		}
+		auto client = std::make_shared<ShellClient>(proc, io_context);
+		client->connect(params.addr, params.service);
 
 		asio::signal_set signals(io_context, SIGINT, SIGTERM);
-		signals.async_wait([&](auto, auto){ io_context.stop(); });
+		signals.async_wait([&](auto, auto) { io_context.stop(); });
 
 		co_await IoServiceAwaiter{io_context};
 	}
@@ -295,5 +278,7 @@ ProcessTask Programs::CmdDbcServer(Proc& proc, std::vector<std::string> args)
 		proc.errln("join: Exception: {}.", e.what());
 	}
 
-	co_return 0;
+	proc.putln("join: DBC link exited.");
+
+    co_return 0;
 }

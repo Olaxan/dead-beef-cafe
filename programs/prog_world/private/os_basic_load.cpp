@@ -1,4 +1,4 @@
-#include "wprograms.h"
+#include "prog_world.h"
 
 #include "proc.h"
 #include "world.h"

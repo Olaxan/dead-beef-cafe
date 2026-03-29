@@ -8,6 +8,9 @@
 #include "host_utils.h"
 
 #include "os_basic.h"
+#include "prog_net.h"
+#include "prog_world.h"
+
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
 
