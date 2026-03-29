@@ -31,3 +31,9 @@ ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     ${CMAKE_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:dbc_client>/assets
 )
+
+ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/lib
+    $<TARGET_FILE_DIR:dbc_client>
+)

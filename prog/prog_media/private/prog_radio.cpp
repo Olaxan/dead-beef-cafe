@@ -2,25 +2,26 @@
 
 #include "soloud.h"
 #include "soloud_wav.h"
+#include "soloud_openmpt.h"
 
 ProcessTask Programs::CmdRadio(Proc& proc, std::vector<std::string> args)
 {
-	SoLoud::Soloud gSoloud; // SoLoud engine
-	SoLoud::Wav gWave;      // One wave file
+	SoLoud::Soloud gSoloud;
+	gSoloud.init();
 
-	gSoloud.init(); // Initialize SoLoud
+	SoLoud::Openmpt chip;
 
-    gWave.load("assets/audio/track1.wav"); // Load a wave
+    chip.load("assets/mod/aryx.s3m");
 
-	int h = gSoloud.play(gWave); // Play the wave
+	SoLoud::handle h = gSoloud.play(chip);
 
     // Wait while sound plays
-    while (gSoloud.getActiveVoiceCount() > 0)
+    while (gSoloud.isValidVoiceHandle(h))
     {
         co_await proc.wait(1.f);
     }
 
-    gSoloud.deinit(); // Clean up!
+    gSoloud.deinit();
 
     co_return 0;
 }
