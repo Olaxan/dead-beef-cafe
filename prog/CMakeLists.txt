@@ -2,6 +2,9 @@
 # Source directory
 # Simply add all subdirectories which contain CMakeLists here.
 #--------------------------------------------------------------------------
+
+ADD_LIBRARY(programs INTERFACE)
+
 FILE(GLOB children RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/*)
 FOREACH(child ${children})
 	IF(IS_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/${child})
@@ -10,3 +13,5 @@ FOREACH(child ${children})
 		ENDIF()
 	ENDIF()
 ENDFOREACH()
+
+TARGET_LINK_LIBRARIES(programs INTERFACE progbasic progmedia progworld prognet)

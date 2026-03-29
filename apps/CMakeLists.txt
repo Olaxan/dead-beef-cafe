@@ -18,13 +18,13 @@ FIND_PACKAGE(Protobuf REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
 
 ADD_EXECUTABLE(dbc_test ${files_test_app})
-TARGET_LINK_LIBRARIES(dbc_test PRIVATE world basicos progbasic progworld common)
+TARGET_LINK_LIBRARIES(dbc_test PRIVATE world basicos programs common)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
-TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos progbasic prognet progworld proto common)
+TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common)
 
 ADD_EXECUTABLE(dbc_server ${files_server_app})
-TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos progbasic prognet progworld proto common)
+TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos programs proto common)
 
 ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
