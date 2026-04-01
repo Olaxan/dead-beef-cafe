@@ -13,5 +13,5 @@ SOURCE_GROUP("progmedia" FILES ${files_progmedia})
 
 ADD_LIBRARY(progmedia STATIC ${files_progmedia})
 
-TARGET_LINK_LIBRARIES(progmedia PUBLIC common tech soloud)
+TARGET_LINK_LIBRARIES(progmedia PUBLIC common term tech soloud)
 TARGET_INCLUDE_DIRECTORIES(progmedia PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
