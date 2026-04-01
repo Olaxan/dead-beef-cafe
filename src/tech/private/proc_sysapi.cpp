@@ -22,7 +22,7 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
-LazyTask<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params)
+Task<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params)
 {
 	if (auto exp_fd = proc.fs.open(path, FileAccessFlags::Execute))
 	{
@@ -77,7 +77,7 @@ LazyTask<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& arg
 	}
 }
 
-LazyTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
+Task<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 {
 	std::string_view name{*std::begin(args)};
 
@@ -211,7 +211,7 @@ LazyTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	co_return 1;
 }
 
-LazyTask<int32_t> ProcSysApi::exec(std::string argstr)
+Task<int32_t> ProcSysApi::exec(std::string argstr)
 {
 	std::string temp{};
 	std::vector<std::string> args{};

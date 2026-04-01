@@ -28,9 +28,9 @@ public:
 	ProcSysApi(Proc* owner);
 	~ProcSysApi();
 
-	LazyTask<int32_t> exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params = {});
-	LazyTask<int32_t> exec(std::vector<std::string>&& args);
-	LazyTask<int32_t> exec(std::string argstr);
+	Task<int32_t> exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params = {});
+	Task<int32_t> exec(std::vector<std::string>&& args);
+	Task<int32_t> exec(std::string argstr);
 
 protected:
 

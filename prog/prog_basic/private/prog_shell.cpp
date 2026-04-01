@@ -93,7 +93,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 	std::size_t num_pipes = num_tasks - 1;
 
 	std::vector<MessageQueue<std::string>> pipes(num_pipes);
-	std::vector<LazyTask<int32_t>> jobs;
+	std::vector<Task<int32_t>> jobs;
 	jobs.reserve(num_tasks);
 
 	std::size_t idx = 0;
@@ -134,7 +134,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 		}
 
 		/* Unless this is the last program in the pipeline, write to the pipe. */
-		if (idx < num_tasks)
+		if (idx < num_pipes)
 		{
 			params.writer = [pipe = &pipes[idx]](const Proc& wproc, const std::string& str)
 			{
@@ -142,15 +142,15 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 			};
 		}
 
-		LazyTask<int32_t> job = proc.sys.exec(*exp_path, std::move(args), std::move(params));
+		Task<int32_t> job = proc.sys.exec(*exp_path, std::move(args), std::move(params));
 		jobs.push_back(std::move(job));
-
-		auto res = co_await when_all_dynamic(std::move(jobs));
-
+		
 		++idx;
 	}
 
-	co_return 1;
+	auto res = co_await when_all_dynamic(std::move(jobs));
+
+	co_return std::ranges::max(res);
 }
 
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
