@@ -98,20 +98,23 @@ int main(int argc, char* argv[])
 
 	auto queue_ptr = std::make_shared<MessageQueue<std::string>>();
 
-	WriterFn local_writer = [](const Proc&, const std::string& str)
+	WriterFn local_writer = [](Proc&, WriteInput str)
 	{
+		if (not str)
+			return;
+
 		com::CommandReply rep;
-		if (rep.ParseFromString(str))
+		if (rep.ParseFromString(*str))
 		{
 			std::cout << rep.reply();
 		}
 		else
 		{
-			std::cout << str;
+			std::cout << *str;
 		}
 	};
 
-	ReaderFn local_reader = [q = queue_ptr](const Proc&) -> Task<ReadResult>
+	ReaderFn local_reader = [q = queue_ptr](Proc&) -> Task<ReadResult>
 	{
 		co_return (co_await q->async_pop());
 	};

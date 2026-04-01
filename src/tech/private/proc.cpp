@@ -52,6 +52,9 @@ void Proc::set_reader(ReaderFn&& reader)
 
 Task<ReadResult> Proc::read(EnvVarAccessMode mode)
 {
+	if (has_signal(SIGTERM))
+		co_return std::unexpected{std::error_condition{EPIPE, std::generic_category()}};
+
 	if (reader_)
 	{
 		auto res = co_await when_any(reader_(*this), ProcSignalAwaiter{this});
@@ -104,6 +107,20 @@ bool Proc::write(const std::string& msg)
 	return false;
 }
 
+bool Proc::write(std::error_condition err)
+{
+	if (writer_)
+	{
+		writer_(*this, std::unexpected{err});
+		return true;
+	}
+
+	if (host)
+		return host->write(err);
+
+	return false;
+}
+
 bool Proc::write(const char* msg)
 {
 	return write(std::string(msg));
@@ -145,24 +162,9 @@ Task<std::error_condition> Proc::wait(float seconds) const
 	co_return (res.index == 0) ? std::error_condition{} : std::error_condition{EINTR, std::generic_category()};
 }
 
-Task<SignalType> Proc::await_signal(EnvVarAccessMode mode) const
+ProcSignalAwaiter Proc::await_signal() const
 {
-	if (host && mode == EnvVarAccessMode::Inherit)
-	{
-		auto res = co_await when_any(ProcSignalAwaiter{this}, host->await_signal());
-		if (res.index == 0) 
-		{ 
-			co_return std::get<1>(res.value); 
-		}
-		else
-		{
-			co_return std::get<2>(res.value);
-		}
-	}
-	else
-	{
-		co_return (co_await ProcSignalAwaiter{this});
-	}
+	return ProcSignalAwaiter{this};
 }
 
 void Proc::add_signal_callback(SignalCallbackFn&& fn) const
@@ -172,6 +174,8 @@ void Proc::add_signal_callback(SignalCallbackFn&& fn) const
 
 void Proc::signal(SignalType sig)
 {
+	signals_.insert(sig);
+
 	std::vector<SignalCallbackFn> empty_{};
 	std::swap(signal_callbacks_, empty_);
 
@@ -179,6 +183,22 @@ void Proc::signal(SignalType sig)
 	{
 		fn(sig);
 	}
+
+	for (auto&& c : children)
+	{
+		c->signal(sig);
+	}
+}
+
+bool Proc::has_signal(SignalType sig, EnvVarAccessMode mode)
+{
+	if (signals_.contains(sig))
+		return true;
+
+	if (host && mode == EnvVarAccessMode::Inherit)
+		return host->has_signal(sig);
+
+	return false;
 }
 
 bool Proc::is_tty() const
@@ -251,13 +271,32 @@ void Proc::enter()
 {
 	fs.register_descriptors();
 	net.register_descriptors();
+
+	if (host)
+		host->add_child(this);
 }
 
 void Proc::exit()
 {
 	signal(SIGTERM);
+
+	write(std::error_condition{EPIPE, std::generic_category()});
+
 	fs.close_all();
 	net.close_all();
+
+	if (host)
+		host->remove_child(this);
+}
+
+void Proc::add_child(Proc* c)
+{
+	children.insert(c);
+}
+
+void Proc::remove_child(Proc* c)
+{
+	children.erase(c);
 }
 
 int ProcCoutBuf::sync()

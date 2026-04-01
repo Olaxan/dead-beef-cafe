@@ -87,15 +87,19 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 		proc.putln("Connection established ({}).", con);
 		proc.set_var("SSHCON", con);
 	
-		auto sess_reader = [con](const Proc& rproc) -> Task<ReadResult>
+		auto sess_reader = [con](Proc& rproc) -> Task<ReadResult>
 		{
 			return rproc.net.async_read_socket(con);
 		};
 	
-		auto sess_writer = [con](const Proc& wproc, const std::string& str)
+		auto sess_writer = [con](Proc& wproc, WriteInput str)
 		{
 			com::CommandReply rep;
-			rep.set_reply(str);
+
+			if (not str)
+				return;
+
+			rep.set_reply(*str);
 			
 			std::string out_str;
 			if (rep.SerializeToString(&out_str))

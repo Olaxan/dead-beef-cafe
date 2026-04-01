@@ -118,18 +118,18 @@ Task<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 
 	InvokeFn invoker = [redirect_to](Proc* new_proc)
 	{
-		if (redirect_to)
-		{
-			FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
+		// if (redirect_to)
+		// {
+		// 	FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
 
-			if (auto exp_fd = new_proc->fs.open(*redirect_to, flags))
-			{
-				new_proc->set_writer([fd = exp_fd.value()](const Proc& wproc, const std::string& line)
-				{
-					std::ignore = wproc.fs.write(fd, line);
-				});
-			}
-		}
+		// 	if (auto exp_fd = new_proc->fs.open(*redirect_to, flags))
+		// 	{
+		// 		new_proc->set_writer([fd = exp_fd.value()](const Proc& wproc, const std::string& line)
+		// 		{
+		// 			std::ignore = wproc.fs.write(fd, line);
+		// 		});
+		// 	}
+		// }
 	};
 
 	/* Try to find a file that matches on the PATH (or directly specified) */

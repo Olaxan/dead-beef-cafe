@@ -28,9 +28,9 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 	FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
 	FileScope log{proc, "/var/log/rx.log", flags};
-	proc.set_writer([log = std::move(log)](const Proc& wproc, const std::string& str)
+	proc.set_writer([log = std::move(log)](Proc& wproc, WriteInput str)
 	{
-		std::ignore = log.write(str);
+		if (str) { std::ignore = log.write(*str); }
 	});
 
 	proc.putln("RX service running.");

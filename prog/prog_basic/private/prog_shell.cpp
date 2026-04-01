@@ -17,6 +17,7 @@
 #include <unicode/ustream.h>
 #include <unicode/brkiter.h>
 
+#include <csignal>
 #include <string>
 #include <vector>
 #include <print>
@@ -87,12 +88,14 @@ Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd)
 
 Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 {
+	using Pipe = MessageQueue<WriteInput>;
+
 	FileSystem* fs = proc.owning_os->get_filesystem();
 
 	std::size_t num_tasks = std::ranges::distance(cmds);
 	std::size_t num_pipes = num_tasks - 1;
 
-	std::vector<MessageQueue<std::string>> pipes(num_pipes);
+	std::vector<Pipe> pipes(num_pipes);
 	std::vector<Task<int32_t>> jobs;
 	jobs.reserve(num_tasks);
 
@@ -121,12 +124,20 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 		/* Unless this is the first program in the pipeline, read from the pipe. */
 		if (idx > 0)
 		{
-			params.reader = [pipe = &pipes[idx - 1]](const Proc& rproc) -> Task<ReadResult>
+			params.reader = [pipe = &pipes[idx - 1]](Proc& rproc) -> Task<ReadResult>
 			{
 				auto res = co_await when_any(pipe->async_pop(), rproc.await_signal());
 				if (res.index == 0)
 				{
-					co_return std::get<1>(res.value);
+					if (auto msg = std::get<1>(res.value); msg.has_value())
+					{
+						co_return msg.value();
+					}
+					else
+					{
+						rproc.signal(SIGTERM);
+						co_return std::unexpected{msg.error()};
+					}
 				}
 				else
 				{
@@ -138,9 +149,9 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 		/* Unless this is the last program in the pipeline, write to the pipe. */
 		if (idx < num_pipes)
 		{
-			params.writer = [pipe = &pipes[idx]](const Proc& wproc, const std::string& str)
+			params.writer = [pipe = &pipes[idx]](Proc& wproc, WriteInput str)
 			{
-				pipe->push(std::string{str});
+				pipe->push(std::move(str));
 			};
 		}
 

@@ -134,6 +134,9 @@ public:
 	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
     bool write(const std::string& msg);
 
+	/* Function accepting a error condition, writes an unexpected to stream (such as EOS). */
+	bool write(std::error_condition err);
+
 	/* Overload to ensure string literals work. */
     bool write(const char* msg);
 	bool write(const com::CommandQuery& com);
@@ -196,11 +199,12 @@ public:
 	/* --- FUNCTIONS THAT RELATE TO OS --- */
 	[[nodiscard]] Task<std::error_condition> wait(float seconds) const;
 
-	[[nodiscard]] Task<SignalType> await_signal(EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const;
+	[[nodiscard]] ProcSignalAwaiter await_signal() const;
 
 	void add_signal_callback(SignalCallbackFn&& fn) const;
 
 	void signal(SignalType sig);
+	bool has_signal(SignalType sig, EnvVarAccessMode mode = EnvVarAccessMode::Inherit);
 
 	bool is_tty() const;
 	void set_tty(bool is_tty);
@@ -234,9 +238,13 @@ protected:
 	void enter();
 	void exit();
 
+	void add_child(Proc* c);
+	void remove_child(Proc* c);
+
 public:
 
 	Proc* host{nullptr};
+	std::set<Proc*> children;
 	OS* owning_os{nullptr};
 	int32_t pid{0};
 
@@ -263,7 +271,7 @@ protected:
 	WriterFn writer_{nullptr};
 	ReaderFn reader_{nullptr};
 
-	SignalType signal_{-1};
+	std::set<SignalType> signals_;
 	mutable std::vector<SignalCallbackFn> signal_callbacks_;
 	
 	std::set<FileDescriptor> returned_descriptors_{};
