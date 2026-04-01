@@ -13,5 +13,5 @@ SOURCE_GROUP("progworld" FILES ${files_progworld})
 
 ADD_LIBRARY(progworld STATIC ${files_progworld})
 
-TARGET_LINK_LIBRARIES(progworld PUBLIC world)
+TARGET_LINK_LIBRARIES(progworld PUBLIC world term)
 TARGET_INCLUDE_DIRECTORIES(progworld PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)

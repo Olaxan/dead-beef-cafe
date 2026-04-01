@@ -13,5 +13,5 @@ SOURCE_GROUP("tech" FILES ${files_tech})
 
 ADD_LIBRARY(tech STATIC ${files_tech})
 
-TARGET_LINK_LIBRARIES(tech PUBLIC utils services proto common)
+TARGET_LINK_LIBRARIES(tech PUBLIC utils term services proto common)
 TARGET_INCLUDE_DIRECTORIES(tech PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
