@@ -667,7 +667,9 @@ std::expected<size_t, std::error_condition> FileSystem::write(OpenFileHandle h, 
 	{
 		OpenFileTableEntry& entry = it->second;
 		File* file = find(entry.node);
-		assert(file);
+	
+		if (not file)
+			return std::unexpected{std::error_condition{EIO, std::generic_category()}};
 
 		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Write))
 			return std::unexpected(std::error_condition{EPERM, std::generic_category()});

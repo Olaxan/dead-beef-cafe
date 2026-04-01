@@ -11,5 +11,5 @@ SET(files_basicos ${basicos_headers} ${basicos_sources})
 SOURCE_GROUP("basicos" FILES ${files_basicos})
 
 ADD_LIBRARY(basicos STATIC ${files_basicos})
-TARGET_LINK_LIBRARIES(basicos PRIVATE common tech progbasic)
+TARGET_LINK_LIBRARIES(basicos PRIVATE common tech programs)
 TARGET_INCLUDE_DIRECTORIES(basicos PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)
