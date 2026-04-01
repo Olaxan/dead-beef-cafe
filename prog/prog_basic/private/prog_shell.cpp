@@ -291,6 +291,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		/* At this point we have a valid command -- attempt to execute it. */
 		int32_t ret = co_await std::invoke([&]() -> EagerTask<int32_t>
 		{
+			if (out_cmd.size() <= 1)
+			{
+				co_return 0;
+			}
+
 			if (num_subcmd == 1)
 			{	
 				co_return (co_await ProcessSubCmdSingle(proc, out_cmd));

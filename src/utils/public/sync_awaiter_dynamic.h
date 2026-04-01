@@ -90,34 +90,32 @@ private:
 
     void run_one(Awaitable& aw, std::size_t index) 
 	{
-        auto runner = [&aw, index](std::shared_ptr<shared_state> local_state) -> Task<bool>
+        auto runner = [&aw](std::shared_ptr<shared_state> local_state, std::size_t index) -> Task<bool>
 		{
-            auto state_copy = std::move(local_state);
-
             try 
 			{
                 auto value = co_await aw;
 
-                state_copy->results[index] = std::move(value);
+                local_state->results[index] = std::move(value);
 
-                if (--state_copy->num_remaining == 0)
+                if (--local_state->num_remaining == 0)
                 {
-                    state_copy->continuation.resume();
+                    local_state->continuation.resume();
                 }
             } 
 			catch (...) 
 			{
-                if (--state_copy->num_remaining == 0)
+                if (--local_state->num_remaining == 0)
                 {
-                    state_copy->exception = std::current_exception();
-                    state_copy->continuation.resume();
+                    local_state->exception = std::current_exception();
+                    local_state->continuation.resume();
                 }
             }
 
             co_return true;
         };
 
-        runner(state);
+        runner(state, index);
     }
 };
 
