@@ -48,7 +48,8 @@ Task<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& args, E
 			.reader = std::move(params.reader),
 			.leader_id = proc.get_pid(),
 			.uid = exec_uid,
-			.gid = exec_gid
+			.gid = exec_gid,
+			.tty = params.is_tty
 		};
 
 		auto&& prog = proc.fs.read_exe(fd);

@@ -46,6 +46,19 @@ ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
+	if (not proc.is_tty())
+	{
+		auto res = co_await proc.read();
+
+		if (not res)
+		{
+			proc.errln("speak: pipe error: {}.", res.error().message());
+			co_return 1;
+		}
+
+		params.line = *res;
+	}
+
 	// Define a couple of variables
 	SoLoud::Soloud soloud;  // SoLoud engine core
 	soloud.init();

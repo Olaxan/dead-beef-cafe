@@ -116,6 +116,8 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 
 		ExecParams params;
 
+		params.is_tty = false;
+
 		/* Unless this is the first program in the pipeline, read from the pipe. */
 		if (idx > 0)
 		{

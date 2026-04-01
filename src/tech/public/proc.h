@@ -202,6 +202,9 @@ public:
 
 	void signal(SignalType sig);
 
+	bool is_tty() const;
+	void set_tty(bool is_tty);
+
 
 	/* --- FUNCTIONS THAT RELATE TO SESSION --- */
 
@@ -240,6 +243,8 @@ public:
 	int32_t sid{0};
 	int32_t uid{0};
 	int32_t gid{0};
+
+	bool tty{true};
 
 	ProcFsApi fs{this};
 	ProcIoApi io{this};

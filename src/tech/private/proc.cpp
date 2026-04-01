@@ -166,6 +166,16 @@ void Proc::signal(SignalType sig)
 	}
 }
 
+bool Proc::is_tty() const
+{
+	return tty;
+}
+
+void Proc::set_tty(bool b)
+{
+	tty = b;
+}
+
 int32_t Proc::set_sid()
 {
 	sid = owning_os->create_sid();

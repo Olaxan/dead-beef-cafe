@@ -18,6 +18,7 @@ struct ExecParams
 	WriterFn writer{nullptr};
 	InvokeFn invoke{nullptr};
 	bool run_in_background{false};
+	bool is_tty{true};
 };
 
 class ProcSysApi

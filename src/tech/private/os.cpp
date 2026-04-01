@@ -79,6 +79,7 @@ Proc* OS::create_process(CreateProcessParams&& params)
 
     proc->set_uid(params.uid);
     proc->set_gid(params.gid);
+    proc->set_tty(params.tty);
 
     /* Run invoker, if set. */
     if (params.invoke)
