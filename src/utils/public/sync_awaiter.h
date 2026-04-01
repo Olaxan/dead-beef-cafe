@@ -110,14 +110,14 @@ private:
 
                 std::get<Index + 1>(state_copy->results) = std::move(value);
 
-                if (state_copy->num_remaining++ == 0)
+                if (--state_copy->num_remaining == 0)
                 {
                     state_copy->continuation.resume();
                 }
             } 
 			catch (...) 
 			{
-                if (state_copy->num_remaining++ == 0)
+                if (--state_copy->num_remaining == 0)
                 {
                     state_copy->exception = std::current_exception();
                     state_copy->continuation.resume();
