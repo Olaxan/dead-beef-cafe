@@ -145,9 +145,24 @@ Task<std::error_condition> Proc::wait(float seconds) const
 	co_return (res.index == 0) ? std::error_condition{} : std::error_condition{EINTR, std::generic_category()};
 }
 
-ProcSignalAwaiter Proc::await_signal() const
+Task<SignalType> Proc::await_signal(EnvVarAccessMode mode) const
 {
-	return ProcSignalAwaiter{this};
+	if (host && mode == EnvVarAccessMode::Inherit)
+	{
+		auto res = co_await when_any(ProcSignalAwaiter{this}, host->await_signal());
+		if (res.index == 0) 
+		{ 
+			co_return std::get<1>(res.value); 
+		}
+		else
+		{
+			co_return std::get<2>(res.value);
+		}
+	}
+	else
+	{
+		co_return (co_await ProcSignalAwaiter{this});
+	}
 }
 
 void Proc::add_signal_callback(SignalCallbackFn&& fn) const

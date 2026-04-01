@@ -108,28 +108,26 @@ private:
 	{
         auto runner = [&aw](std::shared_ptr<state_type> local_state) -> Task<bool>
 		{
-            auto state_copy = std::move(local_state);
-
             try 
 			{
                 auto value = co_await aw;
 
-                if (!state_copy->completed.exchange(true))
+                if (!local_state->completed.exchange(true))
 				{
-                    state_copy->winner = Index;
-					state_copy->result.template emplace<Index + 1>(std::move(value));
-                    state_copy->continuation.resume();
+                    local_state->winner = Index;
+					local_state->result.template emplace<Index + 1>(std::move(value));
+                    local_state->continuation.resume();
                 }
 
             } 
 			catch (...) 
 			{
 
-                if (!state_copy->completed.exchange(true))
+                if (!local_state->completed.exchange(true))
 				{
-                    state_copy->exception = std::current_exception();
-                    state_copy->winner = Index;
-                    state_copy->continuation.resume();
+                    local_state->exception = std::current_exception();
+                    local_state->winner = Index;
+                    local_state->continuation.resume();
                 }
             }
 

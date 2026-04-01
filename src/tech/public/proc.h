@@ -196,7 +196,7 @@ public:
 	/* --- FUNCTIONS THAT RELATE TO OS --- */
 	[[nodiscard]] Task<std::error_condition> wait(float seconds) const;
 
-	[[nodiscard]] ProcSignalAwaiter await_signal() const;
+	[[nodiscard]] Task<SignalType> await_signal(EnvVarAccessMode mode = EnvVarAccessMode::Inherit) const;
 
 	void add_signal_callback(SignalCallbackFn&& fn) const;
 
