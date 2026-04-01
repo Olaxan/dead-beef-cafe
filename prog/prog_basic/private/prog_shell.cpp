@@ -4,6 +4,9 @@
 #include "device.h"
 #include "net_types.h"
 #include "filesystem.h"
+#include "race_awaiter.h"
+#include "sync_awaiter.h"
+#include "sync_awaiter_dynamic.h"
 
 #include "CLI/CLI.hpp"
 
@@ -20,11 +23,140 @@
 #include <chrono>
 #include <format>
 #include <ranges>
+#include <array>
 #include <functional>
 
+using SubCmdRange = std::ranges::split_view<std::string_view, std::ranges::single_view<char>>;
+using ArgList = std::vector<std::string>;
+
+std::expected<FilePath, std::error_condition> FindInPath(Proc& proc, std::string_view name)
+{
+	FileSystem& fs = *proc.owning_os->get_filesystem();
+
+	std::vector<std::string> candidates = proc.get_var("PATH")
+	| std::views::split(';')
+	| std::views::transform([&name](auto&& path) { return std::format("{}/{}", std::string_view(path), name); })
+	| std::ranges::to<std::vector>();
+
+	candidates.emplace_back(name);
+
+	for (auto&& path : candidates)
+	{
+		if (auto exp_file = proc.fs.query(path, FileAccessFlags::Execute))
+		{
+			return fs.get_path(*exp_file);
+		}
+	}
+
+	return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
+};
+
+ArgList MakeArgList(std::string_view cmd)
+{
+	std::string temp{};
+	std::vector<std::string> args{};
+	
+	std::stringstream ss(std::string{cmd});
+
+	while (ss >> std::quoted(temp))
+	{
+		args.push_back(std::move(temp));
+	}
+
+	return args;
+}
+
+Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd)
+{
+	ArgList args = MakeArgList(cmd);
+
+	if (args.empty())
+		co_return 1;
+
+	std::string_view name = *args.begin();
+	auto exp_path = FindInPath(proc, name);
+
+	if (not exp_path)
+	{
+		proc.warnln("'{}': {}.", name, exp_path.error().message());
+		co_return 1;
+	}
+
+	co_return (co_await proc.sys.exec(*exp_path, std::move(args)));
+}
+
+Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
+{
+	FileSystem* fs = proc.owning_os->get_filesystem();
+
+	std::size_t num_tasks = std::ranges::distance(cmds);
+	std::size_t num_pipes = num_tasks - 1;
+
+	std::vector<MessageQueue<std::string>> pipes(num_pipes);
+	std::vector<LazyTask<int32_t>> jobs;
+	jobs.reserve(num_tasks);
+
+	std::size_t idx = 0;
+	for (auto&& subcmd : cmds)
+	{
+		std::string_view cmd_sv{subcmd};
+		ArgList args = MakeArgList(cmd_sv);
+
+		if (args.empty())
+			co_return 1;
+
+		std::string_view name = *args.begin();
+		auto exp_path = FindInPath(proc, name);
+
+		if (not exp_path)
+		{
+			proc.warnln("'{}': {}.", name, exp_path.error().message());
+			co_return 1;
+		}
+
+		ExecParams params;
+
+		/* Unless this is the first program in the pipeline, read from the pipe. */
+		if (idx > 0)
+		{
+			params.reader = [pipe = &pipes[idx - 1]](const Proc& rproc) -> Task<ReadResult>
+			{
+				auto res = co_await when_any(pipe->async_pop(), rproc.await_signal());
+				if (res.index == 0)
+				{
+					co_return std::get<1>(res.value);
+				}
+				else
+				{
+					co_return std::unexpected{std::error_condition{EPIPE, std::generic_category()}};
+				}
+			};
+		}
+
+		/* Unless this is the last program in the pipeline, write to the pipe. */
+		if (idx < num_tasks)
+		{
+			params.writer = [pipe = &pipes[idx]](const Proc& wproc, const std::string& str)
+			{
+				pipe->push(std::string{str});
+			};
+		}
+
+		LazyTask<int32_t> job = proc.sys.exec(*exp_path, std::move(args), std::move(params));
+		jobs.push_back(std::move(job));
+
+		auto res = co_await when_all_dynamic(std::move(jobs));
+
+		++idx;
+	}
+
+	co_return 1;
+}
 
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
+	using namespace std::string_view_literals;
+
 	OS& os = *proc.owning_os;
 	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
@@ -132,7 +264,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
-		const std::string& out_cmd = *exp_out_cmd;
+		std::string_view out_cmd{*exp_out_cmd};
 
 		if (out_cmd.compare("exit") == 0)
 		{
@@ -140,34 +272,23 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			co_return 0;
 		}
 
+		auto subcmd = std::views::split(out_cmd, '|');
+		std::size_t num_subcmd = std::ranges::distance(subcmd);
+
 		/* At this point we have a valid command -- attempt to execute it. */
-		int32_t ret = co_await std::invoke([&proc, &os, &fs, &cd](const std::string& cmd) -> EagerTask<int32_t>
+		int32_t ret = co_await std::invoke([&]() -> EagerTask<int32_t>
 		{
-			std::string temp{};
-			std::vector<std::string> args{};
-			
-			std::stringstream ss(cmd);
-
-			while (ss >> std::quoted(temp))
-			{
-				args.push_back(std::move(temp));
-			}
-
-			if (args.empty())
-				co_return 1;
-
-			std::string_view name = *std::begin(args);
-
-			if (name == "cd")
-			{
-				co_return cd(std::move(args));
+			if (num_subcmd == 1)
+			{	
+				co_return (co_await ProcessSubCmdSingle(proc, out_cmd));
 			}
 			else
 			{
-				co_return (co_await proc.sys.exec(std::move(args)));
+				co_return (co_await ProcessSubCmdPipeline(proc, subcmd));
 			}
+		});
 
-		}, out_cmd);
+		/* --- COMMAND DONE, print status line --- */
 
 		if (int32_t term_w = proc.get_var<int32_t>("TERM_W"))
 		{

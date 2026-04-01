@@ -7,8 +7,6 @@
 #include <utility>
 #include <variant>
 
-struct void_value {};
-
 template<typename A>
 using await_result_t =
     decltype(std::declval<A>().await_resume());
@@ -16,6 +14,8 @@ using await_result_t =
 template<typename Awaitable>
 class when_all_dynamic_awaitable 
 {
+
+    struct void_value {};
 
     template<typename T>
     using normalize_void =

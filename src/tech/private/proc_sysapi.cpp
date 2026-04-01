@@ -22,7 +22,62 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
-EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
+LazyTask<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params)
+{
+	if (auto exp_fd = proc.fs.open(path, FileAccessFlags::Execute))
+	{
+		FileDescriptor fd = exp_fd.value();
+
+		auto exp_meta = proc.fs.get_metadata(fd);
+		if (!exp_meta)
+		{
+			proc.errln("exec: failed to retrieve program metadata: {}.", exp_meta.error().message());
+			co_return 1;
+		}
+
+		FileMeta* meta = exp_meta.value();
+		bool setuid = fs.has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetUid);
+		bool setgid = fs.has_flag<ExtraFileFlags>(meta->extra, ExtraFileFlags::SetGid);
+		int32_t exec_uid = setuid ? meta->owner_uid : proc.get_uid();
+		int32_t exec_gid = setgid ? meta->owner_gid : proc.get_gid();
+	
+		OS::CreateProcessParams proc_params
+		{
+			.invoke = std::move(params.invoke),
+			.writer = std::move(params.writer),
+			.reader = std::move(params.reader),
+			.leader_id = proc.get_pid(),
+			.uid = exec_uid,
+			.gid = exec_gid
+		};
+
+		auto&& prog = proc.fs.read_exe(fd);
+		if (not prog)
+		{
+			proc.errln("exec: no program entry point detected.");
+			co_return 1;
+		}
+
+		proc.fs.close(fd);
+
+		if (params.run_in_background)
+		{
+			os.run_process(*prog, std::move(args), std::move(proc_params));
+			co_return 0;
+		}
+		else
+		{
+			co_return (co_await os.run_process(*prog, std::move(args), std::move(proc_params)));
+		}
+	}
+	else
+	{
+		proc.warnln("exec: failed to open '{}': {}.", path, exp_fd.error().message());
+		co_return 1;
+	}
+}
+
+LazyTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 {
 	std::string_view name{*std::begin(args)};
 
@@ -139,7 +194,6 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 
 		if (run_in_background)
 		{
-			proc.put("[&] ");
 			os.run_process(*prog, std::move(args), std::move(params));
 			co_return 0;
 		}
@@ -157,7 +211,7 @@ EagerTask<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	co_return 1;
 }
 
-EagerTask<int32_t> ProcSysApi::exec(std::string argstr)
+LazyTask<int32_t> ProcSysApi::exec(std::string argstr)
 {
 	std::string temp{};
 	std::vector<std::string> args{};

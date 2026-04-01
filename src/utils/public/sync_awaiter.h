@@ -7,8 +7,6 @@
 #include <utility>
 #include <variant>
 
-struct void_value {};
-
 template<typename... Results>
 using when_all_result =
     std::tuple<std::monostate, Results...>;
@@ -20,6 +18,7 @@ using await_result_t =
 template<typename... Awaitables>
 class when_all_awaitable 
 {
+    struct void_value {};
 
     template<typename T>
     using normalize_void =

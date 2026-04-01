@@ -134,7 +134,7 @@ struct MessageQueueAwaiter
 	explicit MessageQueueAwaiter(OwningQueue* owner)
 		: owner_(owner) { }
 
-    MessageQueueAwaiter(MessageQueueAwaiter&) = delete;
+    //MessageQueueAwaiter(MessageQueueAwaiter&) = delete;
 
 	bool await_ready()
 	{

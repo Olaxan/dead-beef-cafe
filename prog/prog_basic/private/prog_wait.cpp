@@ -2,6 +2,7 @@
 
 #include "proc.h"
 #include "proc_signal_awaiter.h"
+#include "sync_awaiter_dynamic.h"
 
 #include "CLI/CLI.hpp"
 
@@ -15,15 +16,23 @@ ProcessTask Programs::CmdWait(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	float delay = static_cast<float>(std::atof(args[1].c_str()));
+	std::size_t num = static_cast<std::size_t>(std::atof(args[1].c_str()));
 
-	auto res = co_await proc.wait(delay);
-	if (res.value() > 0)
+	std::vector<Task<std::error_condition>> jobs;
+
+	for (std::size_t i = 0; i < num; ++i)
 	{
-		proc.errln("wait: Aborted: {}.", res.message());
-		co_return 1;
+		jobs.emplace_back(proc.wait(1.f + static_cast<float>(i)));
 	}
 
-	proc.putln("Waited {0} seconds.", delay);
+	auto res = co_await when_all_dynamic(std::move(jobs));
+
+	std::size_t idx = 0;
+	for (auto&& r : res)
+	{
+		proc.putln("job {}: {}.", idx, r.message());
+		++idx;
+	}
+
 	co_return 0;
 }
