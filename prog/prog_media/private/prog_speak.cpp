@@ -9,9 +9,15 @@
 #include <ranges>
 #include <cstdlib>
 #include <print>
+#include <regex>
 
 #include <iso646.h>
 
+std::string strip_ansi(const std::string& input) 
+{
+    static const std::regex ansi_regex(R"(\x1B\[[0-?]*[ -/]*[@-~])");
+    return std::regex_replace(input, ansi_regex, "");
+}
 
 ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
 {
@@ -46,32 +52,46 @@ ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	if (not proc.is_tty())
-	{
-		auto res = co_await proc.read();
-
-		if (not res)
-		{
-			proc.errln("speak: pipe error: {}.", res.error().message());
-			co_return 1;
-		}
-
-		params.line = *res;
-	}
-
-	// Define a couple of variables
-	SoLoud::Soloud soloud;  // SoLoud engine core
+	SoLoud::Soloud soloud;
 	soloud.init();
 
-	SoLoud::Speech speech;  // A sound source (speech, in this case)
-	speech.setText(params.line.c_str());
-	speech.setParams(params.base_freq, params.base_speed, params.base_declination, params.waveform);
-
-	SoLoud::handle h = soloud.play(speech);
-
-	while (soloud.isValidVoiceHandle(h))
+	if (proc.is_tty())
 	{
-		co_await proc.wait(0.1f);
+		SoLoud::Speech speech;
+		speech.setText(params.line.c_str());
+		speech.setParams(params.base_freq, params.base_speed, params.base_declination, params.waveform);
+
+		SoLoud::handle h = soloud.play(speech);
+
+		while (soloud.isValidVoiceHandle(h))
+		{
+			co_await proc.wait(0.1f);
+		}
+	}
+	else
+	{
+		while (true)
+		{
+			auto res = co_await proc.read();
+
+			if (not res)
+			{
+				co_return 0;
+			}
+
+			std::string safe = strip_ansi(*res);
+
+			SoLoud::Speech speech;
+			speech.setText(safe.c_str());
+			speech.setParams(params.base_freq, params.base_speed, params.base_declination, params.waveform);
+
+			SoLoud::handle h = soloud.play(speech);
+
+			while (soloud.isValidVoiceHandle(h))
+			{
+				co_await proc.wait(0.1f);
+			}
+		}
 	}
 
 	soloud.deinit();
