@@ -139,13 +139,18 @@ EagerTask<int32_t> Proc::await_dispatch(ProcessFn& program, std::vector<std::str
 	co_return (co_await *task);
 }
 
-Task<std::error_condition> Proc::wait(float seconds)
+Task<std::error_condition> Proc::wait(float seconds) const
 {
 	auto res = co_await when_any(owning_os->wait(seconds), ProcSignalAwaiter{this});
 	co_return (res.index == 0) ? std::error_condition{} : std::error_condition{EINTR, std::generic_category()};
 }
 
-void Proc::add_signal_callback(SignalCallbackFn&& fn)
+ProcSignalAwaiter Proc::await_signal() const
+{
+	return ProcSignalAwaiter{this};
+}
+
+void Proc::add_signal_callback(SignalCallbackFn&& fn) const
 {
 	signal_callbacks_.push_back(std::move(fn));
 }

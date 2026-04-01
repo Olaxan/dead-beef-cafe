@@ -11,9 +11,9 @@ class ProcSignalAwaiter
 {
 public:
 
-	ProcSignalAwaiter(Proc* proc); 
+	ProcSignalAwaiter(const Proc* proc); 
 
-	ProcSignalAwaiter(Proc&) = delete;
+	//ProcSignalAwaiter(ProcSignalAwaiter&) = delete;
 
 	~ProcSignalAwaiter();
 
@@ -23,7 +23,7 @@ public:
 
 protected:
 
-	Proc* proc_{nullptr};
+	const Proc* proc_{nullptr};
 	SignalType signal_{0};
 
 };

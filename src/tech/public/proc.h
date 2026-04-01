@@ -6,6 +6,7 @@
 #include "proc_ioapi.h"
 #include "proc_netapi.h"
 #include "proc_sysapi.h"
+#include "proc_signal_awaiter.h"
 #include "term_utils.h"
 #include "session.h"
 
@@ -193,9 +194,11 @@ public:
 
 
 	/* --- FUNCTIONS THAT RELATE TO OS --- */
-	[[nodiscard]] Task<std::error_condition> wait(float seconds);
+	[[nodiscard]] Task<std::error_condition> wait(float seconds) const;
 
-	void add_signal_callback(SignalCallbackFn&& fn);
+	[[nodiscard]] ProcSignalAwaiter await_signal() const;
+
+	void add_signal_callback(SignalCallbackFn&& fn) const;
 
 	void signal(SignalType sig);
 
@@ -256,7 +259,7 @@ protected:
 	ReaderFn reader_{nullptr};
 
 	SignalType signal_{-1};
-	std::vector<SignalCallbackFn> signal_callbacks_;
+	mutable std::vector<SignalCallbackFn> signal_callbacks_;
 	
 	std::set<FileDescriptor> returned_descriptors_{};
 	FileDescriptor descriptor_counter_{3};

@@ -2,7 +2,7 @@
 
 #include "proc.h"
 
-ProcSignalAwaiter::ProcSignalAwaiter(Proc* proc)
+ProcSignalAwaiter::ProcSignalAwaiter(const Proc* proc)
 	: proc_(proc) {}
 
 ProcSignalAwaiter::~ProcSignalAwaiter()
