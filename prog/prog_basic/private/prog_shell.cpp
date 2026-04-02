@@ -167,7 +167,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 
 		ExecParams params;
 		params.run_in_background = background;
-		params.is_tty = (num_pipes == 0);
+		params.is_tty = (idx == 0);
 
 		/* Unless this is the first program in the pipeline, read from the pipe. */
 		if (idx > 0)

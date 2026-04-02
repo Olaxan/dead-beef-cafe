@@ -53,8 +53,6 @@ ProcessTask Programs::CmdDogs(Proc& proc, std::vector<std::string> args)
 	app.add_option("-w", params.hold, "The time to hold on the last frame")->capture_default_str();
 	app.add_option("-s", params.chunk, "Chunk the string based on a fixed line length instead");
 
-	//app.add_flag("-r,--recurse", params.recurse, "Delete files recursively");
-
 	try
 	{
 		std::ranges::reverse(args);
