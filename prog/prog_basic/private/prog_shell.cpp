@@ -143,12 +143,20 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	for (auto&& subcmd : cmds)
 	{
 		std::string_view cmd_sv{subcmd};
+		trim(cmd_sv);
+
 		ArgList args = proc.sys.make_args(cmd_sv);
 
 		if (args.empty())
 			co_return 1;
 
 		std::string_view name = *args.begin();
+
+		if (name.compare("cd") == 0)
+		{
+			co_return (co_await CmdCd(proc, args));
+		}
+
 		auto exp_path = proc.sys.find_in_path(name);
 
 		if (not exp_path)
@@ -284,11 +292,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		bool background = std::invoke([&]() -> bool
-			if (out_cmd.size() <= 1)
-			{
-				co_return 0;
-			}
-
 		{
 			if (out_cmd.empty()) 
 				return false;
