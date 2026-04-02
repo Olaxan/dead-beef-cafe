@@ -28,6 +28,9 @@ public:
 	ProcSysApi(Proc* owner);
 	~ProcSysApi();
 
+	std::expected<FilePath, std::error_condition> find_in_path(std::string_view name) const;
+	std::vector<std::string> make_args(std::string_view cmd) const;
+
 	Task<int32_t> exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params = {});
 	Task<int32_t> exec(std::vector<std::string>&& args);
 	Task<int32_t> exec(std::string argstr);

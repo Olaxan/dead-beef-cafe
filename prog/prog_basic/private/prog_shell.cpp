@@ -29,52 +29,92 @@
 using SubCmdRange = std::ranges::split_view<std::string_view, std::ranges::single_view<char>>;
 using ArgList = std::vector<std::string>;
 
-std::expected<FilePath, std::error_condition> FindInPath(Proc& proc, std::string_view name)
+
+// trim from left
+inline std::string_view ltrim(std::string_view s, const char* t = " \t\n\r\f\v")
 {
-	FileSystem& fs = *proc.owning_os->get_filesystem();
-
-	std::vector<std::string> candidates = proc.get_var("PATH")
-	| std::views::split(';')
-	| std::views::transform([&name](auto&& path) { return std::format("{}/{}", std::string_view(path), name); })
-	| std::ranges::to<std::vector>();
-
-	candidates.emplace_back(name);
-
-	for (auto&& path : candidates)
-	{
-		if (auto exp_file = proc.fs.query(path, FileAccessFlags::Execute))
-		{
-			return fs.get_path(*exp_file);
-		}
-	}
-
-	return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
-};
-
-ArgList MakeArgList(std::string_view cmd)
-{
-	std::string temp{};
-	std::vector<std::string> args{};
-	
-	std::stringstream ss(std::string{cmd});
-
-	while (ss >> std::quoted(temp))
-	{
-		args.push_back(std::move(temp));
-	}
-
-	return args;
+	while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
+		s.remove_prefix(1);
+    
+	return s;
 }
 
-Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd)
+// trim from right
+inline std::string_view rtrim(std::string_view s, const char* t = " \t\n\r\f\v")
 {
-	ArgList args = MakeArgList(cmd);
+    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
+		s.remove_suffix(1);
+    
+	return s;
+}
+
+// trim from left & right
+inline std::string_view trim(std::string_view s, const char* t = " \t\n\r\f\v")
+{
+    return ltrim(rtrim(s, t), t);
+}
+
+/* For handling shell navigation via 'cd'. */
+auto CmdCd(Proc& proc, std::vector<std::string> args) -> Task<int32_t>
+{
+	FileSystem* fs = proc.owning_os->get_filesystem();
+
+	if (fs == nullptr)
+	{
+		proc.errln("No file system.");
+		co_return 1;
+	}
+
+	CLI::App app{"Change present working directory (PWD)"};
+	app.allow_windows_style_options(false);
+
+	struct CdArgs
+	{
+		bool logical_dot_dot{false};
+		bool physical_dot_dot{false};
+		std::string path{};
+	} params{};
+
+	app.add_option("path", params.path, "Directory to move to (full or relative paths)")->required();
+	app.add_flag("-L", params.logical_dot_dot, "Handle the operand dot-dot logically");
+	app.add_flag("-P", params.physical_dot_dot, "Handle the operand dot-dot physically");
+	
+	try
+	{
+		std::ranges::reverse(args);
+		args.pop_back();
+		app.parse(std::move(args));
+	}
+	catch(const CLI::ParseError& e)
+	{
+		int32_t res = app.exit(e, proc.s_out, proc.s_err);
+		co_return res;
+	}
+
+	/* Filepath resolution */
+	FilePath new_path = proc.fs.resolve(params.path);
+	
+	if (auto exp_fid = proc.fs.query(new_path, FileAccessFlags::Execute))
+	{
+		proc.set_var("PWD", fs->get_path(*exp_fid));
+		co_return 0;
+	}
+	else
+	{
+		proc.warnln("cd '{}': {}.", new_path, exp_fid.error().message());
+		co_return 1;
+	}
+};
+
+Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd, bool background = false)
+{
+	ArgList args = proc.sys.make_args(cmd);
 
 	if (args.empty())
 		co_return 1;
 
 	std::string_view name = *args.begin();
-	auto exp_path = FindInPath(proc, name);
+	auto exp_path = proc.sys.find_in_path(name);
 
 	if (not exp_path)
 	{
@@ -85,7 +125,7 @@ Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd)
 	co_return (co_await proc.sys.exec(*exp_path, std::move(args)));
 }
 
-Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
+Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool background = false)
 {
 	FileSystem* fs = proc.owning_os->get_filesystem();
 
@@ -100,13 +140,13 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 	for (auto&& subcmd : cmds)
 	{
 		std::string_view cmd_sv{subcmd};
-		ArgList args = MakeArgList(cmd_sv);
+		ArgList args = proc.sys.make_args(cmd_sv);
 
 		if (args.empty())
 			co_return 1;
 
 		std::string_view name = *args.begin();
-		auto exp_path = FindInPath(proc, name);
+		auto exp_path = proc.sys.find_in_path(name);
 
 		if (not exp_path)
 		{
@@ -115,6 +155,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds)
 		}
 
 		ExecParams params;
+		params.run_in_background = background;
 
 		/* Unless this is the first program in the pipeline, read from the pipe. */
 		if (idx > 0)
@@ -166,50 +207,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		proc.errln("No file system!");
 		co_return 1;
 	}
-
-	/* Lambda for handling shell navigation via 'cd'. */
-	auto cd = [&proc, &fs](std::vector<std::string> args) -> int32_t
-	{
-		CLI::App app{"Change present working directory (PWD)"};
-		app.allow_windows_style_options(false);
-
-		struct CdArgs
-		{
-			bool logical_dot_dot{false};
-			bool physical_dot_dot{false};
-			std::string path{};
-		} params{};
-
-		app.add_option("path", params.path, "Directory to move to (full or relative paths)")->required();
-		app.add_flag("-L", params.logical_dot_dot, "Handle the operand dot-dot logically");
-		app.add_flag("-P", params.physical_dot_dot, "Handle the operand dot-dot physically");
-		
-		try
-		{
-			std::ranges::reverse(args);
-			args.pop_back();
-			app.parse(std::move(args));
-		}
-		catch(const CLI::ParseError& e)
-		{
-			int32_t res = app.exit(e, proc.s_out, proc.s_err);
-			return res;
-		}
-
-		/* Filepath resolution */
-		FilePath new_path = proc.fs.resolve(params.path);
-		
-		if (auto exp_fid = proc.fs.query(new_path, FileAccessFlags::Execute))
-		{
-			proc.set_var("PWD", fs->get_path(*exp_fid));
-			return 0;
-		}
-		else
-		{
-			proc.warnln("cd '{}': {}.", new_path, exp_fid.error().message());
-			return 1;
-		}
-	};
 
 	icu::UnicodeString buffer;
 	CmdReaderParams read_params;
@@ -265,6 +262,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		std::string_view out_cmd{*exp_out_cmd};
+		trim(out_cmd);
 
 		if (out_cmd.compare("exit") == 0)
 		{
@@ -272,21 +270,25 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			co_return 0;
 		}
 
+		bool background = std::invoke([&]() -> bool
+		{
+			if (out_cmd.empty()) 
+				return false;
+
+			if (out_cmd.back() == '&')
+			{
+				out_cmd.remove_suffix(1);
+				return true;
+			}
+			
+			return false;
+		});
+
 		auto subcmd = std::views::split(out_cmd, '|');
 		std::size_t num_subcmd = std::ranges::distance(subcmd);
 
 		/* At this point we have a valid command -- attempt to execute it. */
-		int32_t ret = co_await std::invoke([&]() -> EagerTask<int32_t>
-		{
-			if (num_subcmd == 1)
-			{	
-				co_return (co_await ProcessSubCmdSingle(proc, out_cmd));
-			}
-			else
-			{
-				co_return (co_await ProcessSubCmdPipeline(proc, subcmd));
-			}
-		});
+		int32_t ret = co_await ProcessSubCmdPipeline(proc, subcmd, background);
 
 		/* --- COMMAND DONE, print status line --- */
 

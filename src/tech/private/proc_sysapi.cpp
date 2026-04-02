@@ -22,6 +22,43 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
+std::expected<FilePath, std::error_condition> ProcSysApi::find_in_path(std::string_view name) const
+{
+	FileSystem& fs = *proc.owning_os->get_filesystem();
+
+	std::vector<std::string> candidates = proc.get_var("PATH")
+	| std::views::split(';')
+	| std::views::transform([&name](auto&& path) { return std::format("{}/{}", std::string_view(path), name); })
+	| std::ranges::to<std::vector>();
+
+	candidates.emplace_back(name);
+
+	for (auto&& path : candidates)
+	{
+		if (auto exp_file = proc.fs.query(path, FileAccessFlags::Execute))
+		{
+			return fs.get_path(*exp_file);
+		}
+	}
+
+	return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
+}
+
+std::vector<std::string> ProcSysApi::make_args(std::string_view cmd) const
+{
+	std::string temp{};
+	std::vector<std::string> args{};
+	
+	std::stringstream ss(std::string{cmd});
+
+	while (ss >> std::quoted(temp))
+	{
+		args.push_back(std::move(temp));
+	}
+
+	return args;
+}
+
 Task<int32_t> ProcSysApi::exec(FilePath path, std::vector<std::string>&& args, ExecParams&& params)
 {
 	if (auto exp_fd = proc.fs.open(path, FileAccessFlags::Execute))
@@ -132,25 +169,7 @@ Task<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 	};
 
 	/* Try to find a file that matches on the PATH (or directly specified) */
-	auto match = std::invoke([&]() -> std::expected<FilePath, std::error_condition>
-	{
-		std::vector<std::string> candidates = proc.get_var("PATH")
-		| std::views::split(';')
-		| std::views::transform([&name](auto&& path) { return std::format("{}/{}", std::string_view(path), name); })
-		| std::ranges::to<std::vector>();
-
-		candidates.emplace_back(name);
-
-		for (auto&& path : candidates)
-		{
-			if (auto exp_file = proc.fs.query(path, FileAccessFlags::Execute))
-			{
-				return fs.get_path(*exp_file);
-			}
-		}
-
-		return std::unexpected{std::error_condition{ENOENT, std::generic_category()}};
-	});
+	auto match = find_in_path(name);
 	
 	if (not match)
 	{
@@ -213,14 +232,7 @@ Task<int32_t> ProcSysApi::exec(std::vector<std::string>&& args)
 
 Task<int32_t> ProcSysApi::exec(std::string argstr)
 {
-	std::string temp{};
-	std::vector<std::string> args{};
-	std::stringstream ss(argstr);
-
-	while (ss >> std::quoted(temp))
-	{
-		args.push_back(std::move(temp));
-	}
+	std::vector<std::string> args = make_args(argstr);
 
 	if (args.empty())
 		co_return 1;
