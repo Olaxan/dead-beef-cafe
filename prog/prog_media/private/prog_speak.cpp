@@ -1,4 +1,5 @@
 #include "prog_media.h"
+#include "term_utils.h"
 
 #include "soloud.h"
 #include "soloud_speech.h"
@@ -13,11 +14,6 @@
 
 #include <iso646.h>
 
-std::string strip_ansi(const std::string& input) 
-{
-    static const std::regex ansi_regex(R"(\x1B\[[0-?]*[ -/]*[@-~])");
-    return std::regex_replace(input, ansi_regex, "");
-}
 
 ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
 {
@@ -79,7 +75,7 @@ ProcessTask Programs::CmdSpeak(Proc& proc, std::vector<std::string> args)
 				co_return 0;
 			}
 
-			std::string safe = strip_ansi(*res);
+			std::string safe = TermUtils::strip_ansi(*res);
 
 			SoLoud::Speech speech;
 			speech.setText(safe.c_str());

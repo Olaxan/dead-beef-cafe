@@ -7,6 +7,13 @@
 #include <unicode/brkiter.h>
 
 #include <sstream>
+#include <regex>
+
+std::string TermUtils::strip_ansi(const std::string& in)
+{
+	static const std::regex ansi_regex(R"(\x1B\[[0-?]*[ -/]*[@-~])");
+	return std::regex_replace(in, ansi_regex, "");
+}
 
 int32_t TermUtils::get_ansi_fg_color(TermColor color)
 {

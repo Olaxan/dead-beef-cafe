@@ -67,6 +67,8 @@ enum class TermColor
 namespace TermUtils
 {
 
+	std::string strip_ansi(const std::string& in);
+
 	int32_t get_ansi_fg_color(TermColor color);
 	int32_t get_ansi_bg_color(TermColor color);
 

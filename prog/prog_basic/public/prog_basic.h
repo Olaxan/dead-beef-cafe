@@ -55,6 +55,7 @@ namespace Programs
 	/* Test programs */
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdDogs(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdUwu(Proc& proc, std::vector<std::string> args);
 
 	/* Utilities */
 	ProcessTask CmdCrypto(Proc& proc, std::vector<std::string> args);

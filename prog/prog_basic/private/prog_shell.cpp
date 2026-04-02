@@ -167,8 +167,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 
 		ExecParams params;
 		params.run_in_background = background;
-
-		params.is_tty = false;
+		params.is_tty = (num_pipes == 0);
 
 		/* Unless this is the first program in the pipeline, read from the pipe. */
 		if (idx > 0)
@@ -198,6 +197,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 		/* Unless this is the last program in the pipeline, write to the pipe. */
 		if (idx < num_pipes)
 		{
+			//std::print("[pipe{}] ", idx);
 			params.writer = [pipe = &pipes[idx]](Proc& wproc, WriteInput str)
 			{
 				pipe->push(std::move(str));
