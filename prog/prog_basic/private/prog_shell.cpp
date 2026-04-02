@@ -162,7 +162,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 		if (not exp_path)
 		{
 			proc.warnln("'{}': {}.", name, exp_path.error().message());
-			co_return 1;
+			continue;
 		}
 
 		ExecParams params;
@@ -197,7 +197,6 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 		/* Unless this is the last program in the pipeline, write to the pipe. */
 		if (idx < num_pipes)
 		{
-			//std::print("[pipe{}] ", idx);
 			params.writer = [pipe = &pipes[idx]](Proc& wproc, WriteInput str)
 			{
 				pipe->push(std::move(str));

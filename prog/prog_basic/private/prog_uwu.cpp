@@ -11,7 +11,7 @@ std::string uwuify(std::string_view in)
 
 	return in
 	| std::views::split("u"sv) 
-	| std::views::join_with("UwU"sv)
+	| std::views::join_with("owo"sv)
 	| std::ranges::to<std::string>();
 }
 
@@ -21,7 +21,7 @@ std::string owoify(std::string_view in)
 
 	return in
 	| std::views::split("o"sv) 
-	| std::views::join_with("OwO"sv)
+	| std::views::join_with("owo"sv)
 	| std::ranges::to<std::string>();
 }
 
@@ -55,6 +55,7 @@ ProcessTask Programs::CmdUwu(Proc& proc, std::vector<std::string> args)
 		std::string uwu = uwuify(safe);
 		std::string owo = owoify(uwu);
 		proc.write(owo);
+		proc.putln("");
 	}
 	else
 	{
@@ -73,8 +74,6 @@ ProcessTask Programs::CmdUwu(Proc& proc, std::vector<std::string> args)
 			proc.write(owo);
 		}
 	}
-
-	proc.putln("");
 
     co_return 0;
 }
