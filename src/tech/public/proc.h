@@ -144,6 +144,12 @@ public:
 
 
 	/* Write to the process 'standard output'. */
+	void put(std::string& msg)
+	{
+		write(msg);
+	}
+
+	/* Write to the process 'standard output'. */
 	template<typename ...Args>
 	void put(std::format_string<Args...> fmt, Args&& ...args)
 	{

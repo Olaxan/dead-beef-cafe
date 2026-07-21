@@ -145,7 +145,6 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryF
 	std::string out_cmd;
 	buffer.trim();
 	buffer.toUTF8String(out_cmd);
-	buffer.remove();
 
 	co_return out_cmd;
 }
