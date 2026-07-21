@@ -32,7 +32,7 @@ using ArgList = std::vector<std::string>;
 
 
 // trim from left
-inline std::string_view ltrim(std::string_view s, const char* t = " \t\n\r\f\v")
+inline std::string_view ltrim(std::string_view s)
 {
 	while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front())))
 		s.remove_prefix(1);
@@ -41,7 +41,7 @@ inline std::string_view ltrim(std::string_view s, const char* t = " \t\n\r\f\v")
 }
 
 // trim from right
-inline std::string_view rtrim(std::string_view s, const char* t = " \t\n\r\f\v")
+inline std::string_view rtrim(std::string_view s)
 {
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back())))
 		s.remove_suffix(1);
@@ -50,9 +50,9 @@ inline std::string_view rtrim(std::string_view s, const char* t = " \t\n\r\f\v")
 }
 
 // trim from left & right
-inline std::string_view trim(std::string_view s, const char* t = " \t\n\r\f\v")
+inline std::string_view trim(std::string_view s)
 {
-    return ltrim(rtrim(s, t), t);
+    return ltrim(rtrim(s));
 }
 
 /* For handling shell navigation via 'cd'. */
@@ -162,7 +162,7 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 		if (not exp_path)
 		{
 			proc.warnln("'{}': {}.", name, exp_path.error().message());
-			continue;
+			co_return 1;
 		}
 
 		ExecParams params;
@@ -283,6 +283,11 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		std::string_view out_cmd{*exp_out_cmd};
 		trim(out_cmd);
+
+		if (out_cmd.empty())
+		{
+			continue;
+		}
 
 		if (out_cmd.compare("exit") == 0)
 		{
