@@ -23,6 +23,8 @@ namespace DbcWin
 
 	std::string utf16_to_utf8(const std::wstring& wstr);
 
+	std::string fetch_terminal_events();
+
 };
 
 #undef DBC_DWORD

@@ -3,9 +3,9 @@
 #include "race_awaiter.h"
 
 FtxuiHost::FtxuiHost(ftxui::Component root, size_t width, size_t height)
-	: root_(std::move(root)), terminal_input_parser_([&](const ftxui::Event& event)
+	: root_(std::move(root)), terminal_input_parser_([&](ftxui::Event event)
 	{
-		feed_event(event);
+		feed_event(std::move(event));
 	})
 {
 	resize(width, height);
@@ -21,6 +21,48 @@ void FtxuiHost::set_root_component(ftxui::Component root)
 	refresh();
 }
 
+void FtxuiHost::install()
+{
+	if (use_alternate_screen_)
+	{
+		proc_->put(BEGIN_ALT_SCREEN_BUFFER);
+	}
+
+	if (hide_cursor_)
+	{
+		proc_->put(HIDE_CURSOR);
+	}
+
+	if (track_mouse_)
+	{
+		proc_->put(CSI "?1000h");
+		proc_->put(CSI "?1003h");
+		proc_->put(CSI "?1015h");
+		proc_->put(CSI "?1006h");
+	}
+}
+
+void FtxuiHost::uninstall()
+{
+	if (use_alternate_screen_)
+	{
+		proc_->put(END_ALT_SCREEN_BUFFER);
+	}
+
+	if (hide_cursor_)
+	{
+		proc_->put(SHOW_CURSOR);
+	}
+
+	if (track_mouse_)
+	{
+		proc_->put(CSI "?1000l");
+		proc_->put(CSI "?1003l");
+		proc_->put(CSI "?1015l");
+		proc_->put(CSI "?1006l");
+	}
+}
+
 void FtxuiHost::resize(size_t width, size_t height)
 {
 	width = width > 0 ? width : 1;
@@ -34,11 +76,20 @@ void FtxuiHost::resize(size_t width, size_t height)
 	}
 }
 
-bool FtxuiHost::feed_event(const ftxui::Event& event)
+bool FtxuiHost::feed_event(ftxui::Event&& event)
 {
 	if (!root_)
 	{
 		return false;
+	}
+
+	if (event.is_mouse())
+	{
+		/* This likely doesn't always hold true,
+		as in the FTXUI App.cpp the cursor position is
+		subtracted instead of a constant value. */
+		event.mouse().x += -1;
+		event.mouse().y += -1;
 	}
 
 	ensure_screen();
@@ -86,8 +137,13 @@ EagerTask<int32_t> FtxuiHost::run(Proc* proc, float refresh_rate)
 
 	proc_ = proc;
 
+	install();
+	refresh();
+
 	while (true)
 	{
+		proc_->write(last_frame_);
+		
 		auto exp_read = co_await when_any(proc_->io.read_query(), proc_->wait(refresh_rate));
 		if (exp_read.index == 0)
 		{
@@ -97,14 +153,14 @@ EagerTask<int32_t> FtxuiHost::run(Proc* proc, float refresh_rate)
 			}
 			else
 			{
-				co_return 1;;
+				break;
 			}
 		}
 
-		//screen_->RequestAnimationFrame();
 		refresh();
-		proc_->write(last_frame_);
 	}
+
+	uninstall();
 
 	co_return 0;
 }

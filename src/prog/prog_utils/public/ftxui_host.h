@@ -32,9 +32,12 @@ public:
 		return root_;
 	}
 
+	void install();
+	void uninstall();
+
 	void resize(size_t width, size_t height);
 
-	bool feed_event(const ftxui::Event& event);
+	bool feed_event(ftxui::Event&& event);
 
 	bool feed_command_bytes(std::string_view command);
 
@@ -51,9 +54,23 @@ public:
 
 	void refresh();
 
+	void set_use_alternate_screen(bool use_alternate_screen)
+	{
+		use_alternate_screen_ = use_alternate_screen;
+	}
+
+	void set_track_mouse(bool track_mouse)
+	{
+		track_mouse_ = track_mouse;
+	}
+
 private:
 
 	void ensure_screen();
+
+	bool track_mouse_{true};
+	bool use_alternate_screen_{true};
+	bool hide_cursor_{true};
 
 	Proc* proc_{nullptr};
 	ftxui::Component root_;

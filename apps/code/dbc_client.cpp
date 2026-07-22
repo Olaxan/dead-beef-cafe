@@ -165,9 +165,6 @@ int main(int argc, char* argv[])
 		std::wstring wide_in = DbcWin::read_console_input_w();
 		std::string utf8_in = DbcWin::utf16_to_utf8(wide_in);
 
-		if (!utf8_in.empty() && utf8_in[0] == 'Q')
-			break;
-
 		com::CommandQuery query;
 		query.set_command(utf8_in);
 
