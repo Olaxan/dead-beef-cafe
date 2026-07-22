@@ -184,7 +184,7 @@ void Proc::signal(SignalType sig)
 		fn(sig);
 	}
 
-	for (auto&& c : children)
+	for (Proc* c : children)
 	{
 		c->signal(sig);
 	}
