@@ -50,7 +50,7 @@ ProcessTask Programs::CmdNetMap(Proc& proc, std::vector<std::string> args)
 
 	size_t term_width = proc.get_var<size_t>("TERM_W");
 	size_t term_height = proc.get_var<size_t>("TERM_H");
-	float step_size = 10.f;
+	float step_size = 1.f;
 	
 	// -- Menu
 	// ----------------------------------------------------------------------

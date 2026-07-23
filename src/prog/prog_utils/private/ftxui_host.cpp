@@ -156,6 +156,12 @@ EagerTask<int32_t> FtxuiHost::run(Proc* proc, float refresh_rate)
 				break;
 			}
 		}
+		else
+		{
+			auto duration = std::chrono::duration<float>(refresh_rate);
+			ftxui::animation::Params params(duration);
+			root_->OnAnimation(params);
+		}
 
 		refresh();
 	}

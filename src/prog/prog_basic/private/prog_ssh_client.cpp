@@ -129,7 +129,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("Connected.");
 
-	SshReader(proc, fd);
+	auto reader = SshReader(proc, fd);
 
 	while (netapi.socket_is_open(fd))
 	{
@@ -137,8 +137,15 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 		if (not exp_msg)
 		{
-			proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
-			co_return 2;
+			if (exp_msg.error().value() == EINTR)
+			{
+				proc.putln("ssh: Connection closed by server: {}. Exiting.", exp_msg.error().message());
+			}
+			else
+			{
+				proc.errln("ssh: Read failure: {}. Exiting.", exp_msg.error().message());
+			}
+			break;
 		}
 
 		if (exp_msg->length() == 0)
@@ -148,7 +155,12 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 		co_await proc.net.async_write_socket(fd, *exp_msg);
 	}
-	
+
+	if (not reader.is_done())
+	{
+		co_await reader;
+	}
+
 	co_return 0;
 }
 

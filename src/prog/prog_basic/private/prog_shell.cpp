@@ -219,14 +219,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	using namespace std::string_view_literals;
 
 	OS& os = *proc.owning_os;
-	FileSystem* fs = os.get_filesystem();
 	UsersManager* users = os.get_users_manager();
-
-	if (fs == nullptr)
-	{
-		proc.errln("No file system!");
-		co_return 1;
-	}
 
 	icu::UnicodeString buffer;
 	CmdReaderParams read_params;

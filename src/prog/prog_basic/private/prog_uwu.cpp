@@ -5,37 +5,86 @@
 
 #include <string>
 
-std::string uwuify(std::string_view in)
+struct Replacement
 {
-	using namespace std::string_view_literals;
+    std::string_view from;
+    std::string_view to;
+};
 
-	return in
-	| std::views::split("u"sv) 
-	| std::views::join_with("owo"sv)
-	| std::ranges::to<std::string>();
+std::string replace_all(std::string_view input, std::span<const Replacement> replacements)
+{
+    // Longest matches first so "foobar" beats "foo".
+    std::vector<Replacement> rules(replacements.begin(), replacements.end());
+
+    std::ranges::sort(rules,
+        [](auto const& a, auto const& b)
+        {
+            return a.from.size() > b.from.size();
+        });
+
+    std::string result;
+    result.reserve(input.size());
+
+    std::size_t pos = 0;
+
+    while (pos < input.size())
+    {
+        bool matched = false;
+
+        for (auto const& rule : rules)
+        {
+            if (input.substr(pos).starts_with(rule.from))
+            {
+                result += rule.to;
+                pos += rule.from.size();
+                matched = true;
+                break;
+            }
+        }
+
+        if (!matched)
+        {
+            result += input[pos++];
+        }
+    }
+
+    return result;
 }
 
 std::string owoify(std::string_view in)
 {
 	using namespace std::string_view_literals;
 
-	return in
-	| std::views::split("o"sv) 
-	| std::views::join_with("owo"sv)
-	| std::ranges::to<std::string>();
+	return replace_all(in, {{
+		{ "r"sv, "ww"sv },
+		{ "l"sv, "w"sv },
+		{ "R"sv, "W"sv },
+		{ "L"sv, "W"sv },
+		{ "ove"sv, "uv"sv },
+		{ "N"sv, "Ny"sv },
+		{ "?"sv, "? OwO"sv },
+		{ "!"sv, "!! UwU"sv },
+		{"."sv, ". >w<"sv },
+		{"..."sv, "... >w<"sv },
+		{"A"sv, "A-a"sv },
+		{"I"sv, "I-i"sv },
+		{"H"sv, "H-h"sv },
+	}});
 }
 
 ProcessTask Programs::CmdUwu(Proc& proc, std::vector<std::string> args)
 {
-    CLI::App app{"A UwUsefUwUl tOwOOwOl tOwO replace UwU with UwUwUwU and OwO with OwOwOwO."};
+    CLI::App app{"A usefuw toow foww making ur text uwu."};
 	app.allow_windows_style_options(false);
 
 	struct SpeechArgs
 	{
 		std::string line{"*Notices your bulge*"};
+		bool no_strip{false};
 	} params{};
 
 	app.add_option("LINE", params.line, "The line to replace");
+	app.add_flag("--no-strip", params.no_strip, "Do not strip ANSI escape codes");
 
 	try
 	{
@@ -51,11 +100,10 @@ ProcessTask Programs::CmdUwu(Proc& proc, std::vector<std::string> args)
 
 	if (proc.is_tty())
 	{
-		std::string safe = TermUtils::strip_ansi(params.line);
-		std::string uwu = uwuify(safe);
-		std::string owo = owoify(uwu);
+		std::string safe = params.no_strip ? params.line : TermUtils::strip_ansi(params.line);
+		std::string owo = owoify(safe);
 		proc.write(owo);
-		proc.putln("");
+		proc.put("\n");
 	}
 	else
 	{
@@ -68,12 +116,17 @@ ProcessTask Programs::CmdUwu(Proc& proc, std::vector<std::string> args)
 				co_return 0;
 			}
 
-			std::string safe = TermUtils::strip_ansi(*res);
-			std::string uwu = uwuify(safe);
-			std::string owo = owoify(uwu);
+			std::string safe = params.no_strip ? *res : TermUtils::strip_ansi(*res);
+			std::string owo = owoify(safe);
 			proc.write(owo);
 		}
 	}
 
     co_return 0;
+}
+
+// Allow calling with a braced-init-list of Replacement
+std::string replace_all(std::string_view input, std::initializer_list<Replacement> replacements)
+{
+	return replace_all(input, std::span<const Replacement>(replacements.begin(), replacements.size()));
 }

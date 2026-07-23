@@ -37,7 +37,6 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD:BEEF:CAFE:: " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
 
 	int32_t ret = co_await proc.sys.exec("/bin/shell");
-	proc.putln("Closing SSH session.");
 	auto status = co_await proc.net.async_close_socket(fd);
 	co_return ret;
 }
