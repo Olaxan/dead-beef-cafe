@@ -19,6 +19,15 @@ FetchContent_Declare(ftxui
  
 FetchContent_MakeAvailable(ftxui)
 
+FetchContent_Declare(
+    markdown-ui
+    GIT_REPOSITORY https://github.com/Olaxan/MarkdownFTXUI.git
+    GIT_TAG        main
+    GIT_SHALLOW    TRUE
+)
+
+FetchContent_MakeAvailable(markdown-ui)
+
 ADD_LIBRARY(progutils STATIC ${files_progutils})
-TARGET_LINK_LIBRARIES(progutils PUBLIC common term tech ftxui::dom ftxui::screen ftxui::component)
+TARGET_LINK_LIBRARIES(progutils PUBLIC common term tech ftxui::dom ftxui::screen ftxui::component markdown-ui)
 TARGET_INCLUDE_DIRECTORIES(progutils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/public)

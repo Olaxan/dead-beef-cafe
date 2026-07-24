@@ -52,6 +52,9 @@ namespace Programs
 	ProcessTask CmdCat(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdEdit(Proc& proc, std::vector<std::string> args);
 
+	/* Plugin programs */
+	ProcessTask CmdMarkdown(Proc& proc, std::vector<std::string> args);
+
 	/* Test programs */
 	ProcessTask CmdSnake(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdDogs(Proc& proc, std::vector<std::string> args);
