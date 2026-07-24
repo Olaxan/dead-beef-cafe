@@ -255,7 +255,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
 
-		auto format = [&proc](const com::CommandQuery& query)
+		auto do_format = [&proc](const com::CommandQuery& query)
 		{
 			/* First, update terminal parameters if we're being passed configuration data. */
 			if (query.has_screen_data())
@@ -266,7 +266,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			}
 		};
 
-		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params, format);
+		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params, do_format);
 
 		if (not exp_out_cmd)
 		{
