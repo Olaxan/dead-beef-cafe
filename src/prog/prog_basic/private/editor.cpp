@@ -13,6 +13,7 @@ bool EditorState::set_file(FilePath path, std::string_view view)
 	init_state();
 	
 	path_ = path;
+
 	return true;
 }
 
@@ -21,10 +22,14 @@ void EditorState::init_state()
 	if (rows_.empty())
 		rows_.emplace_back(); // Guaranteed one row to write in.
 
-	row_it_ = rows_.end();
+	row_it_ = rows_.begin();
+	for (; row_it_ != rows_.end(); ++row_it_)
+	{
+		refresh_row();
+	}
+
 	--row_it_; // Move iterator to last line (not end).
 	row_ = static_cast<int32_t>((rows_.size() - 1));
-	refresh_row();
 	move_end();
 }
 
@@ -98,7 +103,6 @@ int32_t EditorState::get_adjusted_col() const
 	copy_it_->setText(chars);
 
 	int32_t adj = 0;
-	int32_t step = 0;
 	int32_t p1 = 0;
 	int32_t p2 = copy_it_->first();
 
@@ -107,18 +111,40 @@ int32_t EditorState::get_adjusted_col() const
 		if (p2 > col_)
 			break;
 
-		step = p2 - p1;
-
 		if (chars.char32At(p1) == '\t')
 		{
 			adj += (tab_stop_length - 1) - (adj % tab_stop_length);
 		}
 
-		adj += step;
+		int32_t guess = get_approx_point_width(chars.char32At(p1));
+		int32_t step = p2 - p1;
+
+		adj += std::max(step, guess);
 		p1 = p2;
 	}
 
 	return adj;
+}
+
+int32_t EditorState::get_approx_point_width(char32_t ch) const
+{
+	// Combining marks occupy no columns.
+    if (u_hasBinaryProperty(ch, UCHAR_GRAPHEME_EXTEND))
+        return 0;
+
+    // Control characters.
+    if (u_charType(ch) == U_CONTROL_CHAR)
+        return 0;
+
+    switch (static_cast<UEastAsianWidth>(u_getIntPropertyValue(ch, UCHAR_EAST_ASIAN_WIDTH)))
+    {
+        case U_EA_FULLWIDTH:
+        case U_EA_WIDE:
+            return 2;
+
+        default:
+            return 1;
+    }
 }
 
 void EditorState::add_row()

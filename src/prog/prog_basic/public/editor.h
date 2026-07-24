@@ -64,6 +64,9 @@ public:
 	/* Returns the column index (Y), adjusted for tab stops. */
 	int32_t get_adjusted_col() const;
 
+	/* Get a best-guess heuristic of how many columns a unicode character will take in the terminal. */
+	int32_t get_approx_point_width(char32_t point) const;
+
 	/* Get the filename of the current file, or a default if the file has never been saved. */
 	std::string_view get_filename() const { return has_file() ? path_->get_name() : "*new file*"; }
 
