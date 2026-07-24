@@ -39,6 +39,10 @@
 #define DELETE_CHAR CSI "P"
 #define ERASE_CHAR CSI "X"
 #define REVERSE_VIDEO CSI_CODE(7)
+#define SAVE_CURSOR ESC "7"
+#define RESTORE_CURSOR ESC "8"
+#define ERASE_FROM CSI "0K"
+#define ERASE_UNTIL CSI "1K"
 
 
 

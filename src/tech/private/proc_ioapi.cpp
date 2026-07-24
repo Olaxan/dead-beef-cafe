@@ -5,6 +5,7 @@
 #include "proc.h"
 #include "proc_types.h"
 #include "net_types.h"
+#include "input_field.h"
 
 #include <print>
 #include <optional>
@@ -65,7 +66,14 @@ void ProcIoApi::write_reply(const com::CommandReply& reply)
 EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryFn callback)
 {
 
-	icu::UnicodeString buffer;
+	InputFieldParams field_params
+	{
+		.multiline = false
+	};
+
+	InputField field{std::move(field_params)};
+
+	proc.write(SAVE_CURSOR);
 
 	while (true)
 	{
@@ -73,78 +81,46 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryF
 
 		if (not exp_query)
 		{
-			proc.errln("Failed to establish reader.");
 			co_return std::unexpected{exp_query.error()};
 		}
 
 		const com::CommandQuery& query = *exp_query;
+		std::string str_in = query.command();
 
 		if (callback)
 		{
 			std::invoke(callback, query);
 		}
 
-		/* Next, read the actual command and consider it based on first-byte. */
-		std::string str_in = query.command();
+		InputField::HandlerReturn ret = field.accept_input(str_in);
 
-		if (str_in.length() == 0)
-			continue;
-
-		if (str_in[0] == '\x1b')
-			continue;
-
-		if (str_in[0] == '\t')
-			continue;
-
-		if (str_in[0] == '\r' || str_in[0] == '\n')
+		if (ret == InputField::HandlerReturn::Return)
 		{
-			proc.put("\r\n");
 			break;
 		}
-
-		if (str_in[0] == '\x08' || str_in[0] == '\x7f')
-		{
-			UErrorCode status = U_ZERO_ERROR;
-			std::unique_ptr<icu::BreakIterator> bi(icu::BreakIterator::createCharacterInstance(icu::Locale::getDefault(), status));
-			if (U_FAILURE(status) || !bi)
-			{
-				proc.warnln("Warning: Failed to create break iterator!");
-				continue;
-			}
-
-			bi->setText(buffer);
-			int32_t end = buffer.length();
-			int32_t last_char_start = bi->preceding(end);
-			if (last_char_start != icu::BreakIterator::DONE && params.echo)
-			{
-				int32_t points_removed = end - last_char_start;
-				buffer.remove(last_char_start);
-				proc.put(CSI "{}D" CSI "0K", points_removed);
-			}
-
-			continue;
-		}
-
-		if (str_in.back() == '\0')
-			str_in.pop_back();
-
-		icu::UnicodeString chunk = icu::UnicodeString::fromUTF8(str_in);
-		buffer.append(chunk);
 		
 		if (params.echo)
 		{
-			std::string writeback;
-			icu::UnicodeString ret_str = chunk.unescape();
-			ret_str.toUTF8String(writeback);
-			proc.put("{}", params.password ? std::string(ret_str.length(), '*') : writeback);
+			std::string writeback = field.render_line_utf8(true);
+			int32_t line_len = field.current_line_length();
+			int32_t cursor_x = field.get_adjusted_col();
+
+			std::stringstream ss{};
+			ss << RESTORE_CURSOR;
+			ss << ERASE_FROM;
+			ss << (params.password ? std::string(line_len, '*') : writeback);
+			ss << RESTORE_CURSOR;
+
+			if (cursor_x > 0)
+			{
+				ss << CSI << cursor_x << "C";
+			}
+
+			proc.write(ss.str());
 		}
 	}
 
-	/* Trim any whitespace from the buffer string, convert the result back to utf8,
-	and clear the buffer before sending it for processing. */
-	std::string out_cmd;
-	buffer.trim();
-	buffer.toUTF8String(out_cmd);
+	proc.write("\n");
 
-	co_return out_cmd;
+	co_return field.as_utf8();
 }
