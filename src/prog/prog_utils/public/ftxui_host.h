@@ -77,6 +77,8 @@ private:
 	ftxui::TerminalInputParser terminal_input_parser_;
 	std::shared_ptr<ftxui::Screen> screen_{nullptr};
 	std::string last_frame_;
+	std::string current_frame_;
+	std::chrono::steady_clock::time_point last_write_time_{std::chrono::steady_clock::now()};
 	size_t width_{80};
 	size_t height_{24};
 

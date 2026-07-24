@@ -93,7 +93,7 @@ bool FtxuiHost::feed_event(ftxui::Event&& event)
 	}
 
 	ensure_screen();
-	root_->TakeFocus();
+	//root_->TakeFocus();
 	const bool handled = root_->OnEvent(event);
 	refresh();
 	return handled;
@@ -140,9 +140,22 @@ EagerTask<int32_t> FtxuiHost::run(Proc* proc, float refresh_rate)
 	install();
 	refresh();
 
+	proc_->write(current_frame_);
+
 	while (true)
 	{
-		proc_->write(last_frame_);
+
+		const auto min_refresh_rate = std::chrono::duration<float>(1.f / 60.f);
+
+		auto now = std::chrono::steady_clock::now();
+		bool refresh_allowed = (now - last_write_time_) > min_refresh_rate;
+
+		if (refresh_allowed && (last_frame_ != current_frame_))
+		{
+			proc_->write(current_frame_);
+			last_frame_ = current_frame_;
+			last_write_time_ = std::chrono::steady_clock::now();
+		}
 		
 		auto exp_read = co_await when_any(proc_->io.read_query(), proc_->wait(refresh_rate));
 		if (exp_read.index == 0)
@@ -182,8 +195,7 @@ void FtxuiHost::refresh()
 	ensure_screen();
 	screen_->Clear();
 	ftxui::Render(*screen_, root_->Render());
-	last_frame_ = screen_->ToString();
-	last_frame_ += screen_->ResetPosition(false);
+	current_frame_ = screen_->ToString() + screen_->ResetPosition(false);
 }
 
 void FtxuiHost::ensure_screen()
