@@ -15,6 +15,7 @@
 #include <format>
 #include <cctype>
 #include <string_view>
+#include <functional>
 
 struct InputFieldParams
 {
@@ -26,16 +27,42 @@ class InputField
 {
 public:
 
-	enum class HandlerReturn
+	enum class HandlerReturn : uint8_t
 	{
-		Handled = 0,
-		Unhandled,
+		Invalid = 0,
+		Custom,
 		PutChar,
 		Return,
-		Erase,
+		Tab,
+		EraseBack,
+		EraseFront,
+		MoveUp,
+		MoveDown,
+		MoveForward,
+		MoveBackward,
+		MoveHome,
+		MoveEnd,
 		WantSave,
 		WantExit
 	};
+
+	enum class EventResponse : uint8_t
+	{
+		Invalid,
+		Handled,
+		Unhandled,
+		Delegated,
+		WantSave,
+		WantExit
+	};
+
+	enum class EventFilterResponse : uint8_t
+	{
+		Unhandled = 0,
+		Handled,
+	};
+
+	using EventFilterFn = std::function<EventFilterResponse(std::string_view, HandlerReturn)>;
 
 	struct EditorRow
 	{
@@ -113,7 +140,16 @@ public:
 	size_t render_line_length() const;
 
 	/* Take some text from the input stream and process it. */
-	HandlerReturn accept_input(std::string_view input);
+	HandlerReturn accept_input(std::string_view input) const;
+
+	/* Handle an event brought on by a byte sequence, or delegate it. */
+	EventResponse handle_event(std::string_view input, HandlerReturn event);
+
+	/* Feed some characters to the buffer. Events will be raised
+	if certain sequences are detected in the stream.
+	Providing an event filter will let you intercept them,
+	and returning true from the filter will stop further processing. */
+	EventResponse feed(std::string_view input, EventFilterFn filter = nullptr);
 
 	/* --- Cursor movement functions --- */
 

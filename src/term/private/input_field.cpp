@@ -216,6 +216,9 @@ void InputField::remove_front()
 
 void InputField::insert_utf8(std::string_view input)
 {
+	if (input.empty())
+		return;
+
 	icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 	int32_t num_points = u_in.countChar32();
 	//std::println("Inserted {0} code point(s).", num_points);
@@ -262,63 +265,130 @@ size_t InputField::render_line_length() const
 	return chars.countChar32();
 }
 
-InputField::HandlerReturn InputField::accept_input(std::string_view input)
+InputField::HandlerReturn InputField::accept_input(std::string_view input) const
 {
 	if (input.size() == 0)
-		return HandlerReturn::Handled;
+		return HandlerReturn::Invalid;
+
+	switch (input[0])
+	{
+		case '\r': return HandlerReturn::Return;
+		case '\t': return HandlerReturn::Tab;
+		case '\x7f': return HandlerReturn::EraseBack;
+		case CTRL_KEY('s'): return HandlerReturn::WantSave;
+		case '\x1b':
+		{
+			if (input.size() == 1)
+				return HandlerReturn::WantExit;
+
+			if (input[1] == '\0')
+				return HandlerReturn::WantExit;
+			
+			if (input[1] == '[' && input.size() >= 3)
+			{
+				switch(input[2])
+				{
+					case 'A': return HandlerReturn::MoveUp;
+					case 'B': return HandlerReturn::MoveDown;
+					case 'C': return HandlerReturn::MoveForward;
+					case 'D': return HandlerReturn::MoveBackward;
+					case 'H': return HandlerReturn::MoveHome;
+					case 'F': return HandlerReturn::MoveEnd;
+					case '3': return HandlerReturn::EraseFront;
+					default: return HandlerReturn::Custom;
+				}
+			}
+			
+			return HandlerReturn::Invalid;
+		}
+		default: break;
+	}
+
+	return HandlerReturn::PutChar;
+}
+
+InputField::EventResponse InputField::handle_event(std::string_view input, HandlerReturn event)
+{
+	if (input.size() == 0)
+		return EventResponse::Invalid;
 
 	/* Clean erroneous nulls (we should fix this somewhere else). */
-	if (input.back() == '\0')
+	while (input.length() && input.back() == '\0')
+	{
 		input.remove_suffix(1);
-
-	if (input.size() == 0)
-		return HandlerReturn::Handled;
-
-	if (input[0] == '\r')
-	{
-		add_row();
-		return HandlerReturn::Return;
 	}
 
-	/* Backspace */
-	if (input[0] == '\x7f')
+	switch (event)
 	{
-		remove_back();
-		return HandlerReturn::Erase;
-	}
-
-	if (input[0] == CTRL_KEY('s'))
-			return HandlerReturn::WantSave;
-
-	/* Escapes */
-	if (input[0] == '\x1b')
-	{
-		if (input.size() == 1)
-			return HandlerReturn::WantExit;
-
-		if (input[1] == '\0')
-			return HandlerReturn::WantExit;
-		
-		if (input[1] == '[' && input.size() >= 3)
+		case HandlerReturn::Tab:
+		case HandlerReturn::PutChar: 
 		{
-			switch(input[2])
-			{
-				case 'A': move_up(); return HandlerReturn::Handled;
-				case 'B': move_down(); return HandlerReturn::Handled;
-				case 'C': move_right(); return HandlerReturn::Handled;
-				case 'D': move_left(); return HandlerReturn::Handled;
-				case 'H': move_home(); return HandlerReturn::Handled;
-				case 'F': move_end(); return HandlerReturn::Handled;
-				case '3': remove_front(); return HandlerReturn::Handled;
-				default: return HandlerReturn::Handled;
-			}
+			insert_utf8(input);
+			return EventResponse::Handled;
 		}
-
-		return HandlerReturn::Handled;
+		case HandlerReturn::Return:
+		{
+			if (params_.multiline)
+			{
+				add_row();
+			}
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::EraseBack:
+		{
+			remove_back();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::EraseFront:
+		{
+			remove_front();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveUp:
+		{
+			move_up();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveDown:
+		{
+			move_down();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveForward:
+		{
+			move_right();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveBackward:
+		{
+			move_left();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveHome:
+		{
+			move_home();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::MoveEnd:
+		{
+			move_end();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::WantSave: return EventResponse::WantSave;
+		case HandlerReturn::WantExit: return EventResponse::WantExit;
+		case HandlerReturn::Invalid: return EventResponse::Invalid;
+		case HandlerReturn::Custom: return EventResponse::Unhandled;
 	}
+}
 
-	insert_utf8(input);
-	return HandlerReturn::PutChar;
+InputField::EventResponse InputField::feed(std::string_view input, EventFilterFn filter)
+{
+	HandlerReturn event = accept_input(input);
+
+	if (filter && std::invoke(filter, input, event) == EventFilterResponse::Handled)
+		return EventResponse::Delegated;
+
+	return handle_event(input, event);
 }
 
 int32_t InputField::move_to(int32_t n)

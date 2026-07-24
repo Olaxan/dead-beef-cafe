@@ -72,10 +72,11 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryF
 	};
 
 	InputField field{std::move(field_params)};
+	bool run{true};
 
 	proc.write(SAVE_CURSOR);
 
-	while (true)
+	while (run)
 	{
 		auto exp_query = co_await read_query();
 
@@ -92,12 +93,23 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryF
 			std::invoke(callback, query);
 		}
 
-		InputField::HandlerReturn ret = field.accept_input(str_in);
-
-		if (ret == InputField::HandlerReturn::Return)
+		auto input_callback = [&](std::string_view input, InputField::HandlerReturn event)
 		{
-			break;
-		}
+			if (event == InputField::HandlerReturn::Return)
+			{
+				run = false;
+				return InputField::EventFilterResponse::Handled;
+			}
+
+			if (event == InputField::HandlerReturn::Tab)
+			{
+				return InputField::EventFilterResponse::Handled;
+			}
+
+			return InputField::EventFilterResponse::Unhandled;
+		};
+
+		InputField::EventResponse ret = field.feed(str_in, input_callback);
 		
 		if (params.echo)
 		{
