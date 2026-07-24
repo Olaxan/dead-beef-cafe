@@ -110,7 +110,7 @@ public:
 	std::string render_line_utf8(bool unescape = true) const;
 
 	/* Get the length (printable chars) of the current line. */
-	size_t current_line_length() const;
+	size_t render_line_length() const;
 
 	/* Take some text from the input stream and process it. */
 	HandlerReturn accept_input(std::string_view input);

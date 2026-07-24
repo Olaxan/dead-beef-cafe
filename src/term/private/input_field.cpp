@@ -256,7 +256,7 @@ std::string InputField::render_line_utf8(bool unescape) const
 	return writeback;
 }
 
-size_t InputField::current_line_length() const
+size_t InputField::render_line_length() const
 {
 	const icu::UnicodeString& chars = row_it_->chars;
 	return chars.countChar32();
