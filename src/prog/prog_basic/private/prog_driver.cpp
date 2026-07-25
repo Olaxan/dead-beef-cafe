@@ -98,8 +98,6 @@ ProcessTask Programs::InitDisk(Proc& proc, std::vector<std::string> args)
 		proc.put("Initializing file system... ");
 		co_await os.wait(0.1f);
 
-		if (FileSystem* fs = disk->get_fs(); fs == nullptr)
-
 		proc.put("[DONE]\nPrewarming file system access... ");
 		co_await os.wait(0.2f);
 		proc.putln("[DONE]");

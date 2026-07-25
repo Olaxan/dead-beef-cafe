@@ -61,10 +61,6 @@ protected:
 	std::vector<LinkUpdateCallbackFn> callbacks_{};
 	std::unordered_map<Uid64, NIC*> link_cache_{};
 
-	Address6 address_{};
 	float bandwidth_ = 0.f;
-
-	NetQueue rx_queue_{};
-	NetQueue tx_queue_{};
 
 };

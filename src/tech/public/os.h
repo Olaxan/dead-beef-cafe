@@ -11,6 +11,7 @@
 #include "session_mgr.h"
 #include "users_mgr.h"
 #include "game_srv.h"
+#include "filesystem.h"
 
 #include <memory>
 #include <vector>
@@ -20,9 +21,7 @@
 #include <any>
 
 struct GameServices;
-
 class FileSystem;
-class Host;
 
 namespace world { class Host; }
 
@@ -32,13 +31,10 @@ public:
 
 	using SchedulerFn = std::function<void()>;
 
-	OS() = delete;
-
-	OS(Host& owner);
+	OS();
+	virtual ~OS();
 
 	void init(GameServices* services);
-
-	virtual ~OS();
 
 	virtual std::size_t register_devices();
 
@@ -55,14 +51,8 @@ public:
 	[[nodiscard]] DeviceState get_state() const { return state_; }
 	void set_state(DeviceState new_state) { state_ = new_state; }
 
-	/* Get the uid64->device reference map. */
-	[[nodiscard]] auto& get_devices() { return devices_; }
-
-	/* Gets the owning host of the OS. */
-	[[nodiscard]] Host& get_owner();
-
 	/* Gets the filesystem, if one exists (otherwise nullptr). */
-	[[nodiscard]] FileSystem* get_filesystem() const;
+	[[nodiscard]] FileSystem* get_filesystem();
 
 	/* Gets the users/auth manager. */
 	[[nodiscard]] UsersManager* get_users_manager();
@@ -109,36 +99,6 @@ public:
 
 	int32_t create_sid();
 
-
-	/* Device management */
-
-	/* Gets the first registered device that matches the specified type. */
-	template <std::derived_from<Device> T>
-	T* get_device() const
-	{
-		for (auto& [id, dev] : devices_)
-		{
-			if (T* cast = dynamic_cast<T*>(dev))
-				return cast;
-		}
-
-		return nullptr;
-	}
-
-	/* Gets a list of devices matching the specified type. */
-	template <std::derived_from<Device> T>
-	std::vector<T*> get_devices_of_type() const
-	{
-		std::vector<T*> out;
-		for (auto& [id, dev] : devices_)
-		{
-			if (T* cast = dynamic_cast<T*>(dev))
-				out.push_back(cast);
-		}
-
-		return out;
-	}
-
 	/* --- Scheduler --- */
 
 	[[nodiscard]] TimerAwaiter wait(float seconds);
@@ -151,7 +111,6 @@ protected:
 
 	GameServices* services_{nullptr};
 
-	Host& owner_;
 	int32_t pid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
@@ -162,6 +121,7 @@ protected:
 	UsersManager users_{this};
 	SessionManager sess_{this};
 	NetManager net_{this};
+	FileSystem fs_{this};
 
 	friend Proc;
 };

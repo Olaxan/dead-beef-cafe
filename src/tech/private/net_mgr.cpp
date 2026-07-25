@@ -17,7 +17,7 @@
 #include <iso646.h>
 
 NetManager::NetManager(OS* owner) 
-: os_(owner), nic_(owner->get_owner().get_device<NIC>()) { }
+: os_(owner) { }
 
 NetManager::~NetManager() = default;
 
@@ -469,14 +469,12 @@ void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, co
 
 NetMessageAwaiter NetManager::async_read_rx()
 {
-	assert(nic_);
-	return nic_->get_rx_queue().async_pop();
+	return rx_queue_.async_pop();
 }
 
 NetMessageAwaiter NetManager::async_read_tx()
 {
-	assert(nic_);
-	return nic_->get_tx_queue().async_pop();
+	return tx_queue_.async_pop();
 }
 
 NetMessageAwaiter NetManager::async_read_route()
@@ -486,8 +484,7 @@ NetMessageAwaiter NetManager::async_read_route()
 
 Address6 NetManager::get_primary_ip() const
 {
-	assert(nic_);
-	return nic_->get_ip();
+	return address_;
 }
 
 bool NetManager::socket_is_open(OpenSocketHandle h) const

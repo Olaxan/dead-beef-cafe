@@ -14,8 +14,9 @@
 
 /* --- File System --- */
 
-FileSystem::FileSystem()
-{ 
+FileSystem::FileSystem(OS* os)
+ : os_(*os)
+{
 	metadata_[get_root()] = {
 		.owner_uid = 0,
 		.owner_gid = 0,

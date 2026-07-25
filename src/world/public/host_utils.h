@@ -31,7 +31,6 @@ namespace HostUtils
         Disk& my_disk = skel.create_device<Disk>(500);
         CPU& my_cpu = skel.create_device<CPU>(1.5f);
         NIC& my_nic = skel.create_device<NIC>(100.f);
-        FileSystem& fs = my_disk.create_fs();
 
 		std::size_t name_hash = std::hash<std::string>{}(hostname);
 		Uid64 id{static_cast<uint64_t>(name_hash)};

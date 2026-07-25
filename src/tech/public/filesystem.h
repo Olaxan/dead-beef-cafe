@@ -15,6 +15,7 @@
 #include <tuple>
 #include <chrono>
 
+class OS;
 struct SessionData;
 
 namespace world { class FileSystem; }
@@ -23,7 +24,8 @@ class FileSystem
 {
 public:
 
-	FileSystem();
+	FileSystem() = delete;
+	FileSystem(OS* os);
 
 	/* Returns whether file handle is valid. This is not the opposite of is_dir, as a directory is a file. */
 	bool is_file(NodeIdx fid) const;
@@ -213,6 +215,8 @@ protected:
 
 private:
 
+	OS& os_;
+
 	const NodeIdx root_{1};
 	NodeIdx fid_counter_{1024};
 	std::unordered_map<NodeIdx, std::shared_ptr<File>> files_ = {};
@@ -225,6 +229,4 @@ private:
 	std::unordered_map<OpenFileHandle, OpenFileTableEntry> open_files_{}; 	
 	OpenFileHandle handle_counter_{0};
 	std::set<OpenFileHandle> free_handles_{};
-
-	friend class Navigator;
 };

@@ -4,6 +4,7 @@
 #include "proc.h"
 #include "nic.h"
 #include "disk.h"
+#include "filesystem.h"
 
 #include "game_srv.h"
 #include "timer_base.h"
@@ -157,12 +158,9 @@ bool OS::process_is_running(int32_t pid) const
 	return processes_.contains(pid);
 }
 
-FileSystem* OS::get_filesystem() const
+FileSystem* OS::get_filesystem()
 {
-	if (Disk* disk = get_device<Disk>())
-        return disk->get_fs();
-
-    return nullptr;
+	return &fs_;
 }
 
 UsersManager* OS::get_users_manager()

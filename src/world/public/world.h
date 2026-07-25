@@ -77,6 +77,7 @@ public:
     {
         RelationManager<RelationshipType::OneToOne, PersonId, CorpId> employment;
         RelationManager<RelationshipType::OneToMany, PersonId, Uid64> ownership;
+        RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links;
     } relations;
 
 

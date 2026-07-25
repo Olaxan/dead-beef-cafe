@@ -106,12 +106,15 @@ protected:
 protected:
 	
 	OS* os_;
-	NIC* nic_{nullptr};
 
 	uint64_t handle_counter_{1};
 	std::set<OpenSocketHandle> free_handles_{};
 
+	Address6 address_{};
+	
 	NetQueue routing_queue_{};
+	NetQueue rx_queue_{};
+	NetQueue tx_queue_{};
 
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
 	std::unordered_map<Address6, Uid64> arp_cache_;

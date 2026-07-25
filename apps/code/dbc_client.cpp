@@ -122,6 +122,17 @@ int main(int argc, char* argv[])
 		.executable = Programs::CmdLoad
 	});
 
+	client_fs->create_file("/bin/gen", 
+	{
+		.recurse = true,
+		.meta = {
+			.perm_owner = FilePermissionTriad::All,
+			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
+			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
+		},
+		.executable = Programs::CmdGen
+	});
+
 	our_world.launch();
 	
 	auto queue_ptr = std::make_shared<MessageQueue<std::string>>();
