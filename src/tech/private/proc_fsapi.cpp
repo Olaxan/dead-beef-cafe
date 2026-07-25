@@ -46,8 +46,12 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 		/* The file exists -- check if we can read it. */
 		if (not check_permission(fid, flags))
 			return std::unexpected(std::error_condition{EACCES, std::generic_category()});
-
+			
 		auto ret = fs.open_file_entry(fid, flags);
+
+		if (not FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Append))
+			fs.clear(ret.first);
+
 		FileDescriptor fd = proc.get_descriptor();
 		++ret.second->instance_count;
 		fd_table_[fd] = ret;

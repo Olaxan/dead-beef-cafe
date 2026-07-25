@@ -655,7 +655,6 @@ void FileSystem::close_file_entry(OpenFileHandle h)
 	if (auto it = open_files_.find(h); it != open_files_.end())
 	{
 		assert(it->second.instance_count == 0);
-		//std::println("Closing file {}.", h);
 		open_files_.erase(it);
 		return_handle(h);
 	}
@@ -674,18 +673,32 @@ std::expected<size_t, std::error_condition> FileSystem::write(OpenFileHandle h, 
 		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Write))
 			return std::unexpected(std::error_condition{EPERM, std::generic_category()});
 
-		if (has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Append))
-		{
-			file->append(std::move(data));
-		}
-		else
-		{
-			file->write(std::move(data));
-		}
-
+		file->append(std::move(data));
 		file_set_modified_now(entry.node);
 
 		return data.size();
+	}
+
+	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
+}
+
+std::expected<size_t, std::error_condition> FileSystem::clear(OpenFileHandle h)
+{
+	if (auto it = open_files_.find(h); it != open_files_.end())
+	{
+		OpenFileTableEntry& entry = it->second;
+		File* file = find(entry.node);
+	
+		if (not file)
+			return std::unexpected{std::error_condition{EIO, std::generic_category()}};
+
+		if (not has_flag<FileAccessFlags>(entry.flags, FileAccessFlags::Write))
+			return std::unexpected(std::error_condition{EPERM, std::generic_category()});
+
+		file->write("");
+		file_set_modified_now(entry.node);
+
+		return 0;
 	}
 
 	return std::unexpected(std::error_condition{EFAULT, std::generic_category()});
