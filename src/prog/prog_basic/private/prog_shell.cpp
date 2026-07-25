@@ -239,6 +239,8 @@ std::string get_longest_matching(const std::vector<FilePath>& paths)
 			}
 		}
 	}
+
+	return std::string(base);
 }
 
 std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
@@ -266,7 +268,24 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	icu::UnicodeString buffer;
 	CmdReaderParams read_params;
 
-	auto filter_fn = [&proc](InputField& field, const com::CommandQuery& query, CmdReadEvent event) -> CmdEventResponse
+	std::vector<std::string> history;
+	history.emplace_back("");
+	int32_t history_idx{0};
+	int32_t last_history_idx{0};
+
+	auto set_history = [&](std::string_view str)
+	{
+		if (history.empty())
+		{
+			history.emplace_back(str);
+		}
+		else
+		{
+			history[history_idx] = str;
+		}
+	};
+
+	auto filter_fn = [&](InputField& field, const com::CommandQuery& query, CmdReadEvent event) -> CmdEventResponse
 	{
 		
 		/* First, update terminal parameters if we're being passed configuration data. */
@@ -278,6 +297,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		InputField::Word word = field.get_current_word();
+		set_history(field.line_utf8());
 
 		switch (event)
 		{
@@ -290,6 +310,20 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 					field.move_end();
 				}
 
+				return CmdEventResponse::Handled;
+			}
+			case CmdReadEvent::MoveUp:
+			{
+				history_idx = std::clamp(--history_idx, 0, static_cast<int32_t>(history.size()) - 1);
+				field.set_text(history[history_idx]);
+				field.move_end();
+				return CmdEventResponse::Handled;
+			}
+			case CmdReadEvent::MoveDown:
+			{
+				history_idx = std::clamp(++history_idx, 0, static_cast<int32_t>(history.size()) - 1);
+				field.set_text(history[history_idx]);
+				field.move_end();
 				return CmdEventResponse::Handled;
 			}
 			default: return CmdEventResponse::Unhandled;
@@ -345,10 +379,31 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			continue;
 		}
 
+		set_history(out_cmd);
+
+		if (history_idx == last_history_idx)
+		{
+			history.emplace_back("");
+		}
+
+		last_history_idx = static_cast<int32_t>(history.size()) - 1;
+		history_idx = last_history_idx;
+
 		if (out_cmd.compare("exit") == 0)
 		{
 			proc.putln("Goodbye...");
 			co_return 0;
+		}
+
+		if (out_cmd.compare("history") == 0)
+		{
+			for (size_t i = 0; i < history.size(); ++i)
+			{
+				proc.putln("{}\t{}", i, history[i].empty() ? "..." : history[i]);
+			}
+
+			proc.write("\n");
+			continue;
 		}
 
 		bool background = std::invoke([&]() -> bool

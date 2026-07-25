@@ -131,8 +131,8 @@ public:
 	/* Register a writer of a certain type, to be used in put/write function calls instead of standard out. */
     void set_writer(WriterFn&& writer);
 
-	/* Templated function of put/warn/err which allows to write any kind of data to writer map. */
-    bool write(const std::string& msg);
+	/* Static type functions for writing to writer. */
+	bool write(const std::string& msg);
 
 	/* Function accepting a error condition, writes an unexpected to stream (such as EOS). */
 	bool write(std::error_condition err);
@@ -144,9 +144,14 @@ public:
 
 
 	/* Write to the process 'standard output'. */
-	void put(std::string& msg)
+	void put(const std::string& msg)
 	{
 		write(msg);
+	}
+
+	void putln(const std::string& msg)
+	{
+		write(std::format("{}\n", msg));
 	}
 
 	/* Write to the process 'standard output'. */
