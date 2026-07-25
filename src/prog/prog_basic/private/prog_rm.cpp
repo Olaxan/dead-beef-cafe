@@ -98,7 +98,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
 		if (path.is_relative())
 			path.prepend(proc.get_var("PWD"));
 
-		proc.fs.remove_using(path, remover);
+		co_await proc.fs.remove_using_slow(path, remover);
 	}
 
 	proc.putln("Removed {0} file(s).", files_removed);

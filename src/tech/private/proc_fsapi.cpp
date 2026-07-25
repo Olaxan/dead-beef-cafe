@@ -6,6 +6,8 @@
 #include "proc.h"
 #include "os.h"
 
+#include <random>
+
 #include <iso646.h>
 
 /* --- Helpers --- */
@@ -199,7 +201,7 @@ NodeIdx ProcFsApi::get_node(FileDescriptor fd) const
 	return -1;
 }
 
-bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode)
+bool ProcFsApi::check_permission(NodeIdx node, FileAccessFlags mode) const
 {
 	UsersManager& users = *os.get_users_manager();
 
@@ -336,35 +338,8 @@ std::error_condition ProcFsApi::remove(const FilePath& path, bool recurse)
 
 bool ProcFsApi::remove_using(const FilePath& path, FileRemoverFn&& func)
 {
-	if (NodeIdx fid = fs.get_fid(path))
+	if (NodeIdx fid = check_remove_using(path, std::forward<FileRemoverFn>(func)); fid > 0)
 	{
-		NodeIdx parent_fid = fs.get_parent_folder(fid);
-
-		if (not check_permission(parent_fid, FileAccessFlags::Write | FileAccessFlags::Execute))
-		{
-			func(path, std::error_condition{EACCES, std::generic_category()});
-			return false;
-		}
-
-		/* If this is the root directory, ensure we can operate on it. */
-		if (path == "/" && !func(path, std::error_condition{EPERM, std::generic_category()}))
-		{
-			return false;
-		}
-
-		/* If this file doesn't exist, report it to callback and return. */
-		if (not fs.is_file(fid))
-		{
-			func(path, std::error_condition{ENOENT, std::generic_category()});
-			return false;
-		}
-
-		/* If we're not empty, and the callback doesn't say that's okay, fail. */
-		if (not (fs.is_empty(fid) || func(path, std::error_condition{ENOTEMPTY, std::generic_category()})))
-		{
-			return false;
-		}
-
 		/* If we get here, the callback must have given green light for recursion.
 		Remove all children. */
 		for (auto&& child : fs.get_paths(fid))
@@ -386,9 +361,86 @@ bool ProcFsApi::remove_using(const FilePath& path, FileRemoverFn&& func)
 		{
 			return fs.remove_file(path).value() == 0;
 		}
-		else return false;
+		else
+		{
+			return false;
+		}
+	}
+	else return false;
+}
+
+Task<bool> ProcFsApi::remove_using_slow(const FilePath& path, FileRemoverFn&& func)
+{
+	constexpr auto seconds_per_kb = 0.01f;
+	constexpr auto random_variation = 0.01f;
+
+	if (NodeIdx fid = check_remove_using(path, std::forward<FileRemoverFn>(func)); fid > 0)
+	{
+		std::mt19937 mt;
+		mt.seed(static_cast<unsigned>(fid));
+		std::uniform_real_distribution<float> dt(0, random_variation);
+
+		/* If we get here, the callback must have given green light for recursion.
+		Remove all children. */
+		for (auto&& child : fs.get_paths(fid))
+		{
+			if (not co_await remove_using_slow(child, std::forward<FileRemoverFn>(func)))
+			{
+				co_return false;
+			}
+		}
+
+		/* Even if callback requests resume, fail if not empty after recursion. */
+		if (not fs.is_empty(fid))
+		{
+			func(path, std::error_condition{ENOTEMPTY, std::generic_category()});
+			co_return false;
+		}
+
+		if (func(path, {}))
+		{
+			const float delay = std::max(static_cast<float>(fs.get_bytes(fid) / 1000Uz) * seconds_per_kb, seconds_per_kb);
+			const float random = dt(mt);
+
+			co_await proc.wait(delay + random);
+			co_return fs.remove_file(path).value() == 0;
+		}
+		else
+		{
+			co_return false;
+		}
+	}
+	
+	co_return false;
+}
+
+NodeIdx ProcFsApi::check_remove_using(const FilePath& path, FileRemoverFn&& func) const
+{
+	if (NodeIdx fid = fs.get_fid(path))
+	{
+		NodeIdx parent_fid = fs.get_parent_folder(fid);
+
+		if (not check_permission(parent_fid, FileAccessFlags::Write | FileAccessFlags::Execute))
+		{
+			func(path, std::error_condition{EACCES, std::generic_category()});
+			return 0;
+		}
+
+		/* If this is the root directory, ensure we can operate on it. */
+		if (path == "/" && !func(path, std::error_condition{EPERM, std::generic_category()}))
+		{
+			return 0;
+		}
+
+		/* If we're not empty, and the callback doesn't say that's okay, fail. */
+		if (not (fs.is_empty(fid) || func(path, std::error_condition{ENOTEMPTY, std::generic_category()})))
+		{
+			return 0;
+		}
+
+		return fid;
 	}
 
 	func(path, std::error_condition{ENOENT, std::generic_category()});
-	return false;
+	return 0;
 }
