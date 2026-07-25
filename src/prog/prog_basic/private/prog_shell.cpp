@@ -215,12 +215,43 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
-std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
+std::string get_longest_matching(const std::vector<FilePath>& paths)
 {
-	std::vector<FilePath> paths = proc.sys.scan_for(tab_str);
-
+	if (paths.empty())
+		return "";
+	
 	if (paths.size() == 1)
 		return std::string(paths[0].get_name());
+	
+	const std::string_view& base = paths[0].get_name();
+
+	for (size_t idx = 0; idx < base.length(); ++idx)
+	{
+		char c = base[idx];
+
+		for (auto&& path : paths)
+		{
+			const std::string_view& name = path.get_name();
+
+			if (name.length() <= idx || name[idx] != base[idx])
+			{
+				return std::string(name.substr(0, idx));
+			}
+		}
+	}
+}
+
+std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
+{
+	if (auto paths = proc.sys.scan_for(tab_str, proc.get_var("PWD")); paths.size() > 0)
+	{
+		return get_longest_matching(paths);
+	}
+
+	if (auto paths = proc.sys.scan_in_path(tab_str); paths.size() > 0)
+	{
+		return get_longest_matching(paths);
+	}
 
 	return std::string(tab_str);
 }

@@ -22,18 +22,26 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
-std::vector<FilePath> ProcSysApi::scan_for(std::string_view search) const
+std::vector<FilePath> ProcSysApi::scan_for(std::string_view search, FilePath path) const
 {
 	FileSystem& fs = *proc.owning_os->get_filesystem();
 
-	auto on_path = proc.get_var("PATH")
-	| std::views::split(';')
-	| std::ranges::to<std::vector<std::string>>();
+	return fs.get_paths(path)
+	| std::views::filter([search](const FilePath& path){ return path.get_name().starts_with(search); })
+	| std::ranges::to<std::vector>();
+}
 
-	on_path.emplace_back(proc.get_var("PWD"));
+std::vector<FilePath> ProcSysApi::scan_in_path(std::string_view search) const
+{
+	FileSystem& fs = *proc.owning_os->get_filesystem();
 
 	std::vector<FilePath> candidates;
-	for (auto&& dir : on_path)
+
+	auto dirs = proc.get_var("PATH")
+	| std::views::split(';')
+	| std::views::transform([](auto&& str) { return FilePath{std::string_view(str)}; });
+
+	for (auto&& dir : dirs)
 	{
 		auto p = fs.get_paths(dir)
 		| std::views::filter([search](const FilePath& path){ return path.get_name().starts_with(search); });

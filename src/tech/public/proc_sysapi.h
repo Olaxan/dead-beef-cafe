@@ -29,7 +29,9 @@ public:
 	ProcSysApi(Proc* owner);
 	~ProcSysApi();
 
-	std::vector<FilePath> scan_for(std::string_view search) const;
+	std::vector<FilePath> scan_for(std::string_view search, FilePath path) const;
+	std::vector<FilePath> scan_in_path(std::string_view search) const;
+
 	std::expected<FilePath, std::error_condition> find_in_path(std::string_view name) const;
 	std::vector<std::string> make_args(std::string_view cmd) const;
 
