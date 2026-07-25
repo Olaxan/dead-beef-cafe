@@ -123,10 +123,20 @@ int32_t InputField::get_adjusted_col() const
 	return adj;
 }
 
-std::string InputField::get_current_word() const
+InputField::Word InputField::get_current_word() const
 {
 	const icu::UnicodeString& chars = row_it_->chars;
-	const icu::UnicodeString& render = row_it_->render;
+	const auto b = get_current_word_boundary();
+
+	std::string out_str;
+	icu::UnicodeString out;
+	chars.extractBetween(b.first, b.second, out);
+	return std::make_pair(b, out.toUTF8String(out_str));
+}
+
+InputField::WordBoundary InputField::get_current_word_boundary() const
+{
+	const icu::UnicodeString& chars = row_it_->chars;
 
 	int32_t idx = std::clamp(get_adjusted_col() - 1, 0, chars.countChar32());
 
@@ -162,11 +172,7 @@ std::string InputField::get_current_word() const
 		curr = copy_it_->next();
 	}
 
-	std::string out_str;
-	icu::UnicodeString out;
-	chars.extractBetween(start, end, out);
-	return out.toUTF8String(out_str);
-
+	return std::make_pair(start, end);
 }
 
 int32_t InputField::get_approx_point_width(char32_t ch) const
@@ -267,11 +273,19 @@ void InputField::insert_utf8(std::string_view input)
 
 	icu::UnicodeString u_in = icu::UnicodeString::fromUTF8(input);
 	int32_t num_points = u_in.countChar32();
-	//std::println("Inserted {0} code point(s).", num_points);
 	row_it_->chars.insert(col_, u_in);
 	col_ += num_points;
 	refresh_row();
 	++dirty_;
+}
+
+void InputField::replace_utf8(std::string_view input, WordBoundary bounds)
+{
+	icu::UnicodeString& chars = row_it_->chars;
+	icu::UnicodeString rep = icu::UnicodeString::fromUTF8(input);
+	chars.replaceBetween(bounds.first, bounds.second, rep);
+	++dirty_;
+	refresh_row();
 }
 
 std::string InputField::as_utf8() const

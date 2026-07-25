@@ -246,19 +246,17 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 			proc.set_var("TERM_H", screen.size_y());
 		}
 
-		std::string word = field.get_current_word();
-
-		auto r = std::views::split(field.line_utf8(), ' ')
-		| std::ranges::to<std::vector<std::string>>();
+		InputField::Word word = field.get_current_word();
 
 		switch (event)
 		{
 			case CmdReadEvent::Tab:
 			{
-				if (not word.empty())
+				if (not word.second.empty())
 				{
-					std::string tab_str = get_autocomplete_string(proc, word);
-					field.set_text(tab_str);
+					std::string tab_str = get_autocomplete_string(proc, word.second);
+					field.replace_utf8(tab_str, word.first);
+					field.move_end();
 				}
 
 				return CmdEventResponse::Handled;

@@ -63,6 +63,8 @@ public:
 	};
 
 	using EventFilterFn = std::function<EventFilterResponse(std::string_view, HandlerReturn)>;
+	using WordBoundary = std::pair<int32_t, int32_t>;
+	using Word = std::pair<WordBoundary, std::string>;
 
 	struct EditorRow
 	{
@@ -98,7 +100,10 @@ public:
 	int32_t get_adjusted_col() const;
 
 	/* Gets the word currently underneath the cursor. */
-	std::string get_current_word() const;
+	Word get_current_word() const;
+
+	/* Gets the boundaries of the word currently underneath the cursor. */
+	WordBoundary get_current_word_boundary() const;
 
 	/* Get a best-guess heuristic of how many columns a unicode character will take in the terminal. */
 	int32_t get_approx_point_width(char32_t point) const;
@@ -132,6 +137,9 @@ public:
 	/* Insert some text into the current cursor position,
 	formatted as utf-8. */
 	void insert_utf8(std::string_view input);
+
+	/* Replace some text in the buffer. */
+	void replace_utf8(std::string_view input, WordBoundary bounds);
 
 	/* Get the contents of the buffer as a utf-8 formatted string. */
 	std::string as_utf8() const;
