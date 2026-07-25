@@ -98,11 +98,6 @@ public:
 	std::error_condition remove_file(NodeIdx fid, bool recurse = false);
 	std::error_condition remove_file(const FilePath& path, bool recurse = false);
 
-	/* Version of remove_file that takes a deciding callback, which aborts the operation if returning false.
-	If true is returned, the operation should proceed even if an error is reported. */
-	bool remove_file(NodeIdx fid, FileRemoverFn&& func);
-	bool remove_file(const FilePath& path, FileRemoverFn&& func);
-
 	/* Returns a pointer to a file, if found; otherwise nullptr. */
 	FileOpResult get_file(NodeIdx fid, FileAccessFlags flags = FileAccessFlags::All);
 	FileOpResult get_file(const FilePath& path, FileAccessFlags flags = FileAccessFlags::All);

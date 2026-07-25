@@ -16,6 +16,7 @@ class OS;
 class FileSystem;
 
 using FileQueryResult = std::expected<NodeIdx, std::error_condition>;
+using FileRemoverFn = std::function<bool(const FilePath&, std::error_condition)>;
 
 class ProcFsApi
 {
@@ -39,6 +40,7 @@ public:
 	std::expected<NodeIdx, std::error_condition> query(const FilePath& path, FileAccessFlags flags);
 	std::error_condition remove(const FilePath& path, bool recurse = false);
 	bool remove_using(const FilePath& path, FileRemoverFn&& func);
+	//Task<int32_t> remove_using_slow(const FilePath& path, FileRemoverFn&& func);
 
 	OpenFileHandle get_file_handle(FileDescriptor fd) const;
 	NodeIdx get_node(FileDescriptor fd) const;

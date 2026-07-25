@@ -54,7 +54,7 @@ ProcessTask Programs::CmdRemoveFile(Proc& proc, std::vector<std::string> args)
         co_return res;
     }
 
-	auto remover = [&proc, &files_removed, &params](const FileSystem& fs, const FilePath& path, std::error_condition code) -> bool
+	auto remover = [&proc, &files_removed, &params](const FilePath& path, std::error_condition code) -> bool
 	{
 		switch (code.value())
 		{

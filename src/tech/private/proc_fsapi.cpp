@@ -342,13 +342,53 @@ bool ProcFsApi::remove_using(const FilePath& path, FileRemoverFn&& func)
 
 		if (not check_permission(parent_fid, FileAccessFlags::Write | FileAccessFlags::Execute))
 		{
-			func(fs, path, std::error_condition{EACCES, std::generic_category()});
+			func(path, std::error_condition{EACCES, std::generic_category()});
 			return false;
 		}
 
-		return fs.remove_file(path, std::move(func));
+		/* If this is the root directory, ensure we can operate on it. */
+		if (path == "/" && !func(path, std::error_condition{EPERM, std::generic_category()}))
+		{
+			return false;
+		}
+
+		/* If this file doesn't exist, report it to callback and return. */
+		if (not fs.is_file(fid))
+		{
+			func(path, std::error_condition{ENOENT, std::generic_category()});
+			return false;
+		}
+
+		/* If we're not empty, and the callback doesn't say that's okay, fail. */
+		if (not (fs.is_empty(fid) || func(path, std::error_condition{ENOTEMPTY, std::generic_category()})))
+		{
+			return false;
+		}
+
+		/* If we get here, the callback must have given green light for recursion.
+		Remove all children. */
+		for (auto&& child : fs.get_paths(fid))
+		{
+			if (not remove_using(child, std::forward<FileRemoverFn>(func)))
+			{
+				return false;
+			}
+		}
+
+		/* Even if callback requests resume, fail if not empty after recursion. */
+		if (not fs.is_empty(fid))
+		{
+			func(path, std::error_condition{ENOTEMPTY, std::generic_category()});
+			return false;
+		}
+
+		if (func(path, {}))
+		{
+			return fs.remove_file(path).value() == 0;
+		}
+		else return false;
 	}
 
-	func(fs, path, std::error_condition{ENOENT, std::generic_category()});
+	func(path, std::error_condition{ENOENT, std::generic_category()});
 	return false;
 }

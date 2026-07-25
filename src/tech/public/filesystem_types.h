@@ -101,7 +101,6 @@ inline FileAccessFlags& operator |= (FileAccessFlags& a, FileAccessFlags b)
 
 using NodeIdx = int64_t;
 using FileOpResult = std::tuple<NodeIdx, std::shared_ptr<File>, std::error_condition>;
-using FileRemoverFn = std::function<bool(const FileSystem&, const FilePath&, std::error_condition)>;
 
 
 /* --- File Meta-data --- */
