@@ -128,47 +128,45 @@ std::string InputField::get_current_word() const
 	const icu::UnicodeString& chars = row_it_->chars;
 	const icu::UnicodeString& render = row_it_->render;
 
+	int32_t idx = std::clamp(get_adjusted_col() - 1, 0, chars.countChar32());
+
 	int32_t start{0};
 	int32_t end{0};
+	int32_t curr{0};
 
 	copy_it_->setText(chars);
 
 	/* Find previous word boundary. */
-	copy_it_->following(col_);
-	while (true)
+	curr = copy_it_->following(idx);
+	while (curr != icu::BreakIterator::DONE)
 	{
-		int32_t b = copy_it_->previous();
-
-		if (b == icu::BreakIterator::DONE)
-			break;
-
-		if (chars.char32At(b) == ' ')
+		if (u_isspace(chars.char32At(curr)))
 		{
-			start = b + 1;
+			start = curr + 1;
 			break;
 		}
+
+		curr = copy_it_->previous();
 	}
 
 	/* Find next word boundary. */
-	copy_it_->following(col_);
-	while (true)
+	curr = copy_it_->following(idx);
+	while (curr != icu::BreakIterator::DONE)
 	{
-		int32_t b = copy_it_->next();
-
-		if (b == icu::BreakIterator::DONE)
-			break;
-
-		if (chars.char32At(b) == ' ')
+		end = curr;
+		if (u_isspace(chars.char32At(curr)))
 		{
-			end = b;
 			break;
 		}
+		
+		curr = copy_it_->next();
 	}
 
 	std::string out_str;
 	icu::UnicodeString out;
 	chars.extractBetween(start, end, out);
 	return out.toUTF8String(out_str);
+
 }
 
 int32_t InputField::get_approx_point_width(char32_t ch) const

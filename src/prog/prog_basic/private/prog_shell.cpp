@@ -255,13 +255,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		{
 			case CmdReadEvent::Tab:
 			{
-				if (r.empty())
+				if (not word.empty())
 				{
-					return CmdEventResponse::Unhandled;
+					std::string tab_str = get_autocomplete_string(proc, word);
+					field.set_text(tab_str);
 				}
 
-				std::string tab_str = get_autocomplete_string(proc, field.line_utf8());
-				field.set_text(tab_str);
 				return CmdEventResponse::Handled;
 			}
 			default: return CmdEventResponse::Unhandled;
