@@ -7,6 +7,7 @@
 #include "race_awaiter.h"
 #include "sync_awaiter.h"
 #include "sync_awaiter_dynamic.h"
+#include "input_field.h"
 
 #include "CLI/CLI.hpp"
 
@@ -214,6 +215,16 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
+std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
+{
+	std::vector<FilePath> paths = proc.sys.scan_for(tab_str);
+
+	if (paths.size() == 1)
+		return std::string(paths[0].get_name());
+
+	return std::string(tab_str);
+}
+
 ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 {
 	using namespace std::string_view_literals;
@@ -223,6 +234,41 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 	icu::UnicodeString buffer;
 	CmdReaderParams read_params;
+
+	auto filter_fn = [&proc](InputField& field, const com::CommandQuery& query, CmdReadEvent event) -> CmdEventResponse
+	{
+		
+		/* First, update terminal parameters if we're being passed configuration data. */
+		if (query.has_screen_data())
+		{
+			com::ScreenData screen = query.screen_data();
+			proc.set_var("TERM_W", screen.size_x());
+			proc.set_var("TERM_H", screen.size_y());
+		}
+
+		std::string word = field.get_current_word();
+
+		auto r = std::views::split(field.line_utf8(), ' ')
+		| std::ranges::to<std::vector<std::string>>();
+
+		switch (event)
+		{
+			case CmdReadEvent::Tab:
+			{
+				if (r.empty())
+				{
+					return CmdEventResponse::Unhandled;
+				}
+
+				std::string tab_str = get_autocomplete_string(proc, field.line_utf8());
+				field.set_text(tab_str);
+				return CmdEventResponse::Handled;
+			}
+			default: return CmdEventResponse::Unhandled;
+		}
+	};
+
+	read_params.filter = filter_fn;
 
 	if (proc.get_var("PWD").empty())
 		proc.set_var("PWD", "/");
@@ -255,18 +301,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
 
-		auto do_format = [&proc](const com::CommandQuery& query)
-		{
-			/* First, update terminal parameters if we're being passed configuration data. */
-			if (query.has_screen_data())
-			{
-				com::ScreenData screen = query.screen_data();
-				proc.set_var("TERM_W", screen.size_x());
-				proc.set_var("TERM_H", screen.size_y());
-			}
-		};
-
-		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params, do_format);
+		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params);
 
 		if (not exp_out_cmd)
 		{

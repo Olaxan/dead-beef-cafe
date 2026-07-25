@@ -63,9 +63,8 @@ void ProcIoApi::write_reply(const com::CommandReply& reply)
 	proc.write(out);
 }
 
-EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryFn callback)
+EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params)
 {
-
 	InputFieldParams field_params
 	{
 		.multiline = false
@@ -88,25 +87,20 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params, CmdQueryF
 		const com::CommandQuery& query = *exp_query;
 		std::string str_in = query.command();
 
-		if (callback)
-		{
-			std::invoke(callback, query);
-		}
-
 		auto input_callback = [&](std::string_view input, InputField::HandlerReturn event)
 		{
+			if (params.filter && std::invoke(params.filter, field, query, event) == CmdEventResponse::Handled)
+			{
+				return CmdEventResponse::Handled;
+			}
+
 			if (event == InputField::HandlerReturn::Return)
 			{
 				run = false;
-				return InputField::EventFilterResponse::Handled;
+				return CmdEventResponse::Handled;
 			}
 
-			if (event == InputField::HandlerReturn::Tab)
-			{
-				return InputField::EventFilterResponse::Handled;
-			}
-
-			return InputField::EventFilterResponse::Unhandled;
+			return CmdEventResponse::Unhandled;
 		};
 
 		InputField::EventResponse ret = field.feed(str_in, input_callback);

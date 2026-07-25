@@ -123,6 +123,54 @@ int32_t InputField::get_adjusted_col() const
 	return adj;
 }
 
+std::string InputField::get_current_word() const
+{
+	const icu::UnicodeString& chars = row_it_->chars;
+	const icu::UnicodeString& render = row_it_->render;
+
+	int32_t start{0};
+	int32_t end{0};
+
+	copy_it_->setText(chars);
+
+	/* Find previous word boundary. */
+	copy_it_->following(col_);
+	while (true)
+	{
+		int32_t b = copy_it_->previous();
+
+		if (b == icu::BreakIterator::DONE)
+			break;
+
+		if (chars.char32At(b) == ' ')
+		{
+			start = b + 1;
+			break;
+		}
+	}
+
+	/* Find next word boundary. */
+	copy_it_->following(col_);
+	while (true)
+	{
+		int32_t b = copy_it_->next();
+
+		if (b == icu::BreakIterator::DONE)
+			break;
+
+		if (chars.char32At(b) == ' ')
+		{
+			end = b;
+			break;
+		}
+	}
+
+	std::string out_str;
+	icu::UnicodeString out;
+	chars.extractBetween(start, end, out);
+	return out.toUTF8String(out_str);
+}
+
 int32_t InputField::get_approx_point_width(char32_t ch) const
 {
 	// Combining marks occupy no columns.
@@ -249,14 +297,19 @@ std::string InputField::render_line_utf8(bool unescape) const
 	if (unescape)
 	{
 		icu::UnicodeString unesc = chars.unescape();
-		unesc.toUTF8String(writeback);
+		return unesc.toUTF8String(writeback);
 	}
 	else
 	{
-		chars.toUTF8String(writeback);
+		return chars.toUTF8String(writeback);
 	}
-	
-	return writeback;
+}
+
+std::string InputField::line_utf8() const
+{
+	std::string writeback;
+	const icu::UnicodeString& chars = row_it_->chars;
+	return chars.toUTF8String(writeback);
 }
 
 size_t InputField::render_line_length() const

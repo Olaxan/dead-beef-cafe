@@ -22,6 +22,27 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
+std::vector<FilePath> ProcSysApi::scan_for(std::string_view search) const
+{
+	FileSystem& fs = *proc.owning_os->get_filesystem();
+
+	auto on_path = proc.get_var("PATH")
+	| std::views::split(';')
+	| std::ranges::to<std::vector<std::string>>();
+
+	on_path.emplace_back(proc.get_var("PWD"));
+
+	std::vector<FilePath> candidates;
+	for (auto&& dir : on_path)
+	{
+		auto p = fs.get_paths(dir)
+		| std::views::filter([search](const FilePath& path){ return path.get_name().starts_with(search); });
+		candidates.insert_range(candidates.end(), p);
+	}
+
+	return candidates;
+}
+
 std::expected<FilePath, std::error_condition> ProcSysApi::find_in_path(std::string_view name) const
 {
 	FileSystem& fs = *proc.owning_os->get_filesystem();

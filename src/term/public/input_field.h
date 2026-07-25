@@ -97,6 +97,9 @@ public:
 	/* Returns the column index (Y), adjusted for tab stops. */
 	int32_t get_adjusted_col() const;
 
+	/* Gets the word currently underneath the cursor. */
+	std::string get_current_word() const;
+
 	/* Get a best-guess heuristic of how many columns a unicode character will take in the terminal. */
 	int32_t get_approx_point_width(char32_t point) const;
 
@@ -133,8 +136,11 @@ public:
 	/* Get the contents of the buffer as a utf-8 formatted string. */
 	std::string as_utf8() const;
 
-	/* Get the current line as a utf-8 formatted string. */
+	/* Get the current rendering line as a utf-8 formatted string. */
 	std::string render_line_utf8(bool unescape = true) const;
+
+	/* Get the current logical line as a utf-8 formatted string. */
+	std::string line_utf8() const;
 
 	/* Get the length (printable chars) of the current line. */
 	size_t render_line_length() const;
