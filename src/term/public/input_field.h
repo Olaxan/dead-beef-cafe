@@ -145,10 +145,10 @@ public:
 	std::string as_utf8() const;
 
 	/* Get the current rendering line as a utf-8 formatted string. */
-	std::string render_line_utf8(bool unescape = true) const;
+	std::string render_line_utf8(bool unescape = false) const;
 
 	/* Get the current logical line as a utf-8 formatted string. */
-	std::string line_utf8() const;
+	std::string line_utf8(bool unescape = false) const;
 
 	/* Get the length (printable chars) of the current line. */
 	size_t render_line_length() const;

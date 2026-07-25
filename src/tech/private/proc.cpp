@@ -282,6 +282,9 @@ void Proc::exit()
 
 	write(std::error_condition{EPIPE, std::generic_category()});
 
+	writer_ = nullptr;
+	reader_ = nullptr;
+
 	fs.close_all();
 	net.close_all();
 

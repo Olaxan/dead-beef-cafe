@@ -301,27 +301,29 @@ std::string InputField::as_utf8() const
 	| std::ranges::to<std::string>();
 }
 
-std::string InputField::render_line_utf8(bool unescape) const
+std::string unescape_string(bool unescape, const icu::UnicodeString& str)
 {
 	std::string writeback;
-	const icu::UnicodeString& chars = row_it_->render;
 
 	if (unescape)
 	{
-		icu::UnicodeString unesc = chars.unescape();
+		icu::UnicodeString unesc = str.unescape();
 		return unesc.toUTF8String(writeback);
 	}
 	else
 	{
-		return chars.toUTF8String(writeback);
+		return str.toUTF8String(writeback);
 	}
 }
 
-std::string InputField::line_utf8() const
+std::string InputField::render_line_utf8(bool unescape) const
 {
-	std::string writeback;
-	const icu::UnicodeString& chars = row_it_->chars;
-	return chars.toUTF8String(writeback);
+	return unescape_string(unescape, row_it_->render);
+}
+
+std::string InputField::line_utf8(bool unescape) const
+{
+	return unescape_string(unescape, row_it_->chars);
 }
 
 size_t InputField::render_line_length() const

@@ -107,7 +107,7 @@ EagerTask<ReadResult> ProcIoApi::read_cmd_utf8(CmdReaderParams params)
 		
 		if (params.echo)
 		{
-			std::string writeback = field.render_line_utf8(true);
+			std::string writeback = field.render_line_utf8(false);
 			int32_t line_len = field.render_line_length();
 			int32_t cursor_x = field.get_adjusted_col();
 

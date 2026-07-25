@@ -8,6 +8,7 @@
 #include "sync_awaiter.h"
 #include "sync_awaiter_dynamic.h"
 #include "input_field.h"
+#include "scoped_fd.h"
 
 #include "CLI/CLI.hpp"
 
@@ -27,6 +28,7 @@
 #include <ranges>
 #include <array>
 #include <functional>
+#include <algorithm>
 
 using SubCmdRange = std::ranges::split_view<std::string_view, std::ranges::single_view<char>>;
 using ArgList = std::vector<std::string>;
@@ -108,28 +110,16 @@ auto CmdCd(Proc& proc, std::vector<std::string> args) -> Task<int32_t>
 	}
 };
 
-Task<int32_t> ProcessSubCmdSingle(Proc& proc, std::string_view cmd, bool background = false)
-{
-	ArgList args = proc.sys.make_args(cmd);
-
-	if (args.empty())
-		co_return 1;
-
-	std::string_view name = *args.begin();
-	auto exp_path = proc.sys.find_in_path(name);
-
-	if (not exp_path)
-	{
-		proc.warnln("'{}': {}.", name, exp_path.error().message());
-		co_return 1;
-	}
-
-	co_return (co_await proc.sys.exec(*exp_path, std::move(args)));
-}
-
 Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool background = false)
 {
 	using Pipe = MessageQueue<WriteInput>;
+	using namespace std::string_view_literals;
+
+	struct Redirection
+	{
+		FilePath to;
+		FileAccessFlags flags;
+	};
 
 	FileSystem* fs = proc.owning_os->get_filesystem();
 
@@ -152,6 +142,36 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 			co_return 1;
 
 		std::string_view name = *args.begin();
+
+		auto redirect_to = std::invoke([&]() -> std::optional<Redirection>
+		{
+			auto begin_find = std::ranges::find_if(args, [](auto&& arg){ return std::string_view(arg).starts_with(">"sv); });
+
+			if (begin_find == args.end())
+				return std::nullopt;
+
+			auto end_find = std::ranges::next(begin_find);
+
+			if (end_find == args.end())
+				return std::nullopt;
+
+			FilePath where{*end_find};
+			FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write;
+
+			if (where.is_relative())
+				where.make_absolute(proc.get_var("PWD"));
+
+			if (*begin_find == ">>"sv)
+				flags |= FileAccessFlags::Append;
+
+			args.erase(begin_find, std::ranges::next(end_find));
+
+			return Redirection
+			{
+				.to = std::move(where),
+				.flags = flags
+			};
+		});
 
 		if (name.compare("cd") == 0)
 		{
@@ -201,6 +221,14 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 			params.writer = [pipe = &pipes[idx]](Proc& wproc, WriteInput str)
 			{
 				pipe->push(std::move(str));
+			};
+		}
+		else if (redirect_to)
+		{
+			FileScope scope{proc, redirect_to->to, redirect_to->flags};
+			params.writer = [file = std::move(scope)](Proc& wproc, WriteInput str)
+			{
+				if (str) { std::ignore = file.write(*str); }
 			};
 		}
 
@@ -266,13 +294,14 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 	UsersManager* users = os.get_users_manager();
 
 	icu::UnicodeString buffer;
-	CmdReaderParams read_params;
 
 	std::vector<std::string> history;
 	history.emplace_back("");
 	int32_t history_idx{0};
 	int32_t last_history_idx{0};
 
+	/* Set the history at the current point. 
+	Create a new entry if the history is empty. */
 	auto set_history = [&](std::string_view str)
 	{
 		if (history.empty())
@@ -285,6 +314,8 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 	};
 
+	/* Intercept input events from the terminal stream.
+	We handle some of them here, such as tab for auto-complete, and stepping history. */
 	auto filter_fn = [&](InputField& field, const com::CommandQuery& query, CmdReadEvent event) -> CmdEventResponse
 	{
 		
@@ -330,12 +361,15 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 	};
 
-	read_params.filter = filter_fn;
-
 	if (proc.get_var("PWD").empty())
 		proc.set_var("PWD", "/");
 		
 	proc.set_var("PATH", "/bin;/usr/bin;/sbin");
+
+	CmdReaderParams read_params
+	{
+		.filter = filter_fn
+	};
 
 	while (true)
 	{
@@ -389,12 +423,14 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		last_history_idx = static_cast<int32_t>(history.size()) - 1;
 		history_idx = last_history_idx;
 
+		/* Exit shell ('exit') */
 		if (out_cmd.compare("exit") == 0)
 		{
 			proc.putln("Goodbye...");
 			co_return 0;
 		}
 
+		/* Print history ('history') */
 		if (out_cmd.compare("history") == 0)
 		{
 			for (size_t i = 0; i < history.size(); ++i)
@@ -421,7 +457,6 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		});
 
 		auto subcmd = std::views::split(out_cmd, '|');
-		std::size_t num_subcmd = std::ranges::distance(subcmd);
 
 		/* At this point we have a valid command -- attempt to execute it. */
 		int32_t ret = co_await ProcessSubCmdPipeline(proc, subcmd, background);
