@@ -215,21 +215,38 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 			};
 		}
 
-		/* Unless this is the last program in the pipeline, write to the pipe. */
+		std::optional<FileScope> file; 	// Output write file
+		Pipe* pipe = nullptr;			// Output write pipe
+
+		/* If the user requested redirection,
+		we should write to the specified file. */
+		if (redirect_to)
+		{
+			file.emplace(proc, redirect_to->to, redirect_to->flags);
+		}
+
+		/* Unless this is the last program in the pipeline,
+		we should write to the pipeline. */
 		if (idx < num_pipes)
 		{
-			params.writer = [pipe = &pipes[idx]](Proc& wproc, WriteInput str)
-			{
-				pipe->push(std::move(str));
-			};
+			pipe = &pipes[idx];
 		}
-		else if (redirect_to)
+
+		if (file || pipe)
 		{
-			FileScope scope{proc, redirect_to->to, redirect_to->flags};
-			params.writer = [file = std::move(scope)](Proc& wproc, WriteInput str)
-			{
-				if (str) { std::ignore = file.write(*str); }
-			};
+			params.writer =
+				[pipe, file = std::move(file)](Proc&, WriteInput str) mutable
+				{
+					if (file && str)
+					{
+						std::ignore = file->write(*str);
+					}
+
+					if (pipe)
+					{
+						pipe->push(std::move(str));
+					}
+				};
 		}
 
 		Task<int32_t> job = proc.sys.exec(*exp_path, std::move(args), std::move(params));
