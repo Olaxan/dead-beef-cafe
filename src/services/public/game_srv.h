@@ -4,9 +4,11 @@
 
 class ITimerBase;
 class ILinkManager;
+class IAudioBase;
 
 struct GameServices
 {
 	std::any outer;
-	ITimerBase& timers;
+	ITimerBase* timers{nullptr};
+	IAudioBase* audio{nullptr};
 };

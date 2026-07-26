@@ -60,7 +60,9 @@ int main(int argc, char* argv[])
 		std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as intended.");
 	}
 
-	World our_world{};
+	World our_world{WorldExts{
+		.audio_impl = nullptr
+	}};
 
 	LinkServer& links = our_world.get_link_server();
 

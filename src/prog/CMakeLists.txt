@@ -14,4 +14,4 @@ FOREACH(child ${children})
 	ENDIF()
 ENDFOREACH()
 
-TARGET_LINK_LIBRARIES(programs INTERFACE progbasic progmedia progworld prognet)
+TARGET_LINK_LIBRARIES(programs INTERFACE progbasic progworld prognet)

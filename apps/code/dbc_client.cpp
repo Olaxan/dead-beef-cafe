@@ -15,8 +15,9 @@
 
 #include "proto/query.pb.h"
 #include "proto/reply.pb.h"
-
 #include "google/protobuf/util/delimited_message_util.h"
+
+#include "soloud_impl.h"
 
 #include <cstdlib>
 #include <deque>
@@ -65,7 +66,11 @@ int main(int argc, char* argv[])
 		std::println("Warning: Failed to configure utf-8 terminal mode. The app might not work as intended.");
 	}
 
-	World our_world{};
+	auto audio = std::make_unique<SoloudAudio>();
+
+	World our_world{WorldExts{
+		.audio_impl = audio.get()
+	}};
 
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
 	NIC* client_nic = client->get_device<NIC>();

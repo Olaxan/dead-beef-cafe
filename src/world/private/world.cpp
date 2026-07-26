@@ -4,12 +4,27 @@
 #include "task.h"
 #include "proc.h"
 
+#include "audio_base.h"
+
 #include <chrono>
 #include <cmath>
 #include <thread>
 
+World::World(WorldExts&& exts)
+: exts_(std::move(exts)), services_({
+        .outer = this,
+        .timers = &timers_,
+        .audio = exts_.audio_impl
+    })
+{ }
+
 void World::init_world()
 {
+	if (exts_.audio_impl)
+	{
+		exts_.audio_impl->init();
+	}
+
 	for (auto&& [id, host] : data.hosts)
 	{
 		host->init(&services_);
@@ -27,6 +42,14 @@ void World::update_world(float delta_seconds)
 	/* Update timers. */
     timers_.step(delta_seconds);
 
+}
+
+void World::deinit_world()
+{
+	if (exts_.audio_impl)
+	{
+		exts_.audio_impl->deinit();
+	}
 }
 
 void World::launch()

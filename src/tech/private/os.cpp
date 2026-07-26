@@ -178,14 +178,24 @@ NetManager* OS::get_network_manager()
 	return &net_;
 }
 
+GameServices* OS::get_services()
+{
+	return services_;
+}
+
+IAudioBase* OS::get_audio()
+{
+    return services_ ? services_->audio : nullptr;
+}
+
 TimerAwaiter OS::wait(float seconds)
 {
-	return services_->timers.wait(seconds);
+	return services_->timers->wait(seconds);
 }
 
 void OS::schedule(float seconds, SchedulerFn callback)
 {
-    services_->timers.set_timer(seconds, callback);
+    services_->timers->set_timer(seconds, callback);
 }
 
 bool OS::serialize(world::Host* to)
