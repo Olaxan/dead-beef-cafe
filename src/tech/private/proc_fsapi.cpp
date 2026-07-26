@@ -52,7 +52,7 @@ std::expected<FileDescriptor, std::error_condition> ProcFsApi::open(FilePath pat
 		auto ret = fs.open_file_entry(fid, flags);
 
 		if (not FileSystem::has_flag<FileAccessFlags>(flags, FileAccessFlags::Append))
-			fs.clear(ret.first);
+			std::ignore = fs.clear(ret.first);
 
 		FileDescriptor fd = proc.get_descriptor();
 		++ret.second->instance_count;
