@@ -21,7 +21,6 @@
 #include <any>
 
 struct GameServices;
-class FileSystem;
 
 namespace world { class Host; }
 
@@ -44,14 +43,14 @@ public:
 	/* Shut down the host environment (and then the host). */
 	virtual void shutdown_os();
 
-	/* Get the hostname from the owning Host. */
-	[[nodiscard]] const std::string& get_hostname() const;
+	/* Get the hostname of the OS. */
+	[[nodiscard]] std::string_view get_hostname() const;
 
 	/* Get the os device state. */
 	[[nodiscard]] DeviceState get_state() const { return state_; }
 	void set_state(DeviceState new_state) { state_ = new_state; }
 
-	/* Gets the filesystem, if one exists (otherwise nullptr). */
+	/* Gets the filesystem. */
 	[[nodiscard]] FileSystem* get_filesystem();
 
 	/* Gets the users/auth manager. */
@@ -63,7 +62,7 @@ public:
 	/* Gets the network manager. */
 	[[nodiscard]] NetManager* get_network_manager();
 
-	/* Gets the network manager. */
+	/* Gets the services struct. */
 	[[nodiscard]] GameServices* get_services();
 
 	/* Gets the audio interface. */

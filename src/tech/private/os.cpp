@@ -52,17 +52,12 @@ void OS::start_os()
 
 void OS::shutdown_os()
 {
-    owner_.shutdown_host();
+    state_ = DeviceState::PoweredOff;
 }
 
-const std::string& OS::get_hostname() const
+std::string_view OS::get_hostname() const
 {
-	return owner_.get_hostname();
-}
-
-Host& OS::get_owner()
-{
-	return owner_;
+	return hostname_();
 }
 
 Proc* OS::create_process(CreateProcessParams&& params)

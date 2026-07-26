@@ -67,7 +67,6 @@ private:
 public:
 
     WorldExts exts_;
-
     GameServices services_;
 
     struct WorldData

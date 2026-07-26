@@ -653,26 +653,27 @@ LinkUpdateAwaiter NetManager::async_await_link()
 
 void NetManager::arp_request()
 {
-	nic_->broadcast([this](Uid64 mac, NIC* nic)
-	{
-		Address6 addr = nic->get_ip();
-		arp_cache_[addr] = mac;
-		std::println("- ARP entry: {} -> {}", addr, mac);
-	});
+	// link_broadcast([this](Uid64 mac, NIC* nic)
+	// {
+	// 	Address6 addr = nic->get_ip();
+	// 	arp_cache_[addr] = mac;
+	// 	std::println("- ARP entry: {} -> {}", addr, mac);
+	// });
 }
 
 void NetManager::arp_request(Uid64 mac)
 {
-	nic_->unicast(mac, [this](Uid64 mac, NIC* nic)
-	{
-		Address6 addr = nic->get_ip();
-		arp_cache_[addr] = mac;
-		std::println("- ARP entry: {} -> {}", addr, mac);
-	});
+	// link_unicast(mac, [this](Uid64 mac, NIC* nic)
+	// {
+	// 	Address6 addr = nic->get_ip();
+	// 	arp_cache_[addr] = mac;
+	// 	std::println("- ARP entry: {} -> {}", addr, mac);
+	// });
 }
 
 void NetManager::link_unicast(Uid64 mac, NetCastFn unicast_fn)
 {
+	auto rel = os_->get_system(GameServices::Internet)
 	nic_->unicast(mac, std::move(unicast_fn));
 }
 
