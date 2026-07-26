@@ -21,17 +21,23 @@
 using MessageFn = std::function<void(void)>;
 using WorldUpdateQueue = MessageQueue<MessageFn>;
 
+struct WorldExts
+{
+    IAudioBase* audio_impl;
+};
+
 class World
 {
 public:
 
-    World() = default;
+    World(WorldExts&& exts);
     World(World&) = delete;
 
 public:
 
     void init_world();
     void update_world(float delta_seconds);
+    void deinit_world();
 
     void launch();
 
@@ -60,11 +66,9 @@ private:
 
 public:
 
-    GameServices services_
-    {
-        .outer = this,
-        .timers = timers_
-    };
+    WorldExts exts_;
+
+    GameServices services_;
 
     struct WorldData
     {

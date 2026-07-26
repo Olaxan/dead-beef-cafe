@@ -73,6 +73,12 @@ public:
 	/* Gets the network manager. */
 	[[nodiscard]] NetManager* get_network_manager();
 
+	/* Gets the network manager. */
+	[[nodiscard]] GameServices* get_services();
+
+	/* Gets the audio interface. */
+	[[nodiscard]] IAudioBase* get_audio();
+
 	template <typename T>
 	[[nodiscard]] T get_outer_as()
 	{

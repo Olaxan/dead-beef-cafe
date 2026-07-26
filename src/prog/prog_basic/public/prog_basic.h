@@ -66,4 +66,8 @@ namespace Programs
 	/* Networks programs */
 	ProcessTask CmdPing(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdNetMap(Proc& proc, std::vector<std::string> args);
+
+	/* Audio programs */
+	ProcessTask CmdRadio(Proc& proc, std::vector<std::string> args);
+	ProcessTask CmdSpeak(Proc& proc, std::vector<std::string> args);
 }
