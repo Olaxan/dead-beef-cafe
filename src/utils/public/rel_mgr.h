@@ -1,6 +1,8 @@
 #pragma once
 
 #include <concepts>
+#include <unordered_map>
+#include <unordered_set>
 
 enum class RelationshipType
 {

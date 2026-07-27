@@ -309,6 +309,7 @@ void NetManager::send(ip::IpPackage&& package)
 
 void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 {
+	internet_.link_unicast(os_.get_uid(), mac, std::move(package));
 	//nic_->transfer(mac, std::move(package));
 }
 

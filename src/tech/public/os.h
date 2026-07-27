@@ -12,6 +12,7 @@
 #include "users_mgr.h"
 #include "game_srv.h"
 #include "filesystem.h"
+#include "uid.h"
 
 #include <memory>
 #include <vector>
@@ -48,6 +49,8 @@ public:
 	/* Get the hostname of the OS. */
 	[[nodiscard]] std::string_view get_hostname() const;
 	void set_hostname(std::string_view new_name) { hostname_ = new_name; }
+
+	[[nodiscard]] Uid64 get_uid() const { return uid_; }
 
 	/* Get the os device state. */
 	[[nodiscard]] DeviceState get_state() const { return state_; }
@@ -123,6 +126,7 @@ protected:
 	int32_t pid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
+	Uid64 uid_{0};
 	DeviceState state_{DeviceState::PoweredOff};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 
