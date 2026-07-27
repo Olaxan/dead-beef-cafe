@@ -22,28 +22,13 @@
 
 #include <signal.h>
 
-OS::OS(Host& owner)
-    : owner_(owner) 
-{ 
-    register_devices(); 
-}
-
-void OS::init(GameServices* services)
+OS::OS(GameServices& services, HostContext& ctx) 
+: services_(services), context_(ctx) 
 {
-    services_ = services;
-}
+
+};
 
 OS::~OS() = default;
-
-std::size_t OS::register_devices()
-{
-    int32_t uid64 = 0;
-    devices_.clear();
-    for (auto& dev : owner_.get_devices())
-        devices_.emplace(++uid64, dev.get());
-    
-    return devices_.size();
-}
 
 void OS::start_os()
 {
@@ -55,9 +40,14 @@ void OS::shutdown_os()
     state_ = DeviceState::PoweredOff;
 }
 
+void OS::reinstall_os()
+{
+
+}
+
 std::string_view OS::get_hostname() const
 {
-	return hostname_();
+	return hostname_;
 }
 
 Proc* OS::create_process(CreateProcessParams&& params)
@@ -173,29 +163,34 @@ NetManager* OS::get_network_manager()
 	return &net_;
 }
 
-GameServices* OS::get_services()
+GameServices& OS::get_services()
 {
 	return services_;
 }
 
+HostContext& OS::get_context()
+{
+	return context_;
+}
+
 IAudioBase* OS::get_audio()
 {
-    return services_ ? services_->audio : nullptr;
+    return services_.audio;
 }
 
 TimerAwaiter OS::wait(float seconds)
 {
-	return services_->timers->wait(seconds);
+	return services_.timers->wait(seconds);
 }
 
 void OS::schedule(float seconds, SchedulerFn callback)
 {
-    services_->timers->set_timer(seconds, callback);
+    services_.timers->set_timer(seconds, callback);
 }
 
 bool OS::serialize(world::Host* to)
 {
-    to->set_hostname(get_hostname());
+    to->set_hostname(std::string(get_hostname()));
     to->set_addr(net_.get_primary_ip().raw);
 
 	world::FileSystem* to_fs = to->mutable_files();
@@ -216,3 +211,7 @@ bool OS::deserialize(const world::Host& from)
 
 	return true;
 }
+
+// run_process(Programs::SrvNetTx, {"nettx"}, {});
+// run_process(Programs::SrvNetRx, {"netrx"}, {});
+// run_process(Programs::SrvNetArp, {"netarp"}, {});

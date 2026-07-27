@@ -19,16 +19,11 @@
 #include <iostream>
 #include <chrono>
 
-Host::Host(std::string Hostname)
-: hostname_(Hostname) { }
+Host::Host(GameServices& services, HostContext& ctx, std::string Hostname)
+: services_(services), context_(ctx), hostname_(Hostname) 
+{ }
 
 Host::~Host() = default;
-
-void Host::init(GameServices* services)
-{
-    services_ = services;
-    os_->init(services); // Horrible, OOP, fix later.
-}
 
 OS& Host::get_os()
 {

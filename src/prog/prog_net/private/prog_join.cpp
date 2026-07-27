@@ -90,9 +90,7 @@ public:
 	: proc_(proc), socket_(std::move(socket)), timer_(socket_.get_executor())
 	{
 		timer_.expires_at(std::chrono::steady_clock::time_point::max());
-		local_nic_ = proc.owning_os->get_device<NIC>();
 		net_mgr_ = proc.owning_os->get_network_manager();
-		assert(local_nic_);
 	}
 
 	~ShellSession() = default;
@@ -222,7 +220,6 @@ private:
 	Proc& proc_;
 	tcp::socket socket_;
 	asio::steady_timer timer_;
-	NIC* local_nic_{nullptr};
 	NetManager* net_mgr_{nullptr};
 
 	asio::streambuf in_buf_{};

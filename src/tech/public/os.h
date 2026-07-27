@@ -21,6 +21,9 @@
 #include <any>
 
 struct GameServices;
+struct HostContext;
+
+class Internet;
 
 namespace world { class Host; }
 
@@ -30,12 +33,8 @@ public:
 
 	using SchedulerFn = std::function<void()>;
 
-	OS();
+	OS(GameServices& services, HostContext& ctx);
 	virtual ~OS();
-
-	void init(GameServices* services);
-
-	virtual std::size_t register_devices();
 
 	/* Start the host environment (and then the host). */
 	virtual void start_os();
@@ -43,8 +42,12 @@ public:
 	/* Shut down the host environment (and then the host). */
 	virtual void shutdown_os();
 
+	/* Reinstall the OS, setting it up fresh. */
+	virtual void reinstall_os();
+
 	/* Get the hostname of the OS. */
 	[[nodiscard]] std::string_view get_hostname() const;
+	void set_hostname(std::string_view new_name) { hostname_ = new_name; }
 
 	/* Get the os device state. */
 	[[nodiscard]] DeviceState get_state() const { return state_; }
@@ -63,7 +66,10 @@ public:
 	[[nodiscard]] NetManager* get_network_manager();
 
 	/* Gets the services struct. */
-	[[nodiscard]] GameServices* get_services();
+	[[nodiscard]] GameServices& get_services();
+
+	/* Gets the host context. */
+	[[nodiscard]] HostContext& get_context();
 
 	/* Gets the audio interface. */
 	[[nodiscard]] IAudioBase* get_audio();
@@ -71,12 +77,9 @@ public:
 	template <typename T>
 	[[nodiscard]] T get_outer_as()
 	{
-		if (services_ == nullptr)
-			return nullptr;
-
 		try
 		{
-			return std::any_cast<T>(services_->outer);
+			return std::any_cast<T>(services_.outer);
 		}
 		catch (const std::bad_any_cast&)
 		{
@@ -114,13 +117,13 @@ public:
 
 protected:
 
-	GameServices* services_{nullptr};
+	GameServices& services_;
+	HostContext& context_;
 
 	int32_t pid_counter_{0};
 	int32_t fd_counter_{0};
 	std::string hostname_ = {};
 	DeviceState state_{DeviceState::PoweredOff};
-	std::unordered_map<int32_t, Device*> devices_{};
 	std::unordered_map<int32_t, std::unique_ptr<Proc>> processes_{};
 
 	UsersManager users_{this};

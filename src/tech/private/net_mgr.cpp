@@ -5,6 +5,8 @@
 #include "nic.h"
 #include "filesystem.h"
 #include "race_awaiter.h"
+#include "host_context.h"
+#include "internet.h"
 
 #include "proto/ip_packet.pb.h"
 
@@ -17,7 +19,7 @@
 #include <iso646.h>
 
 NetManager::NetManager(OS* owner) 
-: os_(owner) { }
+: os_(*owner), internet_(owner->get_context().internet)  { }
 
 NetManager::~NetManager() = default;
 
@@ -60,7 +62,7 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 		entry->sessions.clear();
 		entry->binding.reset();
 		sockets_.erase(h);
-		std::println("Closed socket {}.", h);
+		//std::println("Closed socket {}.", h);
 		return {};
 	} 
 	else return std::error_condition{EIO, std::generic_category()};
@@ -83,7 +85,7 @@ Task<std::error_condition> NetManager::async_close_socket(OpenSocketHandle h)
 		}
 		
 		while (socket_has_data(h))
-			co_await os_->wait(0);
+			co_await os_.wait(0);
 
 		co_return close_socket(h);
 	}
@@ -132,7 +134,7 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 		
 		send(std::move(ip));
 
-		auto race = co_await when_any(async_read_socket_tcp(sock), os_->wait(5.f));
+		auto race = co_await when_any(async_read_socket_tcp(sock), os_.wait(5.f));
 
 		if (race.index == 0)
 		{
@@ -224,7 +226,7 @@ Task<bool> NetManager::async_socket_test_alive(OpenSocketHandle sock)
 		
 		send(std::move(*pak));
 
-		auto res = co_await when_any(async_read_socket_tcp(sock), os_->wait(1.f));
+		auto res = co_await when_any(async_read_socket_tcp(sock), os_.wait(1.f));
 		co_return (res.index == 0);
 	}
 
@@ -248,7 +250,7 @@ void NetManager::route(ip::IpPackage&& package)
 
 void NetManager::safe_rx(ip::IpPackage&& package)
 {
-	nic_->get_rx_queue().push(std::move(package));
+	rx_queue_.push(std::move(package));
 }
 
 Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)
@@ -302,14 +304,12 @@ Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_acce
 
 void NetManager::send(ip::IpPackage&& package)
 {
-	assert(nic_);
-	nic_->get_tx_queue().push(std::move(package));
+	tx_queue_.push(std::move(package));
 }
 
 void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 {
-	assert(nic_);
-	nic_->transfer(mac, std::move(package));
+	//nic_->transfer(mac, std::move(package));
 }
 
 void NetManager::receive(ip::IpPackage&& package)
@@ -646,10 +646,10 @@ void NetManager::return_handle(OpenSocketHandle h)
 	free_handles_.insert(h);
 }
 
-LinkUpdateAwaiter NetManager::async_await_link()
+/* LinkUpdateAwaiter NetManager::async_await_link()
 {
 	return LinkUpdateAwaiter{nic_};
-}
+} */
 
 void NetManager::arp_request()
 {
@@ -673,13 +673,13 @@ void NetManager::arp_request(Uid64 mac)
 
 void NetManager::link_unicast(Uid64 mac, NetCastFn unicast_fn)
 {
-	auto rel = os_->get_system(GameServices::Internet)
-	nic_->unicast(mac, std::move(unicast_fn));
+	// auto rel = os_->get_system(GameServices::Internet)
+	// nic_->unicast(mac, std::move(unicast_fn));
 }
 
 void NetManager::link_broadcast(NetCastFn unicast_fn)
 {
-	nic_->broadcast(std::move(unicast_fn));
+	/* nic_->broadcast(std::move(unicast_fn)); */
 }
 
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr)

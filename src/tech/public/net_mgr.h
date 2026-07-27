@@ -21,6 +21,7 @@
 class OS;
 class NIC;
 class File;
+class Internet;
 
 class NetManager
 {
@@ -79,7 +80,7 @@ public:
 	void arp_request(Uid64 mac);
 	std::optional<Uid64> arp_lookup(Address6 addr);
 	
-	LinkUpdateAwaiter async_await_link();
+	//LinkUpdateAwaiter async_await_link();
 
 	void link_unicast(Uid64 mac, NetCastFn unicast_fn);
 	void link_broadcast(NetCastFn unicast_fn);
@@ -105,7 +106,8 @@ protected:
 
 protected:
 	
-	OS* os_;
+	OS& os_;
+	Internet& internet_;
 
 	uint64_t handle_counter_{1};
 	std::set<OpenSocketHandle> free_handles_{};

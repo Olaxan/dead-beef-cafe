@@ -16,16 +16,17 @@
 namespace HostUtils
 {
 	template<std::derived_from<OS> T, typename ...Args>
-	void create_os(Host& host, Args&& ...args)
+	void create_os(World& world, Host& host, Args&& ...args)
 	{
-		std::unique_ptr<OS> os = std::make_unique<T>(host, std::forward<Args>(args)...);
+		std::unique_ptr<OS> os = std::make_unique<T>(world.get_services(), world.get_host_context(), std::forward<Args>(args)...);
+		os->set_hostname(host.get_hostname());
 		host.set_os(std::move(os));
 	}
 
 	template<std::derived_from<OS> T_OS>
 	Host* create_host(World& world, std::string hostname)
 	{
-		std::unique_ptr<Host> ptr = std::make_unique<Host>(hostname);
+		std::unique_ptr<Host> ptr = std::make_unique<Host>(world.get_services(), world.get_host_context(), hostname);
         Host& skel = *ptr;
 
         Disk& my_disk = skel.create_device<Disk>(500);
@@ -35,8 +36,10 @@ namespace HostUtils
 		std::size_t name_hash = std::hash<std::string>{}(hostname);
 		Uid64 id{static_cast<uint64_t>(name_hash)};
 
-        HostUtils::create_os<T_OS>(skel);
+        HostUtils::create_os<T_OS>(world, skel);
 
 		return world.add_host(id, std::move(ptr));
 	}
+
+	void install_os(OS& os);
 }

@@ -10,11 +10,11 @@ bool LinkUpdateAwaiter::await_ready()
 
 void LinkUpdateAwaiter::await_suspend(std::coroutine_handle<> h)
 {
-	nic_->add_link_update_callback([this, h](const LinkUpdatePair& link)
-	{
-		retval_ = link;
-		h.resume();
-	});
+	// nic_->add_link_update_callback([this, h](const LinkUpdatePair& link)
+	// {
+	// 	retval_ = link;
+	// 	h.resume();
+	// });
 }
 
 LinkUpdatePair LinkUpdateAwaiter::await_resume() const

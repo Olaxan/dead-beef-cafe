@@ -13,10 +13,26 @@
 #include <print>
 
 
-BasicOS::BasicOS(Host& owner) : OS(owner)
+BasicOS::BasicOS(GameServices& services, HostContext& ctx) : OS(services, ctx)
 {
-	register_devices();
+	reinstall_os();
+}
 
+BasicOS::~BasicOS()
+{
+
+}
+
+void BasicOS::start_os()
+{
+	state_ = DeviceState::PoweredOn;
+	//run_process(Programs::SrvNetTx, {"nettx"}, {});
+	//run_process(Programs::SrvNetRx, {"netrx"}, {});
+	//run_process(Programs::SrvNetArp, {"netarp"}, {});
+}
+
+void BasicOS::reinstall_os()
+{
 	FileSystem* fs = get_filesystem();
 	if (fs == nullptr)
 		return;
@@ -286,16 +302,4 @@ BasicOS::BasicOS(Host& owner) : OS(owner)
 	}, false);
 
 	users_.commit();
-}
-
-BasicOS::~BasicOS()
-{
-}
-
-void BasicOS::start_os()
-{
-	state_ = DeviceState::PoweredOn;
-	run_process(Programs::SrvNetTx, {"nettx"}, {});
-	run_process(Programs::SrvNetRx, {"netrx"}, {});
-	run_process(Programs::SrvNetArp, {"netarp"}, {});
 }

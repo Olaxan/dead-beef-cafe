@@ -7,6 +7,8 @@
 #include "rel_mgr.h"
 #include "uid64.h"
 #include "host.h"
+#include "host_context.h"
+#include "internet.h"
 
 #include "person.h"
 #include "corp.h"
@@ -51,8 +53,12 @@ public:
     bool serialize(world::World* to);
     bool deserialize(const world::World* from);
 
+    GameServices& get_services() { return services_; }
+    HostContext& get_host_context() { return host_context_; }
+
 private:
 
+    /* World runner variables. */
     const float min_timestep{0.01f};
 
     bool run_{true};
@@ -60,14 +66,29 @@ private:
     std::chrono::steady_clock::time_point last_update_{};
     std::mt19937 randomness_;
 
+private:
+
+    /* Core owned objects. */
     TimerManager timers_{};
     LinkServer net_{};
     WorldUpdateQueue queue_{};
+    Internet internet_{};
 
-public:
-
+    /* Implementation-specific dependencies (i.e. sound). */
     WorldExts exts_;
-    GameServices services_;
+
+    /* Views and contexts into world-owned members. */
+    GameServices services_
+    {
+        .outer = this,
+        .timers = &timers_,
+        .audio = exts_.audio_impl
+    };
+
+    HostContext host_context_
+    {
+        .internet = internet_
+    };
 
     struct WorldData
     {

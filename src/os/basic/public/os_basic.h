@@ -8,9 +8,10 @@ class BasicOS : public OS
 public:
 
 	BasicOS() = delete;
-	BasicOS(Host& owner);
+	BasicOS(GameServices& services, HostContext& ctx);
 	~BasicOS();
 
 	virtual void start_os() override;
+	virtual void reinstall_os() override;
 	
 };

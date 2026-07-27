@@ -11,11 +11,7 @@
 #include <thread>
 
 World::World(WorldExts&& exts)
-: exts_(std::move(exts)), services_({
-        .outer = this,
-        .timers = &timers_,
-        .audio = exts_.audio_impl
-    })
+: exts_(std::move(exts))
 { }
 
 void World::init_world()
@@ -23,11 +19,6 @@ void World::init_world()
 	if (exts_.audio_impl)
 	{
 		exts_.audio_impl->init();
-	}
-
-	for (auto&& [id, host] : data.hosts)
-	{
-		host->init(&services_);
 	}
 }
 
