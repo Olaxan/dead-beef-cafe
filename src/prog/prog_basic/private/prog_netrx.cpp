@@ -59,7 +59,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 			if (dest_ip == local_ip)
 			{
-				net->receive(std::move(packet), src_ip, dest_ip);
+				net->unpack(std::move(packet), src_ip, dest_ip);
 			}
 			else
 			{

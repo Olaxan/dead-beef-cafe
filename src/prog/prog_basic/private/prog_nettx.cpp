@@ -57,7 +57,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 
 				if (dest_addr == local_addr)
 				{
-					net->receive(std::move(packet));
+					net->unpack(std::move(packet));
 					continue;
 				}
 
@@ -68,9 +68,9 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 				}
 				else
 				{
-					proc.putln("Performing ARP request (to find {})...", dest_addr);
-					net->arp_request();
-					net->route(std::move(packet));
+					// proc.putln("Performing ARP request (to find {})...", dest_addr);
+					// net->arp_request();
+					// net->route(std::move(packet));
 					continue;
 				}
 			}

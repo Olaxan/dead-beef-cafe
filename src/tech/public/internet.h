@@ -6,9 +6,14 @@
 #include <proto/ip_packet.pb.h>
 
 #include <unordered_map>
+#include <vector>
+#include <tuple>
+#include <memory>
 
 class Host;
-class NetNode;
+struct NetNode;
+
+using NetPathResult = std::pair<bool, std::vector<Uid64>>;
 
 class Internet
 {
@@ -17,14 +22,15 @@ public:
 	Internet() = default;
 	~Internet() = default;
 
-	void register_node(Uid64 mac, NetNode* node);
+	void register_node(Uid64 mac, std::shared_ptr<NetNode> node);
 	void unregister_node(Uid64 mac);
 
 	void link(Uid64 from, Uid64 to);
 	void unlink(Uid64 from, Uid64 to);
 	void unlink_all(Uid64 node);
 
-	int32_t distance(Uid64 from, Uid64 to);
+	NetPathResult get_path(Uid64 from, Uid64 to) const;
+	size_t distance(Uid64 from, Uid64 to) const;
 
 	bool link_unicast(Uid64 from, Uid64 to, ip::IpPackage&& pak);
 	int32_t link_broadcast(Uid64 from, ip::IpPackage&& pak);
@@ -35,7 +41,7 @@ protected:
 
 private:
 
-	std::unordered_map<Uid64, NetNode*> nodes_;
+	std::unordered_map<Uid64, std::shared_ptr<NetNode>> nodes_;
 	RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links_;
 
 };

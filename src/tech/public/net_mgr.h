@@ -22,6 +22,7 @@ class OS;
 class NIC;
 class File;
 class Internet;
+struct NetNode;
 
 class NetManager
 {
@@ -58,13 +59,14 @@ public:
 
 	void route(ip::IpPackage&& package);
 
-	void safe_rx(ip::IpPackage&& package);
-
+	
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);
-
+	
 	void receive(ip::IpPackage&& package);
-	void receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
+
+	void unpack(ip::IpPackage&& package);
+	void unpack(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
 
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
@@ -79,11 +81,6 @@ public:
 	void arp_request();
 	void arp_request(Uid64 mac);
 	std::optional<Uid64> arp_lookup(Address6 addr);
-	
-	//LinkUpdateAwaiter async_await_link();
-
-	void link_unicast(Uid64 mac, NetCastFn unicast_fn);
-	void link_broadcast(NetCastFn unicast_fn);
 
 protected:
 
@@ -108,6 +105,8 @@ protected:
 	
 	OS& os_;
 	Internet& internet_;
+
+	std::shared_ptr<NetNode> node_{nullptr};
 
 	uint64_t handle_counter_{1};
 	std::set<OpenSocketHandle> free_handles_{};

@@ -30,8 +30,8 @@ struct OpenSocketEntry
 	OpenSocketHandle handle{-1};
 	int32_t instances{0};
 
-	MessageQueue<ip::IpPackage> rx_queue{};
-	MessageQueue<ip::IpPackage> tx_queue{};
+	NetQueue rx_queue{};
+	NetQueue tx_queue{};
 
 	AddressPair local_endpoint{};
 	AddressPair remote_endpoint{};
@@ -42,9 +42,6 @@ struct OpenSocketEntry
 	bool open{false};
 	bool listen{false};
 };
-
-
-using NetCastFn = std::function<void(Uid64, NIC*)>;
 
 using NetReadResult = std::expected<std::string, std::error_condition>;
 using NetReadResultIp = std::expected<ip::IpPackage, std::error_condition>;

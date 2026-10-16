@@ -7,6 +7,7 @@
 #include "race_awaiter.h"
 #include "host_context.h"
 #include "internet.h"
+#include "net_node.h"
 
 #include "proto/ip_packet.pb.h"
 
@@ -19,9 +20,15 @@
 #include <iso646.h>
 
 NetManager::NetManager(OS* owner) 
-: os_(*owner), internet_(owner->get_context().internet)  { }
+: os_(*owner), internet_(owner->get_context().internet), node_(std::make_shared<NetNode>())  
+{ 
+	internet_.register_node(os_.get_uid(), node_);
+}
 
-NetManager::~NetManager() = default;
+NetManager::~NetManager()
+{
+	internet_.unregister_node(os_.get_uid());
+};
 
 std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 {
@@ -248,11 +255,6 @@ void NetManager::route(ip::IpPackage&& package)
 	routing_queue_.push(std::move(package));
 }
 
-void NetManager::safe_rx(ip::IpPackage&& package)
-{
-	rx_queue_.push(std::move(package));
-}
-
 Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)
 {
 	while (true)
@@ -315,6 +317,11 @@ void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 
 void NetManager::receive(ip::IpPackage&& package)
 {
+	rx_queue_.push(std::move(package));
+}
+
+void NetManager::unpack(ip::IpPackage&& package)
+{
 	const std::string& src_ip_bytes = package.src_ip();
 	const std::string& dest_ip_bytes = package.dest_ip();
 
@@ -323,11 +330,11 @@ void NetManager::receive(ip::IpPackage&& package)
 
 	if (exp_src_addr && exp_dest_addr)
 	{
-		receive(std::move(package), *exp_src_addr, *exp_dest_addr);
+		unpack(std::move(package), *exp_src_addr, *exp_dest_addr);
 	}
 }
 
-void NetManager::receive(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr)
+void NetManager::unpack(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr)
 {
 	const std::string& payload = package.payload();
 
@@ -670,17 +677,6 @@ void NetManager::arp_request(Uid64 mac)
 	// 	arp_cache_[addr] = mac;
 	// 	std::println("- ARP entry: {} -> {}", addr, mac);
 	// });
-}
-
-void NetManager::link_unicast(Uid64 mac, NetCastFn unicast_fn)
-{
-	// auto rel = os_->get_system(GameServices::Internet)
-	// nic_->unicast(mac, std::move(unicast_fn));
-}
-
-void NetManager::link_broadcast(NetCastFn unicast_fn)
-{
-	/* nic_->broadcast(std::move(unicast_fn)); */
 }
 
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr)
