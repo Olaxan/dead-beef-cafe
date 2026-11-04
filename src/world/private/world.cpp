@@ -99,3 +99,11 @@ bool World::deserialize(const world::World* from)
 
 	return true;
 }
+
+HostContext World::create_host_context()
+{
+	return HostContext{
+		.uid = Uid64Generator::generate(),
+		.internet = internet_
+	};
+}

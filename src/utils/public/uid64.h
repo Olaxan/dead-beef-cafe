@@ -124,7 +124,7 @@ struct std::hash<Uid64>
 	}
 };
 
-class uid64Generator 
+class Uid64Generator 
 {
 public:
 

@@ -22,7 +22,7 @@
 
 #include <signal.h>
 
-OS::OS(GameServices& services, HostContext& ctx) 
+OS::OS(GameServices& services, HostContext ctx) 
 : services_(services), context_(ctx) 
 {
 

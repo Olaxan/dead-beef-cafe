@@ -19,7 +19,7 @@
 #include <iostream>
 #include <chrono>
 
-Host::Host(GameServices& services, HostContext& ctx, std::string Hostname)
+Host::Host(GameServices& services, HostContext ctx, std::string Hostname)
 : services_(services), context_(ctx), hostname_(Hostname) 
 { }
 

@@ -2,6 +2,7 @@
 
 #include "device.h"
 #include "os.h"
+#include "host_context.h"
 
 #include <vector>
 #include <string>
@@ -22,7 +23,7 @@ class Host
 public:
 
 	Host() = delete;
-	Host(GameServices& services, HostContext& ctx, std::string Hostname);
+	Host(GameServices& services, HostContext ctx, std::string Hostname);
 	~Host();
 
 	const std::string& get_hostname() const { return hostname_; }
@@ -33,6 +34,8 @@ public:
 	bool shutdown_host();
 
 	auto& get_devices() const { return devices_; }
+
+	Uid64 get_uid() const { return context_.uid; }
 
 	template<std::derived_from<Device> T, typename ...Args>
 	T& create_device(Args&& ...args)
@@ -75,7 +78,7 @@ public:
 private:
 	
 	GameServices& services_;
-	HostContext& context_;
+	HostContext context_;
 
 	std::string hostname_ = {};
 	std::unique_ptr<OS> os_{nullptr};

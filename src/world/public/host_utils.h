@@ -16,9 +16,9 @@
 namespace HostUtils
 {
 	template<std::derived_from<OS> T, typename ...Args>
-	void create_os(World& world, Host& host, Args&& ...args)
+	void create_os(World& world, Host& host, HostContext ctx, Args&& ...args)
 	{
-		std::unique_ptr<OS> os = std::make_unique<T>(world.get_services(), world.get_host_context(), std::forward<Args>(args)...);
+		std::unique_ptr<OS> os = std::make_unique<T>(world.get_services(), ctx, std::forward<Args>(args)...);
 		os->set_hostname(host.get_hostname());
 		host.set_os(std::move(os));
 	}
@@ -26,19 +26,17 @@ namespace HostUtils
 	template<std::derived_from<OS> T_OS>
 	Host* create_host(World& world, std::string hostname)
 	{
-		std::unique_ptr<Host> ptr = std::make_unique<Host>(world.get_services(), world.get_host_context(), hostname);
+		HostContext ctx = world.create_host_context();
+		std::unique_ptr<Host> ptr = std::make_unique<Host>(world.get_services(), ctx, hostname);
         Host& skel = *ptr;
 
         Disk& my_disk = skel.create_device<Disk>(500);
         CPU& my_cpu = skel.create_device<CPU>(1.5f);
         NIC& my_nic = skel.create_device<NIC>(100.f);
 
-		std::size_t name_hash = std::hash<std::string>{}(hostname);
-		Uid64 id{static_cast<uint64_t>(name_hash)};
+        HostUtils::create_os<T_OS>(world, skel, ctx);
 
-        HostUtils::create_os<T_OS>(world, skel);
-
-		return world.add_host(id, std::move(ptr));
+		return world.add_host(ctx.uid, std::move(ptr));
 	}
 
 	void install_os(OS& os);

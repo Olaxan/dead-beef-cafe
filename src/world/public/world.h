@@ -46,6 +46,7 @@ public:
     LinkServer& get_link_server() { return net_; }
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
+    Internet& get_internet() { return internet_; }
     std::mt19937& get_random_stream() { return randomness_; }
 
     Host* add_host(Uid64 id, std::unique_ptr<Host>&& new_host);
@@ -54,7 +55,7 @@ public:
     bool deserialize(const world::World* from);
 
     GameServices& get_services() { return services_; }
-    HostContext& get_host_context() { return host_context_; }
+    HostContext create_host_context();
 
 private:
 
@@ -83,11 +84,6 @@ private:
         .outer = this,
         .timers = &timers_,
         .audio = exts_.audio_impl
-    };
-
-    HostContext host_context_
-    {
-        .internet = internet_
     };
 
     struct WorldData
