@@ -26,8 +26,13 @@ std::vector<FilePath> ProcSysApi::scan_for(std::string_view search, FilePath pat
 {
 	FileSystem& fs = *proc.owning_os->get_filesystem();
 
-	return fs.get_paths(path)
-	| std::views::filter([search](const FilePath& path){ return path.get_name().starts_with(search); })
+	bool is_absolute = search.starts_with("/");
+
+	return fs.get_paths(path, is_absolute)
+	| std::views::filter([search](const FilePath& path)
+	{ 
+		return path.get_name().starts_with(search) || path.get_view().starts_with(search);
+	})
 	| std::ranges::to<std::vector>();
 }
 

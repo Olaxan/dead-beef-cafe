@@ -260,44 +260,80 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
-std::string get_longest_matching(const std::vector<FilePath>& paths)
+std::string get_longest_matching(const std::vector<FilePath>& paths, std::string_view search, std::string_view drop_prefix = "", bool name_only = false)
 {
 	if (paths.empty())
 		return "";
-	
-	if (paths.size() == 1)
-		return std::string(paths[0].get_name());
-	
-	const std::string_view& base = paths[0].get_name();
 
-	for (size_t idx = 0; idx < base.length(); ++idx)
+	auto res = std::invoke([&]() -> std::string_view
 	{
-		char c = base[idx];
+		if (paths.size() == 1)
+			return paths[0].get_view();
 
-		for (auto&& path : paths)
+		/* Filter paths that are identical to the search string,
+		so that the user can tab-complete through directories containing only a single directory.*/
+		auto filtered_paths = paths 
+		| std::views::filter([search](const FilePath& path)
+		{ 
+			return path.get_view() != search;
+		});
+
+		if (filtered_paths.empty())
+			return paths[0].get_view();
+		
+		const std::string_view& base = filtered_paths.begin()->get_view();
+
+		for (size_t idx = 0; idx < base.length(); ++idx)
 		{
-			const std::string_view& name = path.get_name();
+			char c = base[idx];
 
-			if (name.length() <= idx || name[idx] != base[idx])
+			for (auto&& path : filtered_paths)
 			{
-				return std::string(name.substr(0, idx));
+				const std::string_view& name = path.get_view();
+
+				if (name.length() <= idx || name[idx] != base[idx])
+				{
+					return name.substr(0, idx);
+				}
 			}
 		}
+
+		return base;
+	});
+
+	if (false && not drop_prefix.empty() && res.starts_with(drop_prefix))
+	{
+		res.remove_prefix(drop_prefix.length());
 	}
 
-	return std::string(base);
+	if (name_only)
+	{
+		FilePath fp{res};
+		std::println("\n\nReturning name-only: '{}'", fp.get_name());
+		return std::string(fp.get_name());
+	}
+
+	return std::string(res);
 }
 
 std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
 {
-	if (auto paths = proc.sys.scan_for(tab_str, proc.get_var("PWD")); paths.size() > 0)
+	using namespace std::string_view_literals;
+
+	std::string_view pwd = proc.get_var("PWD");
+
+	FilePath search_from = (tab_str.starts_with("/") ? FilePath{"/"} : FilePath{pwd});
+
+	if (auto paths = proc.sys.scan_for(tab_str, search_from); paths.size() > 0)
 	{
-		return get_longest_matching(paths);
+		std::println("\nFiles found: {}.", paths);
+		return get_longest_matching(paths, tab_str, pwd);
 	}
 
 	if (auto paths = proc.sys.scan_in_path(tab_str); paths.size() > 0)
 	{
-		return get_longest_matching(paths);
+		std::println("\nFiles found in path: {}.", paths);
+		return get_longest_matching(paths, tab_str, pwd, true);
 	}
 
 	return std::string(tab_str);
