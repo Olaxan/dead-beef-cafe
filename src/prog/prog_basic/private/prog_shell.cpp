@@ -260,10 +260,13 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
-FilePath get_longest_matching(const std::vector<FilePath>& paths, std::string_view search)
+FilePath get_longest_matching(const std::vector<FilePath>& paths, const FilePath& pwd, std::string_view search)
 {
+	FilePath search_path = FilePath{search};
+	FilePath abs_search_path = FilePath{pwd, search};
+
 	if (paths.empty())
-		return FilePath{"/"};
+		return search_path;
 
 	auto res = std::invoke([&]() -> std::string_view
 	{
@@ -273,9 +276,9 @@ FilePath get_longest_matching(const std::vector<FilePath>& paths, std::string_vi
 		/* Filter paths that are identical to the search string,
 		so that the user can tab-complete through directories containing only a single directory.*/
 		auto filtered_paths = paths 
-		| std::views::filter([search](const FilePath& path)
+		| std::views::filter([&](const FilePath& path)
 		{ 
-			return path.get_view() != search;
+			return (path.get_view() != search) && path != abs_search_path;
 		});
 
 		if (filtered_paths.empty())
@@ -315,21 +318,19 @@ std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
 
 	if (auto paths = proc.sys.scan_for(tab_str, search_from); paths.size() > 0)
 	{
-		std::println("\nFiles found: {}.", paths);
-		FilePath path = get_longest_matching(paths, tab_str);
+		FilePath path = get_longest_matching(paths, pwd, tab_str);
 
-		// if (not is_absolute)
-		// {
-		// 	path.make_relative(pwd);
-		// }
+		if (not is_absolute)
+		{
+			path.make_relative(pwd);
+		}
 
 		return path.get_string();
 	}
 
 	if (auto paths = proc.sys.scan_in_path(tab_str); paths.size() > 0)
 	{
-		std::println("\nFiles found in path: {}.", paths);
-		FilePath path = get_longest_matching(paths, tab_str);
+		FilePath path = get_longest_matching(paths, pwd, tab_str);
 		return std::string(path.get_name());
 	}
 
@@ -384,12 +385,9 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		{
 			case CmdReadEvent::Tab:
 			{
-				if (not word.second.empty())
-				{
-					std::string tab_str = get_autocomplete_string(proc, word.second);
-					field.replace_utf8(tab_str, word.first);
-					field.move_end();
-				}
+				std::string tab_str = get_autocomplete_string(proc, word.second);
+				field.replace_utf8(tab_str, word.first);
+				field.move_end();
 
 				return CmdEventResponse::Handled;
 			}

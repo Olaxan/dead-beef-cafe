@@ -38,8 +38,6 @@ std::vector<FilePath> ProcSysApi::scan_for(std::string_view search, FilePath sea
 		else return std::make_pair(search_from, FilePath{search_from, search});
 	});
 
-	std::println("\n\nSearching from '{}' for '{}'.", search_dir, search_full);
-
 	return fs.get_paths(search_dir, true)
 	| std::views::filter([&](const FilePath& path)
 	{ 
