@@ -260,10 +260,10 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
-std::string get_longest_matching(const std::vector<FilePath>& paths, std::string_view search, std::string_view drop_prefix = "", bool name_only = false)
+FilePath get_longest_matching(const std::vector<FilePath>& paths, std::string_view search)
 {
 	if (paths.empty())
-		return "";
+		return FilePath{"/"};
 
 	auto res = std::invoke([&]() -> std::string_view
 	{
@@ -301,19 +301,7 @@ std::string get_longest_matching(const std::vector<FilePath>& paths, std::string
 		return base;
 	});
 
-	if (false && not drop_prefix.empty() && res.starts_with(drop_prefix))
-	{
-		res.remove_prefix(drop_prefix.length());
-	}
-
-	if (name_only)
-	{
-		FilePath fp{res};
-		std::println("\n\nReturning name-only: '{}'", fp.get_name());
-		return std::string(fp.get_name());
-	}
-
-	return std::string(res);
+	return FilePath{res};
 }
 
 std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
@@ -322,18 +310,27 @@ std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
 
 	std::string_view pwd = proc.get_var("PWD");
 
-	FilePath search_from = (tab_str.starts_with("/") ? FilePath{"/"} : FilePath{pwd});
+	bool is_absolute = tab_str.starts_with("/"sv);
+	FilePath search_from = is_absolute ? FilePath{"/"} : FilePath{pwd};
 
 	if (auto paths = proc.sys.scan_for(tab_str, search_from); paths.size() > 0)
 	{
 		std::println("\nFiles found: {}.", paths);
-		return get_longest_matching(paths, tab_str, pwd);
+		FilePath path = get_longest_matching(paths, tab_str);
+
+		// if (not is_absolute)
+		// {
+		// 	path.make_relative(pwd);
+		// }
+
+		return path.get_string();
 	}
 
 	if (auto paths = proc.sys.scan_in_path(tab_str); paths.size() > 0)
 	{
 		std::println("\nFiles found in path: {}.", paths);
-		return get_longest_matching(paths, tab_str, pwd, true);
+		FilePath path = get_longest_matching(paths, tab_str);
+		return std::string(path.get_name());
 	}
 
 	return std::string(tab_str);

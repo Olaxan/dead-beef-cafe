@@ -11,6 +11,12 @@ FilePath::FilePath(std::string path)
 	make();
 }
 
+FilePath::FilePath(const FilePath& path, std::string_view file)
+{
+	path_ = std::format("{}/{}", path, file);
+	make();
+}
+
 void FilePath::make()
 {
 	valid_ = false;
@@ -93,6 +99,12 @@ void FilePath::prepend(const FilePath& other)
 	make();
 }
 
+void FilePath::prepend(std::string_view file)
+{
+	path_ = std::format("{}/{}", file, path_);
+	make();
+}
+
 void FilePath::append(const FilePath& other)
 {
 	if (!other.is_valid_path())
@@ -100,6 +112,12 @@ void FilePath::append(const FilePath& other)
 
 	const std::string& other_path = other.path_;
 	path_ = std::format("{}/{}", path_, other_path);
+	make();
+}
+
+void FilePath::append(std::string_view file)
+{
+	path_ = std::format("{}/{}", path_, file);
 	make();
 }
 
@@ -128,4 +146,31 @@ void FilePath::make_absolute(std::string_view from_dir)
 void FilePath::make_absolute(const FilePath& from_dir)
 {
 	make_absolute(from_dir.get_view());
+}
+
+void FilePath::make_relative(std::string_view from_dir)
+{
+	if (std::string_view buf = get_view(); buf.starts_with(from_dir))
+	{
+		buf.remove_prefix(from_dir.size());
+
+		if (buf.starts_with("/"))
+		{
+			buf.remove_prefix(1);
+		}
+
+		path_ = std::string(buf);
+		make();
+	}
+
+}
+
+void FilePath::make_relative(const FilePath& from_dir)
+{
+	make_relative(from_dir.get_view());
+}
+
+void FilePath::drop_one()
+{
+	*this = get_parent_path();
 }

@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <system_error>
+#include <tuple>
 
 #include <iso646.h>
 
@@ -22,16 +23,27 @@ ProcSysApi::ProcSysApi(Proc* owner)
 
 ProcSysApi::~ProcSysApi() = default;
 
-std::vector<FilePath> ProcSysApi::scan_for(std::string_view search, FilePath path) const
+std::vector<FilePath> ProcSysApi::scan_for(std::string_view search, FilePath search_from) const
 {
 	FileSystem& fs = *proc.owning_os->get_filesystem();
 
-	bool is_absolute = search.starts_with("/");
+	auto [search_dir, search_full] = std::invoke([&]() -> std::pair<FilePath, FilePath>
+	{
+		if (search.starts_with("/"))
+		{
+			FilePath full_path{search};
+			FilePath part_path = full_path.get_parent_path();
+			return std::make_pair(part_path, full_path);
+		}
+		else return std::make_pair(search_from, FilePath{search_from, search});
+	});
 
-	return fs.get_paths(path, is_absolute)
-	| std::views::filter([search](const FilePath& path)
+	std::println("\n\nSearching from '{}' for '{}'.", search_dir, search_full);
+
+	return fs.get_paths(search_dir, true)
+	| std::views::filter([&](const FilePath& path)
 	{ 
-		return path.get_name().starts_with(search) || path.get_view().starts_with(search);
+		return path.get_view().starts_with(search_full.get_view());
 	})
 	| std::ranges::to<std::vector>();
 }
