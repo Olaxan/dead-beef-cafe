@@ -23,6 +23,9 @@ NetManager::NetManager(OS* owner)
 : os_(*owner), internet_(owner->get_context().internet), node_(std::make_shared<NetNode>())  
 { 
 	internet_.register_node(os_.get_uid(), node_);
+
+	Uid64 tail = Uid64Generator::generate();
+	address_ = Address6(os_.get_uid().num, tail.num);
 }
 
 NetManager::~NetManager()
@@ -224,6 +227,21 @@ Task<size_t> NetManager::async_write_socket(OpenSocketHandle sock, std::string b
 	co_return 0;
 }
 
+Task<size_t> NetManager::async_write_socket_raw(OpenSocketHandle sock, ip::IpPackage&& package)
+{
+	if (package.ByteSizeLong() == 0)
+		co_return 0;
+		
+	if (OpenSocketEntry* file = find_socket(sock))
+	{
+		size_t tx_size = package.ByteSizeLong();
+		send(std::move(package));
+		co_return tx_size;
+	}
+
+	co_return 0;
+}
+
 Task<bool> NetManager::async_socket_test_alive(OpenSocketHandle sock)
 {
 	if (OpenSocketEntry* file = find_socket(sock))
@@ -253,6 +271,11 @@ int32_t NetManager::listen(OpenSocketHandle sock)
 void NetManager::route(ip::IpPackage&& package)
 {
 	routing_queue_.push(std::move(package));
+}
+
+void NetManager::arp_buffer(ip::IpPackage&& package)
+{
+	arp_queue_.push(std::move(package));
 }
 
 Task<std::expected<OpenSocketPair, std::error_condition>> NetManager::async_accept_socket(OpenSocketHandle sock)
@@ -312,7 +335,6 @@ void NetManager::send(ip::IpPackage&& package)
 void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 {
 	internet_.link_unicast(os_.get_uid(), mac, std::move(package));
-	//nic_->transfer(mac, std::move(package));
 }
 
 void NetManager::receive(ip::IpPackage&& package)
@@ -629,8 +651,7 @@ std::optional<ip::IpPackage> NetManager::make_tcp_reply_ip(OpenSocketHandle h, i
 	if (not opt)
 		return std::nullopt;
 
-	std::string tcp_str;
-	opt->SerializeToString(&tcp_str);
+	std::string tcp_str = opt->SerializeAsString();
 
 	ip::IpPackage pak;
 	pak.set_dest_ip(remote.addr.raw);
@@ -654,29 +675,14 @@ void NetManager::return_handle(OpenSocketHandle h)
 	free_handles_.insert(h);
 }
 
-/* LinkUpdateAwaiter NetManager::async_await_link()
-{
-	return LinkUpdateAwaiter{nic_};
-} */
-
 void NetManager::arp_request()
 {
-	// link_broadcast([this](Uid64 mac, NIC* nic)
-	// {
-	// 	Address6 addr = nic->get_ip();
-	// 	arp_cache_[addr] = mac;
-	// 	std::println("- ARP entry: {} -> {}", addr, mac);
-	// });
+
 }
 
 void NetManager::arp_request(Uid64 mac)
 {
-	// link_unicast(mac, [this](Uid64 mac, NIC* nic)
-	// {
-	// 	Address6 addr = nic->get_ip();
-	// 	arp_cache_[addr] = mac;
-	// 	std::println("- ARP entry: {} -> {}", addr, mac);
-	// });
+
 }
 
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr)

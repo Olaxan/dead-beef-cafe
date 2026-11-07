@@ -20,9 +20,7 @@
 ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
-	FileSystem* fs = os.get_filesystem();
-	NetManager* net = os.get_network_manager();
-	assert(fs);
+	ProcNetApi& netapi = proc.net;;
 
 	CLI::App app{"Network utility to test connectivity and analyze routing."};
 	app.allow_windows_style_options(false);
@@ -57,10 +55,8 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	NetManager* nm = os.get_network_manager();
-
 	const Address6& dest = parse_res.value();
-	Address6 src = nm->get_primary_ip();
+	Address6 src = netapi.get_primary_ip();
 
 	proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
 
@@ -69,26 +65,21 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 	package.set_dest_ip(dest.data_str());
 	package.set_protocol(ip::Protocol::ICMP);
 
-	auto sock_res = proc.net.create_socket();
+	auto sock_res = netapi.create_socket();
 	if (!sock_res)
 	{
 		proc.errln("ping: {}.", sock_res.error().message());
 		co_return 1;
 	}
 
-	co_await os.wait(1.f);
-
 	FileDescriptor fd = sock_res.value();
 
-	//net->send(sock, std::move(package));
+	netapi.async_write_socket_raw(fd, std::move(package));
 
-	//auto [conn, err] = NetUtils::connect(proc, dest, 22);
+	co_await os.wait(1.f);
 
 	bool success = false;
 	proc.putln("Host {}.", success ? "reachable" : "unreachable");
 
 	co_return 0;
-	
-
-	co_return 1;
 }

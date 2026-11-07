@@ -52,13 +52,14 @@ public:
 	Task<NetReadResultIp> async_read_socket_raw(OpenSocketHandle sock);
 
 	Task<size_t> async_write_socket(OpenSocketHandle sock, std::string bytes);
+	Task<size_t> async_write_socket_raw(OpenSocketHandle sock, ip::IpPackage&& package);
 
 	Task<bool> async_socket_test_alive(OpenSocketHandle sock);
 	
 	int32_t listen(OpenSocketHandle sock);
 
 	void route(ip::IpPackage&& package);
-
+	void arp_buffer(ip::IpPackage&& package);
 	
 	void send(ip::IpPackage&& package);
 	void send(ip::IpPackage&& package, Uid64 mac);
@@ -71,6 +72,7 @@ public:
 	NetMessageAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
 	NetMessageAwaiter async_read_route();
+	NetMessageAwaiter async_read_arp();
 
 	Address6 get_primary_ip() const;
 	bool socket_is_open(OpenSocketHandle h) const;
@@ -113,9 +115,10 @@ protected:
 
 	Address6 address_{};
 	
-	NetQueue routing_queue_{};
 	NetQueue rx_queue_{};
 	NetQueue tx_queue_{};
+	NetQueue routing_queue_{};
+	NetQueue arp_queue_{};
 
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
 	std::unordered_map<Address6, Uid64> arp_cache_;

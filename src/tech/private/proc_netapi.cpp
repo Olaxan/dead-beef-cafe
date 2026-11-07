@@ -169,6 +169,17 @@ Task<size_t> ProcNetApi::async_write_socket(FileDescriptor sock, std::string byt
 	else co_return 0;
 }
 
+Task<size_t> ProcNetApi::async_write_socket_raw(FileDescriptor sock, ip::IpPackage&& package) const
+{
+	if (auto it = fd_table_.find(sock); it != fd_table_.end())
+	{
+		const OpenSocketPair& pair = it->second;
+		OpenSocketHandle h = pair.first;
+		co_return (co_await net_->async_write_socket_raw(h, std::move(package)));
+	}
+	else co_return 0;
+}
+
 Task<bool> ProcNetApi::async_socket_test_alive(FileDescriptor fd, size_t test_count) const
 {
 	if (auto it = fd_table_.find(fd); it != fd_table_.end())

@@ -47,6 +47,7 @@ public:
 	Task<NetReadResultIp> async_read_socket_raw(FileDescriptor sock) const;
 
 	Task<size_t> async_write_socket(FileDescriptor sock, std::string bytes) const;
+	Task<size_t> async_write_socket_raw(FileDescriptor sock, ip::IpPackage&& package) const;
 
 	Task<bool> async_socket_test_alive(FileDescriptor fd, size_t test_count) const;
 	

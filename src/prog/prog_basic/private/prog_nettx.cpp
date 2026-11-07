@@ -45,44 +45,36 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		* 4. If fail count > N, discard package, maybe return a rejection package to source.
 		*/
 
-		try
+		ip::IpPackage packet = co_await net->async_read_tx();
+		const std::string& dest_ip_bytes = packet.dest_ip();
+		size_t bytes = packet.ByteSizeLong();
+
+		if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes))
 		{
-			ip::IpPackage packet = co_await net->async_read_tx();
-			const std::string& dest_ip_bytes = packet.dest_ip();
-			size_t bytes = packet.ByteSizeLong();
+			const Address6& dest_addr = *exp_dest_ip;
 
-			if (auto exp_dest_ip = Address6::from_bytes(dest_ip_bytes))
+			if (dest_addr == local_addr)
 			{
-				const Address6& dest_addr = *exp_dest_ip;
+				net->unpack(std::move(packet));
+				continue;
+			}
 
-				if (dest_addr == local_addr)
-				{
-					net->unpack(std::move(packet));
-					continue;
-				}
-
-				if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
-				{
-					net->send(std::move(packet), *arp_entry);
-					continue;
-				}
-				else
-				{
-					// proc.putln("Performing ARP request (to find {})...", dest_addr);
-					// net->arp_request();
-					// net->route(std::move(packet));
-					continue;
-				}
+			if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
+			{
+				net->send(std::move(packet), *arp_entry);
+				continue;
 			}
 			else
 			{
-				proc.warnln("Failed to extract address: {}.", exp_dest_ip.error().what());
+				proc.putln("Performing ARP request (to find {})...", dest_addr);
+				net->arp_request();
+				// net->route(std::move(packet));
+				continue;
 			}
 		}
-		catch (const std::exception& e)
+		else
 		{
-			proc.errln("fatal system error: {}.", e.what());
-			co_return 2;
+			proc.warnln("Failed to extract address: {}.", exp_dest_ip.error().what());
 		}
 	}
 

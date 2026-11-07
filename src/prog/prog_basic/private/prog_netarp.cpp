@@ -8,6 +8,7 @@
 #include "scoped_fd.h"
 
 #include "proto/ip_packet.pb.h"
+#include "proto/arp_packet.pb.h"
 
 #include <string>
 #include <vector>
@@ -38,24 +39,11 @@ ProcessTask Programs::SrvNetArp(Proc& proc, std::vector<std::string> args)
 
 	while (true)
 	{
-		// auto [mac, event] = co_await net->async_await_link();
-		// switch (event)
-		// {
-		// 	case LinkUpdateType::LinkAdded:
-		// 	{
-		// 		proc.putln("Detected new link '{}'.", mac);
-		// 		net->arp_request(mac);
-		// 		break;
-		// 	}
-		// 	case LinkUpdateType::LinkRemoved:
-		// 	{
-		// 		break;
-		// 	}
-		// 	default:
-		// 	{
-		// 		break;
-		// 	}
-		// }
+		ip::IpPackage packet = co_await net->async_read_arp();
+
+		ip::ArpPackage arp;
+		
+
 	}
 
 	co_return 0;
