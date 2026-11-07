@@ -9,6 +9,7 @@ class FilePath
 public:
 
 	FilePath(std::string path);
+	FilePath(const FilePath& path, std::string_view file);
 	FilePath(const char* path) : FilePath(std::string(path)) {}
 	FilePath(std::string_view path) : FilePath(std::string(path)) {}
 	FilePath() : FilePath("") {}
@@ -37,10 +38,15 @@ public:
 	std::string get_string() const { return path_.empty() ? "/" : path_; }
 
 	void prepend(const FilePath& path);
+	void prepend(std::string_view file);
 	void append(const FilePath& path);
+	void append(std::string_view file);
 	void substitute(std::string_view from, std::string_view to);
 	void make_absolute(std::string_view from_dir = {});
 	void make_absolute(const FilePath& from_dir);
+	void make_relative(std::string_view from_dir = {});
+	void make_relative(const FilePath& from_dir);
+	void drop_one();
 
 private:
 

@@ -260,44 +260,78 @@ Task<int32_t> ProcessSubCmdPipeline(Proc& proc, SubCmdRange& cmds, bool backgrou
 	co_return std::ranges::max(res);
 }
 
-std::string get_longest_matching(const std::vector<FilePath>& paths)
+FilePath get_longest_matching(const std::vector<FilePath>& paths, const FilePath& pwd, std::string_view search)
 {
+	FilePath search_path = FilePath{search};
+	FilePath abs_search_path = FilePath{pwd, search};
+
 	if (paths.empty())
-		return "";
-	
-	if (paths.size() == 1)
-		return std::string(paths[0].get_name());
-	
-	const std::string_view& base = paths[0].get_name();
+		return search_path;
 
-	for (size_t idx = 0; idx < base.length(); ++idx)
+	auto res = std::invoke([&]() -> std::string_view
 	{
-		char c = base[idx];
+		if (paths.size() == 1)
+			return paths[0].get_view();
 
-		for (auto&& path : paths)
+		/* Filter paths that are identical to the search string,
+		so that the user can tab-complete through directories containing only a single directory.*/
+		auto filtered_paths = paths 
+		| std::views::filter([&](const FilePath& path)
+		{ 
+			return (path.get_view() != search) && path != abs_search_path;
+		});
+
+		if (filtered_paths.empty())
+			return paths[0].get_view();
+		
+		const std::string_view& base = filtered_paths.begin()->get_view();
+
+		for (size_t idx = 0; idx < base.length(); ++idx)
 		{
-			const std::string_view& name = path.get_name();
+			char c = base[idx];
 
-			if (name.length() <= idx || name[idx] != base[idx])
+			for (auto&& path : filtered_paths)
 			{
-				return std::string(name.substr(0, idx));
+				const std::string_view& name = path.get_view();
+
+				if (name.length() <= idx || name[idx] != base[idx])
+				{
+					return name.substr(0, idx);
+				}
 			}
 		}
-	}
 
-	return std::string(base);
+		return base;
+	});
+
+	return FilePath{res};
 }
 
 std::string get_autocomplete_string(Proc& proc, std::string_view tab_str)
 {
-	if (auto paths = proc.sys.scan_for(tab_str, proc.get_var("PWD")); paths.size() > 0)
+	using namespace std::string_view_literals;
+
+	std::string_view pwd = proc.get_var("PWD");
+
+	bool is_absolute = tab_str.starts_with("/"sv);
+	FilePath search_from = is_absolute ? FilePath{"/"} : FilePath{pwd};
+
+	if (auto paths = proc.sys.scan_for(tab_str, search_from); paths.size() > 0)
 	{
-		return get_longest_matching(paths);
+		FilePath path = get_longest_matching(paths, pwd, tab_str);
+
+		if (not is_absolute)
+		{
+			path.make_relative(pwd);
+		}
+
+		return path.get_string();
 	}
 
 	if (auto paths = proc.sys.scan_in_path(tab_str); paths.size() > 0)
 	{
-		return get_longest_matching(paths);
+		FilePath path = get_longest_matching(paths, pwd, tab_str);
+		return std::string(path.get_name());
 	}
 
 	return std::string(tab_str);
@@ -351,12 +385,9 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		{
 			case CmdReadEvent::Tab:
 			{
-				if (not word.second.empty())
-				{
-					std::string tab_str = get_autocomplete_string(proc, word.second);
-					field.replace_utf8(tab_str, word.first);
-					field.move_end();
-				}
+				std::string tab_str = get_autocomplete_string(proc, word.second);
+				field.replace_utf8(tab_str, word.first);
+				field.move_end();
 
 				return CmdEventResponse::Handled;
 			}
