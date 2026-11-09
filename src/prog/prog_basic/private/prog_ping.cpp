@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "addr.h"
 #include "net_mgr.h"
+#include "race_awaiter.h"
 
 #include "CLI/CLI.hpp"
 
@@ -76,9 +77,19 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 	co_await netapi.async_write_socket_raw(fd, std::move(package));
 
-	co_await os.wait(1.f);
-
 	bool success = false;
+
+	auto res = co_await when_any(netapi.async_read_socket_raw(fd), proc.wait(2.f));
+	if (res.index == 0)
+	{
+		proc.putln("Received echo reply!");
+		success = true;
+	}
+	else
+	{
+		proc.putln("Ping timed out.");
+	}
+
 	proc.putln("Host {}.", success ? "reachable" : "unreachable");
 
 	co_return 0;

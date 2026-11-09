@@ -42,6 +42,6 @@ protected:
 private:
 
 	std::unordered_map<Uid64, std::shared_ptr<NetNode>> nodes_;
-	RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links_;
+	RelationManager<RelationshipType::ManyToMany, Uid64, Uid64> links_;
 
 };

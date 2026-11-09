@@ -118,7 +118,8 @@ bool Internet::link_unicast(ip::DataFrame&& pak)
 	{
 		return link_receive(to, std::move(pak));
 	}
-	else return false;
+
+	return false;
 }
 
 int32_t Internet::link_broadcast(ip::DataFrame&& pak)

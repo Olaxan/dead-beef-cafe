@@ -68,7 +68,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 			}
 			case ip::ArpType::PROBE:
 			{
-				if (packet.dest_mac() == net->get_mac())
+				if (packet.dest_ip() == net->get_primary_ip().data_str())
 				{
 					proc.putln("Received matched ARP probe.");
 
@@ -112,6 +112,18 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		}
 	};
 
+	auto frame_is_for_us = [our_mac = net->get_mac()](const ip::DataFrame& frame) -> bool
+	{
+		if (frame.dest_mac() == our_mac)
+			return true;
+
+		/* Broadcast address */
+		if (frame.dest_mac() == uint64_t(-1))
+			return true;
+
+		return false;
+	};
+
 	/* 
 	* 1. Check IP of incoming packet.
 	* 2. If the IP is ours, look for a receiver in the sockets list.
@@ -122,7 +134,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 	{
 		ip::DataFrame frame = co_await net->async_read_rx();
 
-		if (frame.dest_mac() != net->get_mac().num)
+		if (not frame_is_for_us(frame))
 		{
 			proc.warnln("Discarding frame with incorrect address.");
 			continue;

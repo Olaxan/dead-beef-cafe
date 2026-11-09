@@ -7,7 +7,8 @@
 enum class RelationshipType
 {
 	OneToOne,
-	OneToMany
+	OneToMany,
+    ManyToMany
 };
 
 template <RelationshipType type, typename A, typename B>
@@ -111,6 +112,85 @@ public:
         return forward.at(a);
     }
 
+};
+
+template <typename A, typename B>
+struct RelationshipPolicy<RelationshipType::ManyToMany, A, B>
+{
+    std::unordered_map<A, std::unordered_set<B>> forward;
+    std::unordered_map<B, std::unordered_set<A>> reverse;
+
+public:
+
+    void relate(const A& a, const B& b)
+    {
+        forward[a].insert(b);
+        reverse[b].insert(a);
+    }
+
+    void unrelate(const A& a, const B& b)
+    {
+        auto fit = forward.find(a);
+        if (fit == forward.end()) return;
+
+        if (fit->second.erase(b) == 0) return;
+
+        // Remove the reverse relationship.
+        auto rit = reverse.find(b);
+        if (rit != reverse.end())
+        {
+            rit->second.erase(a);
+
+            // Remove empty entries.
+            if (rit->second.empty())
+                reverse.erase(rit);
+        }
+
+        // Remove empty entries.
+        if (fit->second.empty())
+            forward.erase(fit);
+    }
+
+    void unrelate_all(const A& a)
+    {
+        auto fit = forward.find(a);
+        if (fit == forward.end()) return;
+
+        // Remove this A from every corresponding B's reverse set.
+        for (const B& b : fit->second)
+        {
+            auto rit = reverse.find(b);
+            if (rit == reverse.end()) continue;
+
+            rit->second.erase(a);
+
+            // Remove empty entries.
+            if (rit->second.empty())
+                reverse.erase(rit);
+        }
+
+        forward.erase(fit);
+    }
+
+    bool is_related(const A& a, const B& b) const
+    {
+        auto fit = forward.find(a);
+        if (fit != forward.end() && fit->second.contains(b))
+            return true;
+
+        auto rit = reverse.find(a);
+        return rit != reverse.end() && rit->second.contains(b);
+    }
+
+    const std::unordered_set<B>& get_all_related(const A& a) const
+    {
+        static const std::unordered_set<B> empty;
+
+        auto it = forward.find(a);
+        if (it == forward.end()) return empty;
+
+        return it->second;
+    }
 };
 
 template<typename P, typename A>

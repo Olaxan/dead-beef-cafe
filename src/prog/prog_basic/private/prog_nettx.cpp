@@ -29,7 +29,7 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 
 	ip::IpPackage local_packet = std::move(packet);
 
-	proc.putln("Placing {} bytes in ARP buffer.", packet.ByteSizeLong());
+	proc.putln("Placing {} bytes in ARP buffer.", local_packet.ByteSizeLong());
 	proc.putln("Performing ARP request (to find {}).", dest_addr);
 
 	ip::ArpPackage arp;
@@ -53,10 +53,13 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 
 		if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
 		{
-			net->send(std::move(packet), *arp_entry);
+			proc.putln("Received ARP reply ({}), transmitting...", *arp_entry);
+			net->send(std::move(local_packet), *arp_entry);
 			co_return 0;
 		}
 	}
+
+	proc.putln("ARP request timed out (3 tries).");
 	
 	co_return 1;
 }
