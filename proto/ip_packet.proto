@@ -7,7 +7,6 @@ enum Protocol
 	TCP = 0;
 	UDP = 1;
 	ICMP = 2;
-	ARP = 3;
 }
 
 message IpPackage

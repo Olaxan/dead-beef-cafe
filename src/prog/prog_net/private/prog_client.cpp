@@ -101,7 +101,7 @@ public:
 
 	void deliver(ip::IpPackage&& msg)
 	{
-		net_mgr_->receive(std::move(msg));
+		net_mgr_->unpack(std::move(msg));
 		timer_.cancel_one();
 	}
 

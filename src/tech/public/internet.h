@@ -3,7 +3,7 @@
 #include "uid64.h"
 #include "rel_mgr.h"
 
-#include <proto/ip_packet.pb.h>
+#include <proto/dataframe.pb.h>
 
 #include <unordered_map>
 #include <vector>
@@ -32,12 +32,12 @@ public:
 	NetPathResult get_path(Uid64 from, Uid64 to) const;
 	size_t distance(Uid64 from, Uid64 to) const;
 
-	bool link_unicast(Uid64 from, Uid64 to, ip::IpPackage&& pak);
-	int32_t link_broadcast(Uid64 from, ip::IpPackage&& pak);
+	bool link_unicast(ip::DataFrame&& pak);
+	int32_t link_broadcast(ip::DataFrame&& pak);
 
 protected:
 
-	bool link_receive(Uid64 to, ip::IpPackage&& pak);
+	bool link_receive(Uid64 to, ip::DataFrame&& pak);
 
 private:
 

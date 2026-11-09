@@ -10,6 +10,7 @@
 #include "proto/icmp_packet.pb.h"
 #include "proto/tcp_packet.pb.h"
 #include "proto/udp_packet.pb.h"
+#include "proto/dataframe.pb.h"
 
 #include <string>
 #include <expected>
@@ -62,27 +63,27 @@ public:
 	void arp_buffer(ip::IpPackage&& package);
 	
 	void send(ip::IpPackage&& package);
+	void send(ip::DataFrame&& frame);
 	void send(ip::IpPackage&& package, Uid64 mac);
-	
-	void receive(ip::IpPackage&& package);
 
 	void unpack(ip::IpPackage&& package);
 	void unpack(ip::IpPackage&& package, const Address6& src_addr, const Address6& dest_addr);
 
-	NetMessageAwaiter async_read_rx();
+	NetFrameAwaiter async_read_rx();
 	NetMessageAwaiter async_read_tx();
 	NetMessageAwaiter async_read_route();
 	NetMessageAwaiter async_read_arp();
 
 	Address6 get_primary_ip() const;
+	Uid64 get_mac() const;
+
 	bool socket_is_open(OpenSocketHandle h) const;
 	bool socket_has_data(OpenSocketHandle h) const;
 
 	bool create_session(OpenSocketHandle h);
 
-	void arp_request();
-	void arp_request(Uid64 mac);
 	std::optional<Uid64> arp_lookup(Address6 addr);
+	void arp_refresh(Uid64 mac, Address6 addr);
 
 protected:
 

@@ -8,6 +8,8 @@
 #include "scoped_fd.h"
 
 #include "proto/ip_packet.pb.h"
+#include "proto/arp_packet.pb.h"
+#include "proto/dataframe.pb.h"
 
 #include <string>
 #include <vector>
@@ -35,22 +37,60 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("RX service running.");
 
-	/* 
-	* 1. Check IP of incoming packet.
-	* 2. If the IP is ours, look for a receiver in the sockets list.
-	* 3. Otherwise dump it into the TX queue for the dispatcher to handle (or discard).
-	*/
-
-	while (true)
+	auto make_frame = [&](Uid64 dest, ip::FrameType type) -> ip::DataFrame
 	{
-		ip::IpPackage packet = co_await net->async_read_rx();
-		size_t packet_size = packet.ByteSizeLong();
+		ip::DataFrame frame;
+		frame.set_src_mac(net->get_mac().num);
+		frame.set_dest_mac(dest.num);
+		frame.set_frame_type(type);
+		return frame;
+	};
 
-		const std::string& src_ip_bytes = packet.src_ip();
-		const std::string& dest_ip_bytes = packet.dest_ip();
+	auto receive_arp = [&](ip::ArpPackage&& packet, Uid64 frame_src_mac)
+	{
+		switch (packet.type())
+		{
+			case ip::ArpType::ANNOUNCE:
+			{
+				auto exp_announce_ip = Address6::from_bytes(packet.src_ip().data());
+				Uid64 announce_mac = packet.src_mac();
 
-		auto exp_src_addr = Address6::from_bytes(src_ip_bytes.data());
-		auto exp_dest_addr = Address6::from_bytes(dest_ip_bytes.data());
+				if (exp_announce_ip)
+				{
+					Address6 announce_ip = *exp_announce_ip;
+					net->arp_refresh(announce_mac, announce_ip);
+					proc.putln("Refreshing ARP entry '{}' -> '{}'.", announce_ip, announce_mac);
+					return;
+				}
+				else proc.warnln("Invalid ARP announce.");
+
+				return;
+			}
+			case ip::ArpType::PROBE:
+			{
+				if (packet.dest_mac() == net->get_mac())
+				{
+					proc.putln("Received matched ARP probe.");
+
+					ip::ArpPackage reply;
+					reply.set_type(ip::ArpType::ANNOUNCE);
+					reply.set_src_ip(net->get_primary_ip().data_str());
+					reply.set_src_mac(net->get_mac().num);
+
+					auto frame = make_frame(frame_src_mac, ip::FrameType::ARP);
+					frame.set_payload(reply.SerializeAsString());
+					net->send(std::move(frame));
+				}
+
+				return;
+			}
+		}
+	};
+
+	auto receive_ip = [&](ip::IpPackage&& packet)
+	{
+		auto exp_src_addr = Address6::from_bytes(packet.src_ip().data());
+		auto exp_dest_addr = Address6::from_bytes(packet.dest_ip().data());
 
 		if (exp_src_addr && exp_dest_addr)
 		{
@@ -69,6 +109,45 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		else
 		{
 			proc.warnln("Discarding malformed package (invalid address).");
+		}
+	};
+
+	/* 
+	* 1. Check IP of incoming packet.
+	* 2. If the IP is ours, look for a receiver in the sockets list.
+	* 3. Otherwise dump it into the TX queue for the dispatcher to handle (or discard).
+	*/
+
+	while (true)
+	{
+		ip::DataFrame frame = co_await net->async_read_rx();
+
+		if (frame.dest_mac() != net->get_mac().num)
+		{
+			proc.warnln("Discarding frame with incorrect address.");
+			continue;
+		}
+
+		switch (frame.frame_type()) 
+		{
+			case ip::FrameType::ARP:
+			{
+				ip::ArpPackage pak;
+				if (pak.ParseFromString(frame.payload()))
+				{
+					receive_arp(std::move(pak), frame.src_mac());
+				}
+				continue;
+			}
+			case ip::FrameType::IP:
+			{
+				ip::IpPackage pak;
+				if (pak.ParseFromString(frame.payload()))
+				{
+					receive_ip(std::move(pak));
+				}
+				continue;
+			}
 		}
 	}
 

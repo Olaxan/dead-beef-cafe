@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ip;
+
+enum FrameType
+{
+	IP = 0;
+	ARP = 1;
+}
+
+message DataFrame
+{
+	uint64 src_mac = 1;
+	uint64 dest_mac = 2;
+	FrameType frame_type = 3;
+	bytes payload = 4;
+}

@@ -104,8 +104,16 @@ size_t Internet::distance(Uid64 from, Uid64 to) const
 	return path.first ? path.second.size() : 0;
 }
 
-bool Internet::link_unicast(Uid64 from, Uid64 to, ip::IpPackage&& pak)
+bool Internet::link_unicast(ip::DataFrame&& pak)
 {
+	Uid64 from = pak.src_mac();
+	Uid64 to = pak.dest_mac();
+
+	if (to == uint64_t(-1))
+	{
+		return link_broadcast(std::move(pak));
+	}
+
 	if (links_.is_related(from, to))
 	{
 		return link_receive(to, std::move(pak));
@@ -113,28 +121,30 @@ bool Internet::link_unicast(Uid64 from, Uid64 to, ip::IpPackage&& pak)
 	else return false;
 }
 
-int32_t Internet::link_broadcast(Uid64 from, ip::IpPackage&& pak)
+int32_t Internet::link_broadcast(ip::DataFrame&& pak)
 {
+	Uid64 from = pak.src_mac();
+
 	int32_t rx = 0;
 	for (auto&& rec : links_.get_all_related(from))
 	{
 		if (rec == from)
 			continue;
 
-		rx += link_receive(rec, std::forward<ip::IpPackage>(pak));
+		rx += link_receive(rec, std::forward<ip::DataFrame>(pak));
 	}
 
 	return rx;
 }
 
-bool Internet::link_receive(Uid64 to, ip::IpPackage&& pak)
+bool Internet::link_receive(Uid64 to, ip::DataFrame&& pak)
 {
 	if (auto it = nodes_.find(to); it != nodes_.end())
 	{
 		/* If the node is local, we deliver the message. 
 		However, it could also be remote, meaning the message needs to be transmitted
 		over a real internet connection. */
-		it->second->route.push(std::move(pak));
+		it->second->rx_buffer.push(std::move(pak));
 		return true;
 	}
 	return false;

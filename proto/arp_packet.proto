@@ -11,8 +11,8 @@ enum ArpType
 message ArpPackage
 {
 	bytes src_ip = 1;
-	bytes src_mac = 2;
+	uint64 src_mac = 2;
 	bytes dest_ip = 3;
-	bytes dest_mac = 4;
+	uint64 dest_mac = 4;
 	ArpType type = 5;
 }

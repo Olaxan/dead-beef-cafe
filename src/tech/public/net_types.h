@@ -6,6 +6,7 @@
 
 #include "proto/ip_packet.pb.h"
 #include "proto/tcp_packet.pb.h"
+#include "proto/dataframe.pb.h"
 
 #include <cstdint>
 #include <memory>
@@ -15,12 +16,16 @@
 #include <print>
 #include <tuple>
 
+#define MAC_BROADCAST 18446744073709551615
+
 class NIC;
 class NetManager;
 class SocketFile;
 
 using NetQueue = MessageQueue<ip::IpPackage>;
+using FrameQueue = MessageQueue<ip::DataFrame>;
 using NetMessageAwaiter = MessageQueueAwaiter<ip::IpPackage>;
+using NetFrameAwaiter = MessageQueueAwaiter<ip::DataFrame>;
 
 using OpenSocketHandle = int64_t;
 using OpenSocketPair = std::pair<OpenSocketHandle, struct OpenSocketEntry*>;

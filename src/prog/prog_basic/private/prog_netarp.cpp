@@ -37,14 +37,6 @@ ProcessTask Programs::SrvNetArp(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("ARP service running.");
 
-	while (true)
-	{
-		ip::IpPackage packet = co_await net->async_read_arp();
-
-		ip::ArpPackage arp;
-		
-
-	}
 
 	co_return 0;
 }

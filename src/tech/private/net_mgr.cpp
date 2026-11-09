@@ -10,6 +10,7 @@
 #include "net_node.h"
 
 #include "proto/ip_packet.pb.h"
+#include "proto/dataframe.pb.h"
 
 #include <print>
 #include <memory>
@@ -332,14 +333,20 @@ void NetManager::send(ip::IpPackage&& package)
 	tx_queue_.push(std::move(package));
 }
 
-void NetManager::send(ip::IpPackage&& package, Uid64 mac)
+void NetManager::send(ip::DataFrame&& frame)
 {
-	internet_.link_unicast(os_.get_uid(), mac, std::move(package));
+	internet_.link_unicast(std::move(frame));
 }
 
-void NetManager::receive(ip::IpPackage&& package)
+void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 {
-	rx_queue_.push(std::move(package));
+	ip::DataFrame frame;
+	frame.set_src_mac(get_mac().num);
+	frame.set_dest_mac(mac.num);
+	frame.set_payload(package.SerializeAsString());
+	frame.set_frame_type(ip::FrameType::IP);
+
+	internet_.link_unicast(std::move(frame));
 }
 
 void NetManager::unpack(ip::IpPackage&& package)
@@ -497,9 +504,9 @@ void NetManager::handle_packet(ip::UdpPacket&& packet, ip::IpPackage&& outer, co
 	AddressPair dest = { dest_addr, packet.dest_port() };
 }
 
-NetMessageAwaiter NetManager::async_read_rx()
+NetFrameAwaiter NetManager::async_read_rx()
 {
-	return rx_queue_.async_pop();
+	return node_->rx_buffer.async_pop();
 }
 
 NetMessageAwaiter NetManager::async_read_tx()
@@ -512,9 +519,19 @@ NetMessageAwaiter NetManager::async_read_route()
 	return routing_queue_.async_pop();
 }
 
+NetMessageAwaiter NetManager::async_read_arp()
+{
+	return arp_queue_.async_pop();
+}
+
 Address6 NetManager::get_primary_ip() const
 {
 	return address_;
+}
+
+Uid64 NetManager::get_mac() const
+{
+	return os_.get_uid();
 }
 
 bool NetManager::socket_is_open(OpenSocketHandle h) const
@@ -675,16 +692,6 @@ void NetManager::return_handle(OpenSocketHandle h)
 	free_handles_.insert(h);
 }
 
-void NetManager::arp_request()
-{
-
-}
-
-void NetManager::arp_request(Uid64 mac)
-{
-
-}
-
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr)
 {
 	if (auto it = arp_cache_.find(addr); it != arp_cache_.end())
@@ -692,4 +699,9 @@ std::optional<Uid64> NetManager::arp_lookup(Address6 addr)
 		return it->second;
 	}
 	return std::nullopt;
+}
+
+void NetManager::arp_refresh(Uid64 mac, Address6 addr)
+{
+	arp_cache_[addr] = mac;
 }
