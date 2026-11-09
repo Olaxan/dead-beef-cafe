@@ -396,6 +396,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 				history_idx = std::clamp(--history_idx, 0, static_cast<int32_t>(history.size()) - 1);
 				field.set_text(history[history_idx]);
 				field.move_end();
+				
 				return CmdEventResponse::Handled;
 			}
 			case CmdReadEvent::MoveDown:
@@ -403,6 +404,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 				history_idx = std::clamp(++history_idx, 0, static_cast<int32_t>(history.size()) - 1);
 				field.set_text(history[history_idx]);
 				field.move_end();
+				
 				return CmdEventResponse::Handled;
 			}
 			default: return CmdEventResponse::Unhandled;

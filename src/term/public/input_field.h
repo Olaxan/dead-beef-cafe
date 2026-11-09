@@ -42,6 +42,8 @@ public:
 		MoveBackward,
 		MoveHome,
 		MoveEnd,
+		CutHome,
+		CutEnd,
 		WantSave,
 		WantExit
 	};
@@ -133,6 +135,12 @@ public:
 
 	/* Remove one unicode character, erasing forwards (delete key). */
 	void remove_front();
+
+	/* Remove all characters before the cursor, erasing backwards. */
+	void remove_home();
+
+	/* Remove all characters after the cursor, erasing forwards. */
+	void remove_end();
 
 	/* Insert some text into the current cursor position,
 	formatted as utf-8. */

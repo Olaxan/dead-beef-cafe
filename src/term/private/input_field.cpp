@@ -266,6 +266,19 @@ void InputField::remove_front()
 	refresh_row(); 
 }
 
+void InputField::remove_home()
+{
+	row_it_->chars.removeBetween(0, col_);
+	++dirty_;
+
+	refresh_row();
+}
+
+void InputField::remove_end()
+{
+	//TODO: Implement.
+}
+
 void InputField::insert_utf8(std::string_view input)
 {
 	if (input.empty())
@@ -343,6 +356,7 @@ InputField::HandlerReturn InputField::accept_input(std::string_view input) const
 		case '\t': return HandlerReturn::Tab;
 		case '\x7f': return HandlerReturn::EraseBack;
 		case CTRL_KEY('s'): return HandlerReturn::WantSave;
+		case CTRL_KEY('u'): return HandlerReturn::CutHome;
 		case '\x1b':
 		{
 			if (input.size() == 1)
@@ -439,6 +453,16 @@ InputField::EventResponse InputField::handle_event(std::string_view input, Handl
 		case HandlerReturn::MoveEnd:
 		{
 			move_end();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::CutHome:
+		{
+			remove_home();
+			return EventResponse::Handled;
+		}
+		case HandlerReturn::CutEnd:
+		{
+			remove_end();
 			return EventResponse::Handled;
 		}
 		case HandlerReturn::WantSave: return EventResponse::WantSave;
