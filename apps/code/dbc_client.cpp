@@ -147,15 +147,7 @@ int main(int argc, char* argv[])
 		if (not str)
 			return;
 
-		com::CommandReply rep;
-		if (rep.ParseFromString(*str))
-		{
-			std::cout << rep.reply();
-		}
-		else
-		{
-			std::cout << *str;
-		}
+		std::cout << *str;
 	};
 
 	ReaderFn local_reader = [q = queue_ptr](Proc&) -> Task<ReadResult>
