@@ -54,6 +54,11 @@ public:
         return std::string{raw, 16};
     }
 
+    bool is_valid() const
+    {
+        return (head > 0) || (tail > 0);
+    }
+
     static std::expected<Address6, std::invalid_argument> from_string(const std::string& address) noexcept;
     static std::expected<Address6, std::invalid_argument> from_bytes(std::string_view address) noexcept;
 

@@ -22,7 +22,7 @@
 
 #include <iso646.h>
 
-ProcessTask ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_addr)
+EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_addr)
 {
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();

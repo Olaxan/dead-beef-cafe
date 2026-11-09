@@ -647,6 +647,9 @@ std::optional<ip::TcpPacket> NetManager::make_tcp_reply(OpenSocketHandle h, ip::
 	const AddressPair& local = entry->local_endpoint;
 	const AddressPair& remote = entry->remote_endpoint;
 
+	if (not remote.addr.is_valid())
+		return std::nullopt;
+
 	ip::TcpPacket pak;
 	pak.set_dest_port(remote.port);
 	pak.set_src_port(local.port);
@@ -665,6 +668,7 @@ std::optional<ip::IpPackage> NetManager::make_tcp_reply_ip(OpenSocketHandle h, i
 	const AddressPair& remote = entry->remote_endpoint;
 
 	auto opt = make_tcp_reply(h, type, std::move(payload));
+
 	if (not opt)
 		return std::nullopt;
 

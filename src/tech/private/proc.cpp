@@ -129,15 +129,21 @@ bool Proc::write(const char* msg)
 bool Proc::write(const com::CommandQuery& com)
 {
 	std::string out;
-	com.SerializeToString(&out);
-	return write(out);
+	if (com.SerializeToString(&out))
+	{
+		return write(out);
+	}
+	return false;
 }
 
 bool Proc::write(const com::CommandReply& com)
 {
 	std::string out;
-	com.SerializeToString(&out);
-	return write(out);
+	if (com.SerializeToString(&out))
+	{
+		return write(out);
+	}
+	return false;
 }
 
 void Proc::dispatch(ProcessFn& program, std::vector<std::string> args, bool resume)

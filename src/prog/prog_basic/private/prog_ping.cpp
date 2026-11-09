@@ -55,7 +55,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	const Address6& dest = parse_res.value();
+	Address6 dest = parse_res.value();
 	Address6 src = netapi.get_primary_ip();
 
 	proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
@@ -74,7 +74,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 	FileDescriptor fd = sock_res.value();
 
-	netapi.async_write_socket_raw(fd, std::move(package));
+	co_await netapi.async_write_socket_raw(fd, std::move(package));
 
 	co_await os.wait(1.f);
 

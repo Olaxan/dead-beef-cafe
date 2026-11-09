@@ -39,9 +39,20 @@ std::expected<Address6, std::invalid_argument> Address6::from_string(const std::
 	std::array<uint8_t, 16> out_bytes{0};
 	for (size_t i = 0; i < parts.size(); ++i) 
 	{
-		uint16_t value = std::stoi(parts[i], nullptr, 16);
-		out_bytes[i * 2] = static_cast<uint8_t>(value >> 8);
-		out_bytes[i * 2 + 1] = static_cast<uint8_t>(value & 0xFF);
+		try
+		{
+			uint16_t value = std::stoi(parts[i], nullptr, 16);
+			out_bytes[i * 2] = static_cast<uint8_t>(value >> 8);
+			out_bytes[i * 2 + 1] = static_cast<uint8_t>(value & 0xFF);
+		}
+		catch (std::out_of_range e)
+		{
+			return std::unexpected(std::invalid_argument("Octet member out of range"));
+		}
+		catch (std::invalid_argument e)
+		{
+			return std::unexpected(e);
+		}
 	}
 
 	return Address6(std::move(out_bytes));
