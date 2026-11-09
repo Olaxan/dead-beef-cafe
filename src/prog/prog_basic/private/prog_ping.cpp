@@ -61,12 +61,16 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("Pinging {} with {} bytes of data...", dest, params.payload);
 
+	ip::IcmpPacket icmp;
+	icmp.set_type(ip::IcmpType::EchoRequest);
+
 	ip::IpPackage package;
 	package.set_src_ip(src.data_str());
 	package.set_dest_ip(dest.data_str());
 	package.set_protocol(ip::Protocol::ICMP);
+	package.set_payload(icmp.SerializeAsString());
 
-	auto sock_res = netapi.create_socket();
+	auto sock_res = netapi.create_socket(SocketType::Raw);
 	if (!sock_res)
 	{
 		proc.errln("ping: {}.", sock_res.error().message());

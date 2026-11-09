@@ -24,11 +24,11 @@ void ProcNetApi::register_descriptors()
 	}
 }
 
-std::expected<FileDescriptor, std::error_condition> ProcNetApi::create_socket()
+std::expected<FileDescriptor, std::error_condition> ProcNetApi::create_socket(SocketType type)
 {
 	Proc& proc = *owner_;
 
-	if (auto exp_sock = net_->create_socket())
+	if (auto exp_sock = net_->create_socket(type))
 	{
 		OpenSocketEntry* page = exp_sock->second;
 		FileDescriptor fd = proc.get_descriptor();

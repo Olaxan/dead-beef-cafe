@@ -109,6 +109,8 @@ bool Internet::link_unicast(ip::DataFrame&& pak)
 	Uid64 from = pak.src_mac();
 	Uid64 to = pak.dest_mac();
 
+	//std::println("INTERNET: {} bytes from {} to {}.", pak.ByteSizeLong(), from, to);
+
 	if (to == uint64_t(-1))
 	{
 		return link_broadcast(std::move(pak));

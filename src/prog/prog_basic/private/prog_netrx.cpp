@@ -87,7 +87,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		}
 	};
 
-	auto receive_ip = [&](ip::IpPackage&& packet)
+	auto receive_ip = [&](ip::IpPackage&& packet, Uid64 src_mac)
 	{
 		auto exp_src_addr = Address6::from_bytes(packet.src_ip().data());
 		auto exp_dest_addr = Address6::from_bytes(packet.dest_ip().data());
@@ -96,6 +96,8 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		{
 			const Address6& src_ip = *exp_src_addr;
 			const Address6& dest_ip = *exp_dest_addr;
+
+			net->arp_refresh(src_mac, src_ip);
 
 			if (dest_ip == local_ip)
 			{
@@ -156,7 +158,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 				ip::IpPackage pak;
 				if (pak.ParseFromString(frame.payload()))
 				{
-					receive_ip(std::move(pak));
+					receive_ip(std::move(pak), frame.src_mac());
 				}
 				continue;
 			}

@@ -30,7 +30,7 @@ public:
 	void copy_descriptors_from(const ProcNetApi& other);
 	void register_descriptors();
 
-	DescriptorResult create_socket();
+	DescriptorResult create_socket(SocketType type = SocketType::Stream);
 	std::error_condition close_socket(FileDescriptor sock);
 	Task<std::error_condition> async_close_socket(FileDescriptor fd);
 

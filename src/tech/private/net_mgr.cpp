@@ -34,7 +34,7 @@ NetManager::~NetManager()
 	internet_.unregister_node(os_.get_uid());
 };
 
-std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
+std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket(SocketType type)
 {
 	OpenSocketHandle h = get_handle();
 	auto [it, success] = sockets_.try_emplace(h);
@@ -43,6 +43,13 @@ std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket()
 	{
 		it->second.open = true;
 		it->second.handle = h;
+		it->second.type = type;
+
+		if (type == SocketType::Raw)
+		{
+			raw_sockets_.emplace_back(h);
+		}
+
 		return std::make_pair(h, &it->second);
 	}
 	else
@@ -73,7 +80,9 @@ std::error_condition NetManager::close_socket(OpenSocketHandle h)
 		entry->sessions.clear();
 		entry->binding.reset();
 		sockets_.erase(h);
-		//std::println("Closed socket {}.", h);
+
+		std::erase(raw_sockets_, h);
+
 		return {};
 	} 
 	else return std::error_condition{EIO, std::generic_category()};
@@ -367,6 +376,14 @@ void NetManager::unpack(ip::IpPackage&& package, const Address6& src_addr, const
 {
 	const std::string& payload = package.payload();
 
+	for (OpenSocketHandle raw : raw_sockets_)
+	{
+		if (OpenSocketEntry* sock = find_socket(raw))
+		{
+			sock->rx_queue.push(std::forward<ip::IpPackage>(package));
+		}
+	}
+
 	switch (package.protocol())
 	{
 		case ip::Protocol::ICMP:
@@ -406,31 +423,29 @@ void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, c
 	{
 		case ip::IcmpType::EchoRequest:
 		{
-			if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
-			{
-				std::println("Received echo request from {}.", *exp_src);
-			}
+			// if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
+			// {
+			// 	std::println("Received echo request from {}.", *exp_src);
+			// }
 
 			ip::IcmpPacket reply;
 			reply.set_type(ip::IcmpType::EchoReply);
-			std::string ret_str;
-			if (reply.SerializeToString(&ret_str))
-			{
-				ip::IpPackage pak;
-				pak.set_dest_ip(outer.src_ip());
-				pak.set_src_ip(get_primary_ip().raw);
-				pak.set_protocol(ip::Protocol::ICMP);
-				pak.set_payload(ret_str);
-				send(std::move(pak));
-			}
+
+			ip::IpPackage pak;
+			pak.set_dest_ip(outer.src_ip());
+			pak.set_src_ip(get_primary_ip().raw);
+			pak.set_protocol(ip::Protocol::ICMP);
+			pak.set_payload(reply.SerializeAsString());
+
+			send(std::move(pak));
 			break;
 		}
 		case ip::IcmpType::EchoReply:
 		{
-			if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
-			{
-				std::println("Received echo reply from {}.", *exp_src);
-			}
+			// if (auto exp_src = Address6::from_bytes(outer.src_ip()); exp_src.has_value())
+			// {
+			// 	std::println("Received echo reply from {}.", *exp_src);
+			// }
 			break;
 		}
 		default: break;
@@ -452,10 +467,6 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 			if (OpenSocketEntry* sock = find_socket(sess))
 			{
 				sock->rx_queue.push(std::move(outer));
-			}
-			else
-			{
-				std::println("DATA: Dropping packet (no session).");
 			}
 			break;
 		}
@@ -561,7 +572,6 @@ bool NetManager::create_session(OpenSocketHandle h)
 		const AddressPair& local = file->local_endpoint;
 		const AddressPair& remote = file->remote_endpoint;
 		file->sessions.emplace(local, remote);
-		//std::println("Created session {}:{} <-> {}:{}.", local.addr, local.port, remote.addr, remote.port);
 		return true;
 	}
 

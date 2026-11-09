@@ -35,7 +35,7 @@ public:
 	NetManager(NetManager&&) = delete;
 	~NetManager();
 
-	std::expected<OpenSocketPair, std::error_condition> create_socket();
+	std::expected<OpenSocketPair, std::error_condition> create_socket(SocketType type = SocketType::Stream);
 	std::error_condition close_socket(OpenSocketHandle h);
 	std::error_condition close_socket(OpenSocketEntry* sock);
 	Task<std::error_condition> async_close_socket(OpenSocketHandle h);
@@ -123,6 +123,7 @@ protected:
 
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
+	std::vector<OpenSocketHandle> raw_sockets_;
 
 	friend class ProcNetApi;
 };

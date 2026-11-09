@@ -30,10 +30,19 @@ using NetFrameAwaiter = MessageQueueAwaiter<ip::DataFrame>;
 using OpenSocketHandle = int64_t;
 using OpenSocketPair = std::pair<OpenSocketHandle, struct OpenSocketEntry*>;
 
+enum class SocketType
+{
+	Stream,
+	Datagram,
+	Raw
+};
+
 struct OpenSocketEntry
 {
 	OpenSocketHandle handle{-1};
 	int32_t instances{0};
+
+	SocketType type{SocketType::Raw};
 
 	NetQueue rx_queue{};
 	NetQueue tx_queue{};
