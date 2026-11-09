@@ -443,9 +443,8 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 
 		std::string usr_str = std::format(CSI_CODE(95) "{}@{}" CSI_RESET, username.value_or("-"), os.get_hostname());
 		std::string path_str = std::format(CSI_CODE(94) "{}" CSI_RESET, path.get_string());
-		std::string net_str = (os.get_state() != DeviceState::PoweredOn) ? "(" CSI_CODE(33) "NetBIOS" CSI_RESET ") " : "";
 
-		proc.put("{0}{1}:{2}$ ", net_str, usr_str, path_str);
+		proc.put("{}:{}$ ", usr_str, path_str);
 
 		auto exp_out_cmd = co_await proc.io.read_cmd_utf8(read_params);
 
@@ -456,7 +455,7 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		}
 
 		std::string_view out_cmd{*exp_out_cmd};
-		trim(out_cmd);
+		out_cmd = trim(out_cmd);
 
 		if (out_cmd.empty())
 		{

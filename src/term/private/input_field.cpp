@@ -470,6 +470,8 @@ InputField::EventResponse InputField::handle_event(std::string_view input, Handl
 		case HandlerReturn::Invalid: return EventResponse::Invalid;
 		case HandlerReturn::Custom: return EventResponse::Unhandled;
 	}
+
+	return EventResponse::Unhandled;
 }
 
 InputField::EventResponse InputField::feed(std::string_view input, EventFilterFn filter)
