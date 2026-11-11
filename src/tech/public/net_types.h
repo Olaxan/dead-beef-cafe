@@ -60,3 +60,18 @@ struct OpenSocketEntry
 using NetReadResult = std::expected<std::string, std::error_condition>;
 using NetReadResultIp = std::expected<ip::IpPackage, std::error_condition>;
 using NetReadResultTcp = std::expected<ip::TcpPacket, std::error_condition>;
+
+enum class RouteType
+{
+	Static,
+	Dynamic
+};
+
+struct RoutingTableEntry
+{
+	Address6 address{};
+	uint64_t prefix{32};
+
+	Address6 via{};
+	RouteType type{RouteType::Static};
+};

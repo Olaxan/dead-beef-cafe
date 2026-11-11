@@ -85,6 +85,8 @@ public:
 	std::optional<Uid64> arp_lookup(Address6 addr);
 	void arp_refresh(Uid64 mac, Address6 addr);
 
+	void add_route(Address6 to, uint64_t prefix, Address6 via, RouteType type);
+
 protected:
 
 	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
@@ -124,6 +126,7 @@ protected:
 	std::unordered_map<OpenSocketHandle, OpenSocketEntry> sockets_;
 	std::unordered_map<Address6, Uid64> arp_cache_;
 	std::vector<OpenSocketHandle> raw_sockets_;
+	std::vector<RoutingTableEntry> routes_;
 
 	friend class ProcNetApi;
 };

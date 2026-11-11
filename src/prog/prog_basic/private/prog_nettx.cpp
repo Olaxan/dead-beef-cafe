@@ -64,6 +64,11 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 	co_return 1;
 }
 
+bool check_local_subnet()
+{
+	
+}
+
 ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 {
 	const std::string log_path = "/var/log/tx.log";

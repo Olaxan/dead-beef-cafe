@@ -719,3 +719,8 @@ void NetManager::arp_refresh(Uid64 mac, Address6 addr)
 {
 	arp_cache_[addr] = mac;
 }
+
+void NetManager::add_route(Address6 to, uint64_t prefix, Address6 via, RouteType type)
+{
+	routes_.emplace_back(to, prefix, via, type);
+}
