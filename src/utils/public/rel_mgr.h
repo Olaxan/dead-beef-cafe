@@ -120,56 +120,52 @@ struct RelationshipPolicy<RelationshipType::ManyToMany, A, B>
     std::unordered_map<A, std::unordered_set<B>> forward;
     std::unordered_map<B, std::unordered_set<A>> reverse;
 
+private:
+
+    void unrelate_one_way(const A& a, const B& b)
+    {
+        auto fit = forward.find(a);
+        if (fit == forward.end() || fit->second.erase(b) == 0) return;
+
+        auto rit = reverse.find(b);
+        if (rit != reverse.end())
+        {
+            rit->second.erase(a);
+            if (rit->second.empty())
+                reverse.erase(rit);
+        }
+
+        if (fit->second.empty())
+            forward.erase(fit);
+    }
+
 public:
 
     void relate(const A& a, const B& b)
     {
         forward[a].insert(b);
         reverse[b].insert(a);
+        if constexpr (std::same_as<A, B>)
+        {
+            forward[b].insert(a);
+            reverse[a].insert(b);
+        }
     }
 
     void unrelate(const A& a, const B& b)
     {
-        auto fit = forward.find(a);
-        if (fit == forward.end()) return;
-
-        if (fit->second.erase(b) == 0) return;
-
-        // Remove the reverse relationship.
-        auto rit = reverse.find(b);
-        if (rit != reverse.end())
+        unrelate_one_way(a, b);
+        if constexpr (std::same_as<A, B>)
         {
-            rit->second.erase(a);
-
-            // Remove empty entries.
-            if (rit->second.empty())
-                reverse.erase(rit);
+            unrelate_one_way(b, a);
         }
-
-        // Remove empty entries.
-        if (fit->second.empty())
-            forward.erase(fit);
     }
 
     void unrelate_all(const A& a)
     {
-        auto fit = forward.find(a);
-        if (fit == forward.end()) return;
-
-        // Remove this A from every corresponding B's reverse set.
-        for (const B& b : fit->second)
-        {
-            auto rit = reverse.find(b);
-            if (rit == reverse.end()) continue;
-
-            rit->second.erase(a);
-
-            // Remove empty entries.
-            if (rit->second.empty())
-                reverse.erase(rit);
-        }
-
-        forward.erase(fit);
+        const auto related = get_all_related(a);
+        for (const B& b : related)
+            unrelate(a, b);
     }
 
     bool is_related(const A& a, const B& b) const
@@ -178,18 +174,29 @@ public:
         if (fit != forward.end() && fit->second.contains(b))
             return true;
 
-        auto rit = reverse.find(a);
-        return rit != reverse.end() && rit->second.contains(b);
+        if constexpr (std::same_as<A, B>)
+        {
+            auto rit = reverse.find(a);
+            return rit != reverse.end() && rit->second.contains(b);
+        }
+
+        return false;
     }
 
-    const std::unordered_set<B>& get_all_related(const A& a) const
+    std::unordered_set<B> get_all_related(const A& a) const
     {
-        static const std::unordered_set<B> empty;
+        std::unordered_set<B> related;
 
-        auto it = forward.find(a);
-        if (it == forward.end()) return empty;
+        if (auto it = forward.find(a); it != forward.end())
+            related.insert(it->second.begin(), it->second.end());
 
-        return it->second;
+        if constexpr (std::same_as<A, B>)
+        {
+            if (auto it = reverse.find(a); it != reverse.end())
+                related.insert(it->second.begin(), it->second.end());
+        }
+
+        return related;
     }
 };
 
