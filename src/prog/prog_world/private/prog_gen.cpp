@@ -49,6 +49,9 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 	proc.putln("Created remote host with UID: {}, IP: {}", remote_os.get_uid(), remote_os.get_network_manager()->get_primary_ip());
 	proc.putln("Created middle host with UID: {}, IP: {}", middle_os.get_uid(), middle_os.get_network_manager()->get_primary_ip());
 	proc.putln("We are UID: {}, IP: {}.", local_os.get_uid(), local_os.get_network_manager()->get_primary_ip());
+	proc.put("\n");
+	proc.putln("Linked {}<->{}.", local_os.get_uid(), middle_os.get_uid());
+	proc.putln("Linked {}<->{}.", middle_os.get_uid(), remote_os.get_uid());
 
 	co_return 0;
 }

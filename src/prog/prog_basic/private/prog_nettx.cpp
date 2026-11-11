@@ -103,6 +103,8 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 			{
 				Address6 next_addr = *exp_next_addr;
 
+				proc.putln("Packet {} -via-> {}.", dest_addr, next_addr);
+
 				if (std::optional<Uid64> arp_entry = net->arp_lookup(next_addr); arp_entry.has_value())
 				{
 					net->send(std::move(packet), *arp_entry);
@@ -116,7 +118,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 			}
 			else
 			{
-				proc.putln("Destination not found in routing table. Droppping.");
+				proc.putln("Destination not found in routing table. Dropping.");
 			}
 		}
 		else

@@ -71,7 +71,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 	package.set_payload(icmp.SerializeAsString());
 
 	auto sock_res = netapi.create_socket(SocketType::Raw);
-	if (!sock_res)
+	if (not sock_res)
 	{
 		proc.errln("ping: {}.", sock_res.error().message());
 		co_return 1;
