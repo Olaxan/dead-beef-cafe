@@ -706,7 +706,7 @@ void NetManager::return_handle(OpenSocketHandle h)
 	free_handles_.insert(h);
 }
 
-std::optional<Uid64> NetManager::arp_lookup(Address6 addr)
+std::optional<Uid64> NetManager::arp_lookup(Address6 addr) const
 {
 	if (auto it = arp_cache_.find(addr); it != arp_cache_.end())
 	{
@@ -720,7 +720,40 @@ void NetManager::arp_refresh(Uid64 mac, Address6 addr)
 	arp_cache_[addr] = mac;
 }
 
-void NetManager::add_route(Address6 to, uint64_t prefix, Address6 via, RouteType type)
+void NetManager::add_route(Address6 to, uint8_t prefix, Address6 via, RouteType type)
 {
 	routes_.emplace_back(to, prefix, via, type);
+	// Sort routes based on prefix length and metric.
+}
+
+std::optional<Address6> NetManager::get_route(Address6 dest) const
+{
+	for (const auto& route : routes_)
+	{
+		if (same_subnet(dest, route.address, route.prefix))
+			return route.via;
+	}
+	return std::nullopt;
+}
+
+bool NetManager::same_subnet(Address6 a, Address6 b, uint8_t prefix_length)
+{
+	if (prefix_length < 0 || prefix_length > 128)
+		return false;
+
+	const auto whole_bytes = static_cast<size_t>(prefix_length / 8);
+	if (!std::equal(a.bytes.begin(), a.bytes.begin() + whole_bytes, b.bytes.begin()))
+		return false;
+
+	const auto remaining_bits = prefix_length % 8;
+	if (remaining_bits == 0)
+		return true;
+
+	const auto mask = static_cast<uint8_t>(0xFF << (8 - remaining_bits));
+	return (a.bytes[whole_bytes] & mask) == (b.bytes[whole_bytes] & mask);
+}
+
+bool NetManager::same_subnet(Address6 addr) const
+{
+	return same_subnet(addr, get_primary_ip(), prefix_length_);
 }

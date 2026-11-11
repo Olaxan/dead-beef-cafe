@@ -82,10 +82,14 @@ public:
 
 	bool create_session(OpenSocketHandle h);
 
-	std::optional<Uid64> arp_lookup(Address6 addr);
+	std::optional<Uid64> arp_lookup(Address6 addr) const;
 	void arp_refresh(Uid64 mac, Address6 addr);
 
-	void add_route(Address6 to, uint64_t prefix, Address6 via, RouteType type);
+	void add_route(Address6 to, uint8_t prefix, Address6 via, RouteType type);
+	std::optional<Address6> get_route(Address6 dest) const;
+
+	static bool same_subnet(Address6 a, Address6 b, uint8_t prefix_length);
+	bool same_subnet(Address6 addr) const;
 
 protected:
 
@@ -117,6 +121,7 @@ protected:
 	std::set<OpenSocketHandle> free_handles_{};
 
 	Address6 address_{};
+	int32_t prefix_length_{64};
 	
 	NetQueue rx_queue_{};
 	NetQueue tx_queue_{};

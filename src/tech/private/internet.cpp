@@ -109,7 +109,7 @@ bool Internet::link_unicast(ip::DataFrame&& pak)
 	Uid64 from = pak.src_mac();
 	Uid64 to = pak.dest_mac();
 
-	//std::println("INTERNET: {} bytes from {} to {}.", pak.ByteSizeLong(), from, to);
+	std::println("INTERNET: {} bytes from {} to {}.", pak.ByteSizeLong(), from, to);
 
 	if (to == uint64_t(-1))
 	{
@@ -144,6 +144,7 @@ bool Internet::link_receive(Uid64 to, ip::DataFrame&& pak)
 {
 	if (auto it = nodes_.find(to); it != nodes_.end())
 	{
+		std::println("INTERNET: Receiving to {}.", to);
 		/* If the node is local, we deliver the message. 
 		However, it could also be remote, meaning the message needs to be transmitted
 		over a real internet connection. */

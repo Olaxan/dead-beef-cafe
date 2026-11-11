@@ -70,7 +70,7 @@ enum class RouteType
 struct RoutingTableEntry
 {
 	Address6 address{};
-	uint64_t prefix{32};
+	uint8_t prefix{64};
 
 	Address6 via{};
 	RouteType type{RouteType::Static};
