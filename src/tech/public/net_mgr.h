@@ -75,6 +75,9 @@ public:
 	NetMessageAwaiter async_read_arp();
 
 	Address6 get_primary_ip() const;
+	void set_primary_ip(Address6 addr);
+	void set_primary_ip(const std::string& addr);
+
 	Uid64 get_mac() const;
 
 	bool socket_is_open(OpenSocketHandle h) const;

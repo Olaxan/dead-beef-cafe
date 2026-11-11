@@ -540,6 +540,17 @@ Address6 NetManager::get_primary_ip() const
 	return address_;
 }
 
+void NetManager::set_primary_ip(const std::string& addr)
+{
+	if (auto parsed = Address6::from_string(addr); parsed.has_value())
+		address_ = *parsed;
+}
+
+void NetManager::set_primary_ip(Address6 addr)
+{
+	address_ = addr;
+}
+
 Uid64 NetManager::get_mac() const
 {
 	return os_.get_uid();

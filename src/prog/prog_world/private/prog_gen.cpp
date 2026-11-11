@@ -29,6 +29,10 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 	NetManager* middle_net = middle_os.get_network_manager();
 	NetManager* local_net = local_os.get_network_manager();
 
+	//remote_net->set_primary_ip("dead::");
+	//middle_net->set_primary_ip("beef::");
+	//local_net->set_primary_ip("cafe::");
+
 	Internet& internet = world.get_internet();
 
 	internet.link(local_os.get_uid(), middle_os.get_uid());

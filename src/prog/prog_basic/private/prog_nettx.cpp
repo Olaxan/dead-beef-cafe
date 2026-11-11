@@ -32,8 +32,6 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 	proc.putln("Placing {} bytes in ARP buffer.", local_packet.ByteSizeLong());
 	proc.putln("Performing ARP request (to find {}).", dest_addr);
 
-	std::println("{}. ARP for {}.", net->get_primary_ip().bytes[0], dest_addr);
-
 	ip::ArpPackage arp;
 	arp.set_dest_ip(dest_addr.data_str());
 	arp.set_type(ip::ArpType::PROBE);
@@ -105,8 +103,6 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 			{
 				Address6 next_addr = *exp_next_addr;
 
-				std::println("{}. Next hop to {} is {}.", local_addr.bytes[0], dest_addr, next_addr);
-
 				if (std::optional<Uid64> arp_entry = net->arp_lookup(next_addr); arp_entry.has_value())
 				{
 					net->send(std::move(packet), *arp_entry);
@@ -120,7 +116,6 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 			}
 			else
 			{
-				std::println("{}. No route to {}.", local_addr.bytes[0], dest_addr);
 				proc.putln("Destination not found in routing table. Droppping.");
 			}
 		}

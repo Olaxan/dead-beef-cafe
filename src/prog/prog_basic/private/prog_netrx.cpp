@@ -71,7 +71,6 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 				if (packet.dest_ip() == net->get_primary_ip().data_str())
 				{
 					proc.putln("Received matched ARP probe.");
-					std::println("{}. Received matching ARP probe.", local_ip.bytes[0]);
 
 					ip::ArpPackage reply;
 					reply.set_type(ip::ArpType::ANNOUNCE);
@@ -81,10 +80,6 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 					auto frame = make_frame(frame_src_mac, ip::FrameType::ARP);
 					frame.set_payload(reply.SerializeAsString());
 					net->send(std::move(frame));
-				}
-				else
-				{
-					std::println("{}. Dropped ARP not for us.", local_ip.bytes[0]);
 				}
 
 				return;
@@ -101,9 +96,6 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		{
 			const Address6& src_ip = *exp_src_addr;
 			const Address6& dest_ip = *exp_dest_addr;
-
-			//std::println("{}. Adding {}->{} to ARP cache.", 
-			//	local_ip.bytes[0], src_mac, src_ip);
 
 			//net->arp_refresh(src_mac, src_ip);
 
