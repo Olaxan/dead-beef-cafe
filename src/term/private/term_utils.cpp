@@ -83,6 +83,11 @@ std::string TermUtils::msg_line(std::string str, int32_t length)
 	return std::format("{} " LINE_BEGIN "{}" LINE_END, str, std::string(length - 1, 'q'));
 }
 
+std::string TermUtils::bar(int32_t length)
+{
+	return std::format(REVERSE_VIDEO "{}" CSI_RESET, std::string(length, ' '));
+}
+
 std::string TermUtils::status_line(int32_t line, int32_t width, std::string left, std::string right)
 {
 	std::stringstream ss;

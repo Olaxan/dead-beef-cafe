@@ -485,7 +485,6 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 		}
 		case ip::TcpType::Test:
 		{
-			//std::println("Received TEST from {}.", src_addr);
 			if (OpenSocketEntry* sock = find_socket(sess))
 			{
 				auto opt_rep = make_tcp_reply_ip(sock->handle, ip::TcpType::Ack, {});
