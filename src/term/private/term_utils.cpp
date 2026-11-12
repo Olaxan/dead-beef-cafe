@@ -127,6 +127,11 @@ TermUtils::Effect TermUtils::background(TermColor color)
 	return make_effect(std::format(CSI "{}m", ansi_bg_code(color)), CSI "49m");
 }
 
+TermUtils::Effect TermUtils::color(TermColor fg, TermColor bg)
+{
+	return background(bg) | foreground(fg);
+}
+
 TermUtils::Effect TermUtils::bold()
 {
 	return make_effect(CSI "1m", CSI "22m");
@@ -151,11 +156,6 @@ std::string TermUtils::strip_ansi(const std::string& in)
 {
 	static const std::regex ansi_regex(R"(\x1B\[[0-?]*[ -/]*[@-~])");
 	return std::regex_replace(in, ansi_regex, "");
-}
-
-TermUtils::Text TermUtils::color(const std::string& str, TermColor fg, TermColor bg)
-{
-	return text(str) | (foreground(fg) | background(bg));
 }
 
 TermUtils::Text TermUtils::horizontal_line(int32_t length, char glyph)

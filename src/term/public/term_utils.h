@@ -113,14 +113,13 @@ namespace TermUtils
 
 	Effect foreground(TermColor color);
 	Effect background(TermColor color);
+	Effect color(TermColor foreground, TermColor background);
 	Effect bold();
 	Effect underline();
 	Effect reverse_video();
 	Effect line_graphics();
 
 	std::string strip_ansi(const std::string& in);
-
-	Text color(const std::string& str, TermColor fg, TermColor bg = TermColor::Black);
 
 	Text horizontal_line(int32_t length, char glyph = '-');
 	Text bar_text(int32_t length);
