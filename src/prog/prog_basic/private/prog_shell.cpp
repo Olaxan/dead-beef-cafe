@@ -518,16 +518,12 @@ ProcessTask Programs::CmdShell(Proc& proc, std::vector<std::string> args)
 		{
 			/* Print a prettier result line if the terminal width parameter is set. */
 			auto const current_time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
-			
 			std::string ret_sym = (TermUtils::text(ret == 0 ? "✓" : "✕")
 				| TermUtils::foreground(ret == 0 ? TermColor::Green : TermColor::Red)).str();
-			
 			std::string time_str = std::format("{:%Y-%m-%d %X}", current_time);
 			std::string line_str = std::format("{} {}", ret_sym, time_str);
-			
-			int32_t length = static_cast<int32_t>(2 + time_str.length());
 
-			proc.putln("\n{}", TermUtils::msg_line(line_str, term_w - length));
+			proc.putln("\n{}", TermUtils::msg_line(line_str, term_w));
 		}
 		else
 		{

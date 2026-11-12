@@ -12,6 +12,24 @@
 
 namespace
 {
+	std::size_t visible_width(std::string_view value)
+	{
+		const std::string plain = TermUtils::strip_ansi(std::string(value));
+		return static_cast<std::size_t>(icu::UnicodeString::fromUTF8(plain).countChar32());
+	}
+
+	std::size_t leading_padding(std::size_t width, std::size_t content_width, TermUtils::TermJustification justification)
+	{
+		const std::size_t padding = width > content_width ? width - content_width : 0;
+		switch (justification)
+		{
+			case TermUtils::TermJustification::Center: return padding / 2;
+			case TermUtils::TermJustification::Right: return padding;
+			case TermUtils::TermJustification::Left: return 0;
+		}
+		return 0;
+	}
+
 	std::string padding(int32_t width, std::size_t left, std::size_t right)
 	{
 		const std::size_t content_width = left + right + 2;
@@ -150,6 +168,19 @@ TermUtils::Text TermUtils::bar_text(int32_t length)
 	return text(std::string(std::max(0, length), ' ')) | reverse_video();
 }
 
+TermUtils::Text TermUtils::bar_text(int32_t length, std::string label, TermJustification justification)
+{
+	const std::size_t label_width = visible_width(label);
+	const std::size_t bar_width = std::max(
+		static_cast<std::size_t>(std::max(0, length)),
+		label_width);
+	const std::size_t left = leading_padding(bar_width, label_width, justification);
+	std::string value(left, ' ');
+	value.append(label);
+	value.append(bar_width - label_width - left, ' ');
+	return text(std::move(value)) | reverse_video();
+}
+
 TermUtils::Text TermUtils::heading(std::string title, int32_t width)
 {
 	width = std::max(0, width);
@@ -177,6 +208,26 @@ std::string TermUtils::msg_line(std::string str, int32_t length)
 {
 	const int32_t fill_length = length > 1 ? length - 1 : 0;
 	return std::format("{} {}", str, (text(std::string(fill_length, 'q')) | line_graphics()).str());
+}
+
+std::string TermUtils::msg_line(std::string str, int32_t width, TermJustification justification)
+{
+	const std::size_t label_width = visible_width(str);
+
+	if (label_width == 0)
+		return line(width);
+
+	const std::size_t line_width = std::max(
+		static_cast<std::size_t>(std::max(0, width)),
+		label_width + 2);
+	const std::size_t fill_width = line_width - label_width - 2;
+	const std::size_t left_fill = leading_padding(fill_width, 0, justification);
+	const std::size_t right_fill = fill_width - left_fill;
+
+	return std::format("{} {} {}",
+		(text(std::string(left_fill, 'q')) | line_graphics()).str(),
+		str,
+		(text(std::string(right_fill, 'q')) | line_graphics()).str());
 }
 
 std::string TermUtils::bar(int32_t length)

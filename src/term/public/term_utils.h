@@ -74,6 +74,13 @@ enum class TermColor
 namespace TermUtils
 {
 
+	enum class TermJustification
+	{
+		Left,
+		Center,
+		Right,
+	};
+
 	class Text
 	{
 	public:
@@ -107,11 +114,13 @@ namespace TermUtils
 
 	Text horizontal_line(int32_t length, char glyph = '-');
 	Text bar_text(int32_t length);
+	Text bar_text(int32_t length, std::string label, TermJustification justification = TermJustification::Left);
 	Text heading(std::string title, int32_t width);
 
 	std::string pixel(int32_t x, int32_t y, std::string c);
 	std::string line(int32_t length);
 	std::string msg_line(std::string str, int32_t length);
+	std::string msg_line(std::string str, int32_t width, TermJustification justification);
 	std::string bar(int32_t length);
 	std::string status_line(int32_t line, int32_t width, std::string left, std::string right);
 	std::string status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right);

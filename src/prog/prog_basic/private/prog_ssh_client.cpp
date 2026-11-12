@@ -131,7 +131,7 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	int32_t width = proc.get_var<int32_t>("TERM_W");
 
-	proc.putln("{}", TermUtils::bar_text(width) | TermUtils::foreground(TermColor::Red));
+	proc.putln("{}", TermUtils::heading("SSH Open", width) | TermUtils::foreground(TermColor::Red));
 
 	auto reader = SshReader(proc, fd);
 

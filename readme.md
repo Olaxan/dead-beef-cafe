@@ -15,6 +15,8 @@ std::string label = std::format("{}", text("Warning") | foreground(TermColor::Ye
 std::string banner = heading("System status", 40).str();
 std::string separator = horizontal_line(40, '=').str();
 std::string progress_bar = bar_text(20).str();
+std::string labeled_bar = bar_text(20, "Loading", TermJustification::Center).str();
+std::string section_line = msg_line("Network status", 40, TermJustification::Center);
 ```
 
 Available effects include `foreground`, `background`, `bold`, `underline`,
