@@ -9,6 +9,7 @@
 #include <string>
 #include <format>
 #include <functional>
+#include <ostream>
 #include <string_view>
 #include <utility>
 
@@ -88,6 +89,11 @@ namespace TermUtils
 
 		const std::string& str() const noexcept { return value_; }
 
+		friend std::ostream& operator<<(std::ostream& stream, const Text& value)
+		{
+			return stream << value.value_;
+		}
+
 	private:
 		std::string value_;
 	};
@@ -114,27 +120,24 @@ namespace TermUtils
 
 	std::string strip_ansi(const std::string& in);
 
-	int32_t get_ansi_fg_color(TermColor color);
-	int32_t get_ansi_bg_color(TermColor color);
-
-	std::string color(const std::string& str, TermColor fg, TermColor bg = TermColor::Black);
+	Text color(const std::string& str, TermColor fg, TermColor bg = TermColor::Black);
 
 	Text horizontal_line(int32_t length, char glyph = '-');
 	Text bar_text(int32_t length);
 	Text bar_text(std::string label, int32_t length, TermJustification justification = TermJustification::Left);
 	Text heading(std::string title, int32_t width);
 
-	std::string pixel(int32_t x, int32_t y, std::string c);
-	std::string line(int32_t length);
-	std::string msg_line(std::string str, int32_t length);
-	std::string msg_line(std::string str, int32_t width, TermJustification justification);
-	std::string bar(int32_t length);
-	std::string status_line(int32_t line, int32_t width, std::string left, std::string right);
-	std::string status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right);
-	std::string status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right);
-	std::string line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out_char);
-	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
-	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg);
+	Text pixel(int32_t x, int32_t y, std::string c);
+	Text line(int32_t length);
+	Text msg_line(std::string str, int32_t length);
+	Text msg_line(std::string str, int32_t width, TermJustification justification);
+	Text bar(int32_t length);
+	Text status_line(int32_t line, int32_t width, std::string left, std::string right);
+	Text status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right);
+	Text status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right);
+	Text line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out_char);
+	Text frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+	Text frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg);
 };
 
 template<>

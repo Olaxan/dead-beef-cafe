@@ -12,6 +12,54 @@
 
 namespace
 {
+	int32_t ansi_fg_code(TermColor color)
+	{
+		switch (color)
+		{
+			case TermColor::Black: return 30;
+			case TermColor::Red: return 31;
+			case TermColor::Green: return 32;
+			case TermColor::Yellow: return 33;
+			case TermColor::Blue: return 34;
+			case TermColor::Magenta: return 35;
+			case TermColor::Cyan: return 36;
+			case TermColor::White: return 37;
+			case TermColor::BrightBlack: return 90;
+			case TermColor::BrightRed: return 91;
+			case TermColor::BrightGreen: return 92;
+			case TermColor::BrightYellow: return 93;
+			case TermColor::BrightBlue: return 94;
+			case TermColor::BrightMagenta: return 95;
+			case TermColor::BrightCyan: return 96;
+			case TermColor::BrightWhite: return 97;
+			default: return 37;
+		}
+	}
+
+	int32_t ansi_bg_code(TermColor color)
+	{
+		switch (color)
+		{
+			case TermColor::Black: return 40;
+			case TermColor::Red: return 41;
+			case TermColor::Green: return 42;
+			case TermColor::Yellow: return 43;
+			case TermColor::Blue: return 44;
+			case TermColor::Magenta: return 45;
+			case TermColor::Cyan: return 46;
+			case TermColor::White: return 47;
+			case TermColor::BrightBlack: return 100;
+			case TermColor::BrightRed: return 101;
+			case TermColor::BrightGreen: return 102;
+			case TermColor::BrightYellow: return 103;
+			case TermColor::BrightBlue: return 104;
+			case TermColor::BrightMagenta: return 105;
+			case TermColor::BrightCyan: return 106;
+			case TermColor::BrightWhite: return 107;
+			default: return 40;
+		}
+	}
+
 	std::size_t visible_width(std::string_view value)
 	{
 		const std::string plain = TermUtils::strip_ansi(std::string(value));
@@ -71,12 +119,12 @@ TermUtils::Effect TermUtils::operator|(Effect first, Effect second)
 
 TermUtils::Effect TermUtils::foreground(TermColor color)
 {
-	return make_effect(std::format(CSI "{}m", get_ansi_fg_color(color)), CSI "39m");
+	return make_effect(std::format(CSI "{}m", ansi_fg_code(color)), CSI "39m");
 }
 
 TermUtils::Effect TermUtils::background(TermColor color)
 {
-	return make_effect(std::format(CSI "{}m", get_ansi_bg_color(color)), CSI "49m");
+	return make_effect(std::format(CSI "{}m", ansi_bg_code(color)), CSI "49m");
 }
 
 TermUtils::Effect TermUtils::bold()
@@ -105,57 +153,9 @@ std::string TermUtils::strip_ansi(const std::string& in)
 	return std::regex_replace(in, ansi_regex, "");
 }
 
-int32_t TermUtils::get_ansi_fg_color(TermColor color)
+TermUtils::Text TermUtils::color(const std::string& str, TermColor fg, TermColor bg)
 {
-	switch (color)
-	{
-		case TermColor::Black: 			return 30;
-		case TermColor::Red: 			return 31;
-		case TermColor::Green:   		return 32;
-		case TermColor::Yellow:  		return 33;
-		case TermColor::Blue:    		return 34;
-		case TermColor::Magenta: 		return 35;
-		case TermColor::Cyan:    		return 36;
-		case TermColor::White:   		return 37;
-		case TermColor::BrightBlack:    return 90;
-		case TermColor::BrightRed:      return 91;
-		case TermColor::BrightGreen:    return 92;
-		case TermColor::BrightYellow:   return 93;
-		case TermColor::BrightBlue:     return 94;
-		case TermColor::BrightMagenta:  return 95;
-		case TermColor::BrightCyan:     return 96;
-		case TermColor::BrightWhite:    return 97;
-		default: return 37;
-	}
-}
-
-int32_t TermUtils::get_ansi_bg_color(TermColor color)
-{
-	switch (color)
-	{
-		case TermColor::Black: 			return 40;
-		case TermColor::Red: 			return 41;
-		case TermColor::Green:   		return 42;
-		case TermColor::Yellow:  		return 43;
-		case TermColor::Blue:    		return 44;
-		case TermColor::Magenta: 		return 45;
-		case TermColor::Cyan:    		return 46;
-		case TermColor::White:   		return 47;
-		case TermColor::BrightBlack:    return 100;
-		case TermColor::BrightRed:      return 101;
-		case TermColor::BrightGreen:    return 102;
-		case TermColor::BrightYellow:   return 103;
-		case TermColor::BrightBlue:     return 104;
-		case TermColor::BrightMagenta:  return 105;
-		case TermColor::BrightCyan:     return 106;
-		case TermColor::BrightWhite:    return 107;
-		default: return 40;
-	}
-}
-
-std::string TermUtils::color(const std::string& str, TermColor fg, TermColor bg)
-{
-	return (text(str) | (foreground(fg) | background(bg))).str();
+	return text(str) | (foreground(fg) | background(bg));
 }
 
 TermUtils::Text TermUtils::horizontal_line(int32_t length, char glyph)
@@ -194,22 +194,22 @@ TermUtils::Text TermUtils::heading(std::string title, int32_t width)
 	return text(std::move(value)) | bold();
 }
 
-std::string TermUtils::pixel(int32_t x, int32_t y, std::string c)
+TermUtils::Text TermUtils::pixel(int32_t x, int32_t y, std::string c)
 {
-	return std::format(MOVE_CURSOR_PLACEHOLDER "{}", y, x, c);
+	return text(std::format(MOVE_CURSOR_PLACEHOLDER "{}", y, x, c));
 }
 
-std::string TermUtils::line(int32_t length)
+TermUtils::Text TermUtils::line(int32_t length)
 {
-	return (text(std::string(std::max(0, length), 'q')) | line_graphics()).str();
+	return text(std::string(std::max(0, length), 'q')) | line_graphics();
 }
 
-std::string TermUtils::msg_line(std::string str, int32_t length)
+TermUtils::Text TermUtils::msg_line(std::string str, int32_t length)
 {
 	return msg_line(std::move(str), length, TermJustification::Left);
 }
 
-std::string TermUtils::msg_line(std::string str, int32_t width, TermJustification justification)
+TermUtils::Text TermUtils::msg_line(std::string str, int32_t width, TermJustification justification)
 {
 	const std::size_t label_width = visible_width(str);
 
@@ -223,18 +223,18 @@ std::string TermUtils::msg_line(std::string str, int32_t width, TermJustificatio
 	const std::size_t left_fill = leading_padding(fill_width, 0, justification);
 	const std::size_t right_fill = fill_width - left_fill;
 
-	return std::format("{} {} {}",
+	return text(std::format("{} {} {}",
 		(text(std::string(left_fill, 'q')) | line_graphics()).str(),
 		str,
-		(text(std::string(right_fill, 'q')) | line_graphics()).str());
+		(text(std::string(right_fill, 'q')) | line_graphics()).str()));
 }
 
-std::string TermUtils::bar(int32_t length)
+TermUtils::Text TermUtils::bar(int32_t length)
 {
-	return bar_text(length).str();
+	return bar_text(length);
 }
 
-std::string TermUtils::status_line(int32_t line, int32_t width, std::string left, std::string right)
+TermUtils::Text TermUtils::status_line(int32_t line, int32_t width, std::string left, std::string right)
 {
 	std::stringstream ss;
 	ss << MOVE_CURSOR_FORMAT(1, line);
@@ -243,10 +243,10 @@ std::string TermUtils::status_line(int32_t line, int32_t width, std::string left
 	ss << padding(width, left.length(), right.length());
 	ss << right;
 	ss << " ";
-	return (text(ss.str()) | reverse_video()).str();
+	return text(ss.str()) | reverse_video();
 }
 
-std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right)
+TermUtils::Text TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right)
 {
 	std::string left_out;
 	left.toUTF8String(left_out);
@@ -257,10 +257,10 @@ std::string TermUtils::status_line(int32_t line, int32_t width, const icu::Unico
 	ss << padding(width, static_cast<std::size_t>(left.countChar32()), right.length());
 	ss << right;
 	ss << " ";
-	return (text(ss.str()) | reverse_video()).str();
+	return text(ss.str()) | reverse_video();
 }
 
-std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right)
+TermUtils::Text TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right)
 {
 	std::stringstream ss;
 	ss << MOVE_CURSOR_FORMAT(1, line);
@@ -269,7 +269,7 @@ std::string TermUtils::status_line(int32_t line, int32_t width, const icu::Unico
 	ss << padding(width, static_cast<std::size_t>(left.countChar32()), static_cast<std::size_t>(right.countChar32()));
 	ss << right;
 	ss << " ";
-	return (text(ss.str()) | reverse_video()).str();
+	return text(ss.str()) | reverse_video();
 }
 
 std::string bhm_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string c)
@@ -360,15 +360,14 @@ std::string bhm_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string
 	return ss.str();
 }
 
-std::string TermUtils::line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out)
+TermUtils::Text TermUtils::line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string out)
 {
-	return bhm_line(x1, y1, x2, y2, out);
+	return text(bhm_line(x1, y1, x2, y2, out));
 }
 
-std::string TermUtils::frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2)
+TermUtils::Text TermUtils::frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2)
 {
 	std::stringstream ss;
-	ss << LINE_BEGIN; 					// Enter line drawing mode
 	ss << line(x1 + 1, y1, x2 - 1, y1, "q");	// Top H
 	ss << line(x1, y1 + 1, x1, y2 - 1, "x");	// Left V
 	ss << line(x1 + 1, y2, x2 - 1, y2, "q");	// Bottom H
@@ -378,16 +377,15 @@ std::string TermUtils::frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2)
 	ss << pixel(x1, y2, "m");
 	ss << pixel(x2, y2, "j");
 	ss << MOVE_CURSOR_FORMAT(x1 + 1, y1 + 1);
-    ss << LINE_END; 					// Exit line drawing mode
-	return ss.str();
+	return text(ss.str()) | line_graphics();
 }
 
-std::string TermUtils::frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg)
+TermUtils::Text TermUtils::frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg)
 {
 	std::stringstream ss;
 	ss << frame(x1, y1, x2, y2);
 	ss << MOVE_CURSOR_FORMAT(x1 + 3, y1);
 	ss << msg;
 	ss << MOVE_CURSOR_FORMAT(x1 + 2, y1 + 2);
-	return ss.str();
+	return text(ss.str());
 }
