@@ -19,6 +19,12 @@ std::string labeled_bar = std::format("{}", bar_text("Loading", 20, TermJustific
 std::string section_line = msg_line("Network status", 40, TermJustification::Center);
 ```
 
+```c++
+std::format("\nWelcome to {}.\nPlease make sure you sign the g{}!\n",
+		(TermUtils::text(" DEAD:BEEF:CAFE:: ") | TermUtils::foreground(TermColor::Black) | TermUtils::background(TermColor::Red)).str(),
+		(TermUtils::text("uest book") | TermUtils::underline()).str());
+```
+
 Available effects include `foreground`, `background`, `bold`, `underline`,
 `reverse_video`, and `line_graphics`. `horizontal_line`, `bar_text`, and
 `heading` provide basic text shapes. Existing cursor and frame helpers remain

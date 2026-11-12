@@ -34,9 +34,13 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	proc.putln("\nWelcome to {}.\nPlease make sure you sign the g{}!\n",
-		(TermUtils::text(" DEAD:BEEF:CAFE:: ") | TermUtils::foreground(TermColor::Black) | TermUtils::background(TermColor::Red)).str(),
-		(TermUtils::text("uest book") | TermUtils::underline()).str());
+	if (auto exp_motd = proc.fs.open("/etc/motd"))
+	{
+		if (auto exp_motd_read = proc.fs.read(*exp_motd))
+		{
+			proc.putln("\n{}\n", *exp_motd_read);
+		}
+	}
 
 	int32_t ret = co_await proc.sys.exec("/bin/shell");
 	auto status = co_await proc.net.async_close_socket(fd);
