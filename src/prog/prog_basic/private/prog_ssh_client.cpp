@@ -21,6 +21,8 @@
 #include <signal.h>
 #include <iso646.h>
 
+using namespace TermUtils;
+
 EagerTask<int32_t> SshReader(Proc& proc, FileDescriptor fd)
 {
 	ProcNetApi& netapi = proc.net;
@@ -131,7 +133,8 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	int32_t width = proc.get_var<int32_t>("TERM_W");
 
-	proc.putln("{}", TermUtils::heading("SSH Open", width) | TermUtils::foreground(TermColor::Red));
+	auto title_begin = text("=== SSH BEGIN [{}] ===", params.addr).str();
+	proc.putln("\n{}\n", bar_text(title_begin, width, TermJustification::Center) | foreground(TermColor::Blue));
 
 	auto reader = SshReader(proc, fd);
 
@@ -164,6 +167,9 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 	{
 		co_await reader;
 	}
+
+	auto title_end = text("=== SSH END [{}] ===", params.addr).str();
+	proc.putln("\n{}\n", bar_text(title_end, width, TermJustification::Center) | foreground(TermColor::Red));
 
 	co_return 0;
 }

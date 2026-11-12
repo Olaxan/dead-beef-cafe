@@ -168,7 +168,7 @@ TermUtils::Text TermUtils::bar_text(int32_t length)
 	return text(std::string(std::max(0, length), ' ')) | reverse_video();
 }
 
-TermUtils::Text TermUtils::bar_text(int32_t length, std::string label, TermJustification justification)
+TermUtils::Text TermUtils::bar_text(std::string label, int32_t length, TermJustification justification)
 {
 	const std::size_t label_width = visible_width(label);
 	const std::size_t bar_width = std::max(
@@ -206,8 +206,7 @@ std::string TermUtils::line(int32_t length)
 
 std::string TermUtils::msg_line(std::string str, int32_t length)
 {
-	const int32_t fill_length = length > 1 ? length - 1 : 0;
-	return std::format("{} {}", str, (text(std::string(fill_length, 'q')) | line_graphics()).str());
+	return msg_line(std::move(str), length, TermJustification::Left);
 }
 
 std::string TermUtils::msg_line(std::string str, int32_t width, TermJustification justification)

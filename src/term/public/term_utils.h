@@ -95,6 +95,13 @@ namespace TermUtils
 	using Effect = std::function<std::string(std::string_view)>;
 
 	Text text(std::string value);
+
+	template<typename ...Args>
+	Text text(std::format_string<Args...> fmt, Args&& ...args)
+	{
+		return text(std::format(fmt, std::forward<Args>(args)...));
+	}
+
 	Text operator|(Text value, const Effect& effect);
 	Effect operator|(Effect first, Effect second);
 
@@ -114,7 +121,7 @@ namespace TermUtils
 
 	Text horizontal_line(int32_t length, char glyph = '-');
 	Text bar_text(int32_t length);
-	Text bar_text(int32_t length, std::string label, TermJustification justification = TermJustification::Left);
+	Text bar_text(std::string label, int32_t length, TermJustification justification = TermJustification::Left);
 	Text heading(std::string title, int32_t width);
 
 	std::string pixel(int32_t x, int32_t y, std::string c);
