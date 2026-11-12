@@ -93,16 +93,10 @@ ProcessTask Programs::CmdSshServer(Proc& proc, std::vector<std::string> args)
 	
 		auto sess_writer = [con](Proc& wproc, WriteInput str)
 		{
-			com::CommandReply rep;
-
-			if (not str)
-				return;
-
-			rep.set_reply(*str);
-			
-			std::string out_str;
-			if (rep.SerializeToString(&out_str))
-				wproc.net.async_write_socket(con, out_str);
+			if (str)
+			{
+				wproc.net.async_write_socket(con, *str);
+			}
 		};
 	
 		OS::CreateProcessParams params
