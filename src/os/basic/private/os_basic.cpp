@@ -28,6 +28,7 @@ void BasicOS::start_os()
 	state_ = DeviceState::PoweredOn;
 	run_process(Programs::SrvNetTx, {"nettx"}, {});
 	run_process(Programs::SrvNetRx, {"netrx"}, {});
+	run_process(Programs::CmdSshServer, {"ssh"}, {});
 }
 
 void BasicOS::reinstall_os()
