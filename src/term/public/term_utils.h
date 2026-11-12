@@ -120,3 +120,12 @@ namespace TermUtils
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 	std::string frame(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string msg);
 };
+
+template<>
+struct std::formatter<TermUtils::Text> : std::formatter<std::string>
+{
+	auto format(const TermUtils::Text& value, auto& ctx) const
+	{
+		return std::formatter<std::string>::format(value.str(), ctx);
+	}
+};

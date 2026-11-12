@@ -129,6 +129,10 @@ ProcessTask Programs::CmdSshClient(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("Connected.");
 
+	int32_t width = proc.get_var<int32_t>("TERM_W");
+
+	proc.putln("{}", TermUtils::bar_text(width) | TermUtils::foreground(TermColor::Red));
+
 	auto reader = SshReader(proc, fd);
 
 	while (netapi.socket_is_open(fd))

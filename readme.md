@@ -11,7 +11,7 @@ do not leak into following output:
 ```cpp
 using namespace TermUtils;
 
-std::string label = (text("Warning") | foreground(TermColor::Yellow) | bold()).str();
+std::string label = std::format("{}", text("Warning") | foreground(TermColor::Yellow) | bold());
 std::string banner = heading("System status", 40).str();
 std::string separator = horizontal_line(40, '=').str();
 std::string progress_bar = bar_text(20).str();
