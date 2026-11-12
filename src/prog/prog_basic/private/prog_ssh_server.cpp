@@ -34,7 +34,9 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 		co_return 1;
 	}
 
-	proc.putln("\nWelcome to " CSI_CODE(30;41) " DEAD:BEEF:CAFE:: " CSI_RESET ".\nPlease make sure you sign the g" CSI_CODE(4) "uest book" CSI_RESET "!\n");
+	proc.putln("\nWelcome to {}.\nPlease make sure you sign the g{}!\n",
+		(TermUtils::text(" DEAD:BEEF:CAFE:: ") | TermUtils::foreground(TermColor::Black) | TermUtils::background(TermColor::Red)).str(),
+		(TermUtils::text("uest book") | TermUtils::underline()).str());
 
 	int32_t ret = co_await proc.sys.exec("/bin/shell");
 	auto status = co_await proc.net.async_close_socket(fd);

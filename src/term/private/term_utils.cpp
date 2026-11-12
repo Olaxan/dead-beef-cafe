@@ -8,6 +8,78 @@
 
 #include <sstream>
 #include <regex>
+#include <algorithm>
+
+namespace
+{
+	std::string padding(int32_t width, std::size_t left, std::size_t right)
+	{
+		const std::size_t content_width = left + right + 2;
+		const std::size_t line_width = width > 0 ? static_cast<std::size_t>(width) : 0;
+		return std::string(line_width > content_width ? line_width - content_width : 0, ' ');
+	}
+
+	TermUtils::Effect make_effect(std::string begin, std::string end)
+	{
+		return [begin = std::move(begin), end = std::move(end)](std::string_view value)
+		{
+			std::string result;
+			result.reserve(begin.size() + value.size() + end.size());
+			result.append(begin);
+			result.append(value);
+			result.append(end);
+			return result;
+		};
+	}
+}
+
+TermUtils::Text TermUtils::text(std::string value)
+{
+	return Text{std::move(value)};
+}
+
+TermUtils::Text TermUtils::operator|(Text value, const Effect& effect)
+{
+	return Text{effect(value.str())};
+}
+
+TermUtils::Effect TermUtils::operator|(Effect first, Effect second)
+{
+	return [first = std::move(first), second = std::move(second)](std::string_view value)
+	{
+		return first(second(value));
+	};
+}
+
+TermUtils::Effect TermUtils::foreground(TermColor color)
+{
+	return make_effect(std::format(CSI "{}m", get_ansi_fg_color(color)), CSI "39m");
+}
+
+TermUtils::Effect TermUtils::background(TermColor color)
+{
+	return make_effect(std::format(CSI "{}m", get_ansi_bg_color(color)), CSI "49m");
+}
+
+TermUtils::Effect TermUtils::bold()
+{
+	return make_effect(CSI "1m", CSI "22m");
+}
+
+TermUtils::Effect TermUtils::underline()
+{
+	return make_effect(CSI "4m", CSI "24m");
+}
+
+TermUtils::Effect TermUtils::reverse_video()
+{
+	return make_effect(CSI "7m", CSI "27m");
+}
+
+TermUtils::Effect TermUtils::line_graphics()
+{
+	return make_effect(LINE_BEGIN, LINE_END);
+}
 
 std::string TermUtils::strip_ansi(const std::string& in)
 {
@@ -65,7 +137,30 @@ int32_t TermUtils::get_ansi_bg_color(TermColor color)
 
 std::string TermUtils::color(const std::string& str, TermColor fg, TermColor bg)
 {
-	return std::format(CSI "{};{}m{}" CSI_CODE(0), TermUtils::get_ansi_fg_color(fg), TermUtils::get_ansi_bg_color(bg), str);
+	return (text(str) | (foreground(fg) | background(bg))).str();
+}
+
+TermUtils::Text TermUtils::horizontal_line(int32_t length, char glyph)
+{
+	return text(std::string(std::max(0, length), glyph));
+}
+
+TermUtils::Text TermUtils::bar_text(int32_t length)
+{
+	return text(std::string(std::max(0, length), ' ')) | reverse_video();
+}
+
+TermUtils::Text TermUtils::heading(std::string title, int32_t width)
+{
+	width = std::max(0, width);
+	const std::size_t title_size = title.size();
+	const std::size_t line_size = static_cast<std::size_t>(width);
+	const std::size_t padding = line_size > title_size ? (line_size - title_size) / 2 : 0;
+	std::string value(padding, ' ');
+	value.append(title);
+	value.push_back('\n');
+	value.append(line_size, '-');
+	return text(std::move(value)) | bold();
 }
 
 std::string TermUtils::pixel(int32_t x, int32_t y, std::string c)
@@ -75,31 +170,30 @@ std::string TermUtils::pixel(int32_t x, int32_t y, std::string c)
 
 std::string TermUtils::line(int32_t length)
 {
-	return std::format(LINE_BEGIN "{}" LINE_END, std::string(length, 'q'));
+	return (text(std::string(std::max(0, length), 'q')) | line_graphics()).str();
 }
 
 std::string TermUtils::msg_line(std::string str, int32_t length)
 {
-	return std::format("{} " LINE_BEGIN "{}" LINE_END, str, std::string(length - 1, 'q'));
+	const int32_t fill_length = length > 1 ? length - 1 : 0;
+	return std::format("{} {}", str, (text(std::string(fill_length, 'q')) | line_graphics()).str());
 }
 
 std::string TermUtils::bar(int32_t length)
 {
-	return std::format(REVERSE_VIDEO "{}" CSI_RESET, std::string(length, ' '));
+	return bar_text(length).str();
 }
 
 std::string TermUtils::status_line(int32_t line, int32_t width, std::string left, std::string right)
 {
 	std::stringstream ss;
-	ss << REVERSE_VIDEO;
 	ss << MOVE_CURSOR_FORMAT(1, line);
 	ss << " ";
 	ss << left;
-	ss << std::string(width - (left.length() + right.length() + 2), ' ');
+	ss << padding(width, left.length(), right.length());
 	ss << right;
 	ss << " ";
-	ss << CSI_RESET;
-	return ss.str();
+	return (text(ss.str()) | reverse_video()).str();
 }
 
 std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, std::string right)
@@ -107,29 +201,25 @@ std::string TermUtils::status_line(int32_t line, int32_t width, const icu::Unico
 	std::string left_out;
 	left.toUTF8String(left_out);
 	std::stringstream ss;
-	ss << REVERSE_VIDEO;
 	ss << MOVE_CURSOR_FORMAT(1, line);
 	ss << " ";
 	ss << left_out;
-	ss << std::string(width - (left.countChar32() + right.length() + 2), ' ');
+	ss << padding(width, static_cast<std::size_t>(left.countChar32()), right.length());
 	ss << right;
 	ss << " ";
-	ss << CSI_RESET;
-	return ss.str();
+	return (text(ss.str()) | reverse_video()).str();
 }
 
 std::string TermUtils::status_line(int32_t line, int32_t width, const icu::UnicodeString& left, const icu::UnicodeString& right)
 {
 	std::stringstream ss;
-	ss << REVERSE_VIDEO;
 	ss << MOVE_CURSOR_FORMAT(1, line);
 	ss << " ";
 	ss << left;
-	ss << std::string(width - (left.countChar32() + right.countChar32() + 2), ' ');
+	ss << padding(width, static_cast<std::size_t>(left.countChar32()), static_cast<std::size_t>(right.countChar32()));
 	ss << right;
 	ss << " ";
-	ss << CSI_RESET;
-	return ss.str();
+	return (text(ss.str()) | reverse_video()).str();
 }
 
 std::string bhm_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2, std::string c)

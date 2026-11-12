@@ -168,32 +168,32 @@ public:
 		write(std::format(fmt, std::forward<Args>(args)...).append("\n"));
 	}
 
-	/* Write to the process 'standard output', only with yellow ANSI colours. */
+	/* Write to the process 'standard output', with a yellow marker. */
 	template<typename ...Args>
 	void warn(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		put("(" CSI_CODE(33) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
+		put("({}) {}", (TermUtils::text("!") | TermUtils::foreground(TermColor::Yellow)).str(), std::format(fmt, std::forward<Args>(args)...));
 	}
 
-	/* Write to the process 'standard output', with yellow ANSI colours, with  a \n at the end. */
+	/* Write to the process 'standard output', with a yellow marker and a newline. */
 	template<typename ...Args>
 	void warnln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		putln("(" CSI_CODE(33) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
+		putln("({}) {}", (TermUtils::text("!") | TermUtils::foreground(TermColor::Yellow)).str(), std::format(fmt, std::forward<Args>(args)...));
 	}
 
-	/* Write to the process 'standard output', only with red ANSI colours. */
+	/* Write to the process 'standard output', with a red marker. */
 	template<typename ...Args>
 	void err(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		put("(" CSI_CODE(31) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
+		put("({}) {}", (TermUtils::text("!") | TermUtils::foreground(TermColor::Red)).str(), std::format(fmt, std::forward<Args>(args)...));
 	}
 
-	/* Write to the process 'standard output', with red ANSI colours, with  a \n at the end. */
+	/* Write to the process 'standard output', with a red marker and a newline. */
 	template<typename ...Args>
 	void errln(std::format_string<Args...> fmt, Args&& ...args)
 	{
-		putln("(" CSI_CODE(31) "!" CSI_RESET ") {0}", std::format(fmt, std::forward<Args>(args)...));
+		putln("({}) {}", (TermUtils::text("!") | TermUtils::foreground(TermColor::Red)).str(), std::format(fmt, std::forward<Args>(args)...));
 	}
 
 

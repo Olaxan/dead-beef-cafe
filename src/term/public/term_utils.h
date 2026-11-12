@@ -8,6 +8,9 @@
 
 #include <string>
 #include <format>
+#include <functional>
+#include <string_view>
+#include <utility>
 
 #define ESC "\x1b"
 #define CSI "\x1b["
@@ -71,12 +74,40 @@ enum class TermColor
 namespace TermUtils
 {
 
+	class Text
+	{
+	public:
+		explicit Text(std::string value) : value_(std::move(value)) {}
+
+		const std::string& str() const noexcept { return value_; }
+
+	private:
+		std::string value_;
+	};
+
+	using Effect = std::function<std::string(std::string_view)>;
+
+	Text text(std::string value);
+	Text operator|(Text value, const Effect& effect);
+	Effect operator|(Effect first, Effect second);
+
+	Effect foreground(TermColor color);
+	Effect background(TermColor color);
+	Effect bold();
+	Effect underline();
+	Effect reverse_video();
+	Effect line_graphics();
+
 	std::string strip_ansi(const std::string& in);
 
 	int32_t get_ansi_fg_color(TermColor color);
 	int32_t get_ansi_bg_color(TermColor color);
 
 	std::string color(const std::string& str, TermColor fg, TermColor bg = TermColor::Black);
+
+	Text horizontal_line(int32_t length, char glyph = '-');
+	Text bar_text(int32_t length);
+	Text heading(std::string title, int32_t width);
 
 	std::string pixel(int32_t x, int32_t y, std::string c);
 	std::string line(int32_t length);

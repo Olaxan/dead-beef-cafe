@@ -94,7 +94,8 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 		proc.putln("Ping timed out.");
 	}
 
-	proc.putln("Host {}." CSI_RESET, success ? CSI_CODE(32) "reachable" : CSI_CODE(31) "unreachable");
+	proc.putln("Host {}.", (TermUtils::text(success ? "reachable" : "unreachable")
+		| TermUtils::foreground(success ? TermColor::Green : TermColor::Red)).str());
 
 	co_return 0;
 }

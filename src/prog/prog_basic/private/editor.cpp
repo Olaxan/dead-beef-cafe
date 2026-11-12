@@ -437,9 +437,8 @@ std::string EditorState::get_printout() const
 	/* Print program chars. */
 	std::stringstream ss;
 	ss << HIDE_CURSOR CLEAR_SCREEN CLEAR_CURSOR;
-	ss << CSI_CODE(33);
-	ss << TermUtils::line(1, 1 + num_rows, 1, height_ - 1, "~");
-	ss << CSI_RESET;
+	ss << (TermUtils::text(TermUtils::line(1, 1 + num_rows, 1, height_ - 1, "~"))
+		| TermUtils::foreground(TermColor::Yellow)).str();
 	ss << TermUtils::status_line(height_, width_, status_.length() ? status_ : icu::UnicodeString::fromUTF8(left_msg), right_msg);
 	
 	/* Print user chars. */

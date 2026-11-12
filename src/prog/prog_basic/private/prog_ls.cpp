@@ -123,7 +123,6 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		std::stringstream ss;
 		for (const LsListData& item : data)
 		{
-			ss << CSI_RESET;
 			ss << std::setw(f.w_fid)   << item.fid   << " ";
 			ss << std::setw(f.w_flags) << item.flags << " ";
 			ss << std::setw(f.w_links) << item.links << " ";
@@ -131,8 +130,11 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 			ss << std::setw(f.w_group) << item.group << " ";
 			ss << std::setw(f.w_bytes) << item.bytes << " ";
 			ss << std::setw(f.w_mdate) << item.mdate << " ";
-			ss << (item.is_dir ? CSI_CODE(1) CSI_CODE(34) : CSI_RESET);
-			ss << item.name << "\n";
+			if (item.is_dir)
+				ss << (TermUtils::text(item.name) | TermUtils::bold() | TermUtils::foreground(TermColor::Blue)).str();
+			else
+				ss << item.name;
+			ss << "\n";
 		}
 		
 		proc.put("{}", ss.str());
@@ -143,9 +145,11 @@ ProcessTask Programs::CmdList(Proc& proc, std::vector<std::string> args)
 		std::stringstream ss;
 		for (const LsListData& item : data)
 		{
-			ss << CSI_RESET;
-			ss << (item.is_dir ? CSI_CODE(1) CSI_CODE(34) : CSI_RESET);
-			ss << item.name << "\t";
+			if (item.is_dir)
+				ss << (TermUtils::text(item.name) | TermUtils::bold() | TermUtils::foreground(TermColor::Blue)).str();
+			else
+				ss << item.name;
+			ss << "\t";
 		}
 		proc.putln("{}", ss.str());
 	};
