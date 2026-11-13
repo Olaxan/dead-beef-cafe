@@ -19,12 +19,12 @@ enum BusinessType
 
 message GenCountry
 {
-	string countryName = 1;
+	string country_name = 1 [json_name = "countryName"];
 	
-	BusinessType primaryBusiness = 2;
+	BusinessType primary_business = 2 [json_name = "primaryBusiness"];
 
-	repeated NamePool personNames = 3;
-	repeated NamePool businessNames = 4;
+	repeated NamePool person_names = 3 [json_name = "personNames"];
+	repeated NamePool business_names = 4 [json_name = "businessNames"];
 }
 
 message GenParams
