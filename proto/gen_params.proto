@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package world;
+
+message NamePool
+{
+	repeated string prefix = 1;
+	repeated string suffix = 2;
+}
+
+enum BusinessType
+{
+	Manufacturing = 0;
+	DigitalTechnology = 1;
+	CyberSecurity = 2;
+	Banking = 3;
+	ResourceExtraction = 4;
+}
+
+message GenCountry
+{
+	string countryName = 1;
+	
+	BusinessType primaryBusiness = 2;
+
+	repeated NamePool personNames = 3;
+	repeated NamePool businessNames = 4;
+}
+
+message GenParams
+{
+	repeated GenCountry countries = 1;
+}
