@@ -1,0 +1,230 @@
+{
+  "countries": [
+    {
+      "countryName": "Americana",
+      "primaryBusiness": "DigitalTechnology",
+      "personNames": [
+        {
+          "prefix": [
+            "Adam", "John", "Rayleigh", "Cedric", "Kim", "Victor", "Andrei", "Andrea", "Sally", "James",
+            "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles", "Christopher", "Daniel",
+            "Matthew", "Anthony", "Mark", "Donald", "Steven", "Paul", "Andrew", "Joshua", "Kenneth", "Kevin",
+            "Brian", "George", "Edward", "Ronald", "Timothy", "Jason", "Jeffrey", "Ryan", "Jacob", "Gary",
+            "Nicholas", "Eric", "Jonathan", "Stephen", "Larry", "Justin", "Scott", "Brandon", "Benjamin", "Samuel",
+            "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan", "Jessica", "Karen", "Nancy",
+            "Lisa", "Margaret", "Betty", "Sandra", "Ashley", "Dorothy", "Kimberly", "Emily", "Donna", "Michelle",
+            "Carol", "Amanda", "Melissa", "Deborah", "Stephanie", "Rebecca", "Laura", "Sharon", "Cynthia", "Kathleen",
+            "Amy", "Shirley", "Angela", "Helen", "Anna", "Brenda", "Pamela", "Nicole", "Samantha", "Katherine",
+            "Emma", "Olivia", "Sophia", "Isabella", "Grace", "Chloe", "Megan", "Rachel", "Victoria", "Alex"
+          ],
+          "suffix": [
+            "Jones", "Stone", "Smith", "Miller", "Cartwright", "Cork", "Johnson", "Williams", "Brown", "Davis",
+            "Wilson", "Anderson", "Taylor", "Thomas", "Moore", "Martin", "Jackson", "Thompson", "White", "Harris",
+            "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Green",
+            "Baker", "Adams", "Nelson", "Hill", "Campbell", "Mitchell", "Roberts", "Carter", "Phillips", "Evans",
+            "Turner", "Parker", "Collins", "Edwards", "Stewart", "Morris", "Rogers", "Reed", "Cook", "Morgan",
+            "Bell", "Murphy", "Bailey", "Rivera", "Cooper", "Richardson", "Cox", "Howard", "Ward", "Torres",
+            "Peterson", "Gray", "Ramirez", "James", "Watson", "Brooks", "Kelly", "Sanders", "Price", "Bennett",
+            "Wood", "Barnes", "Ross", "Henderson", "Coleman", "Jenkins", "Perry", "Powell", "Long", "Patterson",
+            "Hughes", "Flores", "Washington", "Butler", "Simmons", "Foster", "Gonzales", "Bryant", "Alexander", "Russell",
+            "Griffin", "Hayes", "Myers", "Ford", "Hamilton", "Graham", "Sullivan", "Wallace", "Woods", "West"
+          ]
+        }
+      ],
+      "businessNames": [
+        {
+          "prefix": [
+            "Intellivision", "InterPlc", "Global", "Cyberdyne", "Revenant", "BIG", "Locomotion", "Apex",
+            "NexGen", "Omni", "Vertex", "Quantum", "Pinnacle", "BlueSky", "Silverline", "Northstar",
+            "Redwood", "Ironclad", "Evergreen", "Brightstar", "Blackstone", "Clearwater", "Westbridge", "Eastgate",
+            "First American", "Continental", "Atlantic", "Pacific", "Frontier", "Summit", "Horizon", "Keystone",
+            "Sterling", "Crown", "Liberty", "United", "National", "Federal", "Metropolitan", "American",
+            "Advanced", "Integrated", "Precision", "Dynamic", "Innovative", "Progressive", "Strategic", "Reliable",
+            "Universal", "Premier", "Prime", "Elite", "Executive", "Direct", "Rapid", "Everlast",
+            "FutureTech", "TechCore", "DataForge", "ByteWorks", "CloudNine", "NetSource", "CyberLink", "SoftCore",
+            "Digital Frontier", "PixelWorks", "CodeCraft", "CircuitWorks", "Silicon Valley", "Mainframe", "Hardline", "Bitstream",
+            "DeepField", "DarkMatter", "Starfall", "Redshift", "Blackbird", "Ironwood", "Stonebridge", "Ashcroft",
+            "Cobalt", "Titanium", "Copperfield", "Goldcrest", "Silveroak", "Ironpeak", "Foxglove", "Ravenwood",
+            "Gravitas", "Helix", "Orion", "Vanguard", "Sentinel", "Monolith", "Parallax", "Meridian",
+            "Cinder", "Frostbyte", "Machina", "Overwatch", "Crosspoint", "Brightwell"
+          ],
+          "suffix": [
+            "Ltd.", "Incorporated", "Inc.", "Solutions", "LLC", "Limited", "Corp", "Corporation",
+            "Technologies", "Technology Group", "Systems", "Industries", "Holdings", "Enterprises", "International", "Global",
+            "Group", "Partners", "Associates", "Consulting", "Services", "Networks", "Software", "Digital",
+            "Communications", "Development", "Engineering", "Manufacturing", "Electronics", "Dynamics", "Innovations", "Research",
+            "Resources", "Management", "Logistics", "Distribution", "Ventures", "Capital", "Investments", "Properties",
+            "Realty", "Infrastructure", "Data Systems", "Computing", "Cybernetics", "Automation", "Robotics", "Security",
+            "Media", "Broadcasting", "Telecommunications", "Laboratories", "Research Group", "Technology Partners", "Business Solutions", "Professional Services",
+            "Industrial Systems", "Advanced Systems", "Digital Services", "Software Group", "Network Solutions", "Cloud Services", "Data Solutions", "Information Systems",
+            "Engineering Group", "Industrial Group", "Manufacturing Group", "Trading Company", "Supply Company", "Service Company", "American Holdings", "National Group",
+            "International Holdings", "Global Ventures", "Worldwide", "Worldwide Group", "Corporation of America", "American Corporation", "Company", "Company LLC",
+            "Company Inc.", "Company Ltd.", "Associates LLC", "Partners Inc.", "Consultants", "Consulting Group", "Management Group", "Development Group",
+            "Technology Holdings", "Industrial Holdings", "Financial Group", "Financial Services", "Business Group", "Business Holdings", "Commercial Group", "Commercial Services",
+            "Enterprise Solutions", "Enterprise Systems", "Strategic Partners", "Integrated Solutions", "Advanced Technologies", "Digital Corporation", "Systems International", "Group International"
+          ]
+        }
+      ]
+    },
+    {
+      "countryName": "Japan",
+      "primaryBusiness": "Manufacturing",
+      "personNames": [
+        {
+          "prefix": [
+            "Harotu", "Hinata", "Himari", "Aoi", "Soma", "Sora", "Momoka", "Rin",
+            "Haruto", "Yuto", "Sota", "Yuki", "Hayato", "Ren", "Kaito", "Riku",
+            "Takumi", "Daiki", "Ryota", "Shota", "Kenta", "Takuya", "Naoki", "Hiroshi",
+            "Kenji", "Takeshi", "Akira", "Shinji", "Daisuke", "Masato", "Tsubasa", "Kazuya",
+            "Yusuke", "Koji", "Ryo", "Haruki", "Itsuki", "Minato", "Asahi", "Koki",
+            "Taichi", "Yuma", "Ryusei", "Kazuki", "Tomoya", "Satoshi", "Makoto", "Issei",
+            "Kenshin", "Shun", "Yoshiki", "Natsuki", "Koharu", "Yui", "Sakura", "Hana",
+            "Akari", "Mei", "Yuna", "Aoi", "Mio", "Hina", "Riko", "Nanami",
+            "Ayaka", "Misaki", "Miku", "Saki", "Haruka", "Miyu", "Rina", "Nozomi",
+            "Emi", "Yuka", "Kaori", "Reina", "Chihiro", "Mai", "Sayaka", "Asuka",
+            "Madoka", "Fumiko", "Tomoko", "Yoko", "Keiko", "Noriko", "Satomi", "Ami",
+            "Mizuki", "Kanna", "Shiori", "Kokoro", "Honoka", "Sumire", "Karin", "Runa",
+            "Ayane", "Nanako", "Eri", "Manami"
+          ],
+          "suffix": [
+            "Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura",
+            "Kobayashi", "Kato", "Yoshida", "Yamada", "Sasaki", "Yamaguchi", "Matsumoto", "Inoue",
+            "Kimura", "Hayashi", "Shimizu", "Yamazaki", "Mori", "Abe", "Ikeda", "Hashimoto",
+            "Ishikawa", "Yamashita", "Ogawa", "Ishii", "Hasegawa", "Goto", "Okada", "Kondo",
+            "Maeda", "Fujita", "Endo", "Aoki", "Sakamoto", "Murakami", "Ota", "Kaneko",
+            "Fujii", "Fukuda", "Nishimura", "Miura", "Takeuchi", "Nakajima", "Okamoto", "Matsuda",
+            "Harada", "Nakagawa", "Nakano", "Ishida", "Ueda", "Morita", "Ogura", "Shibata",
+            "Sakai", "Yokoyama", "Miyazaki", "Miyamoto", "Uchida", "Takagi", "Ando", "Taniguchi",
+            "Ono", "Maruyama", "Imai", "Kojima", "Takada", "Masuda", "Kawasaki", "Kawamura",
+            "Murata", "Ohashi", "Hirano", "Nomura", "Otsuka", "Sugiyama", "Chiba", "Kubo",
+            "Matsui", "Iwasaki", "Sano", "Nishida", "Sugawara", "Kinoshita", "Noguchi", "Matsuzaki",
+            "Hamada", "Higuchi", "Kikuchi", "Arai", "Omori", "Nagai", "Kawaguchi", "Fujimoto",
+            "Hoshino", "Kuroda", "Kawai", "Tsuda"
+          ]
+        }
+      ],
+      "businessNames": [
+        {
+          "prefix": [
+            "Sumoto", "Toray", "Sumimoto", "Motoi-ITO", "Marola", "Yama-yama",
+            "Mitsubishi", "Mitsui", "Sumitomo", "Hitachi", "Toshiba", "Fujitsu",
+            "Panasonic", "Sony", "Yamaha", "Kawasaki", "Nippon", "Nissan", "Toyota", "Honda",
+            "Suzuki", "Subaru", "Mazda", "Isuzu", "Daihatsu", "Komatsu", "Kubota", "Mori",
+            "Morioka", "Shinwa", "Shinsei", "Kensei", "Takara", "Takamatsu", "Kawahara", "Fujimoto",
+            "Hikari", "Mirai", "Asahi", "Akatsuki", "Hinode", "Hoshizaki", "Sakura", "Tsukumo",
+            "Kitsune", "Kirin", "Raiden", "Seishin", "Tatsumi", "Kobayashi", "Nakamura", "Yamato",
+            "Shogun", "Samurai", "Shinobi", "Kaito", "Hoshino", "Kuroda", "Aozora", "Kiyomizu",
+            "Tsubaki", "Mizuno", "Kanzaki", "Takeda", "Matsuda", "Okamoto", "Kogane", "Shirogane",
+            "Kurogane", "Tetsuya", "Daikoku", "Fujiyama", "Kokoro", "Seiko", "Kyoto", "Osaka",
+            "Tokyo", "Nagoya", "Sendai", "Sapporo", "Kobe", "Hiroshima", "Shin-Etsu", "Nihon",
+            "Nisshin", "Nitto", "Sankyo", "Kawaden", "Marubeni", "Itochu", "Mitsukoshi", "Daikin",
+            "Shimizu", "Taisei", "Kajima", "Obayashi", "Nippon Steel", "Kobe Steel", "J-Systems", "NeoTokyo"
+          ],
+          "suffix": [
+            "Heavy Industries", "Motor Corporation", "Corporation", "Group", "Co., Ltd.", "Ltd.",
+            "Industries", "Industrial Corporation", "Manufacturing", "Manufacturing Co., Ltd.", "Electronics", "Electric",
+            "Electric Corporation", "Technology", "Technologies", "Engineering", "Engineering Co., Ltd.", "Automotive",
+            "Automotive Industries", "Motors", "Motor Works", "Precision Machinery", "Heavy Machinery", "Machine Works",
+            "Machinery", "Machine Industries", "Chemical Industries", "Chemical Corporation", "Steel Corporation", "Steel Works",
+            "Metals", "Metal Industries", "Materials", "Materials Corporation", "Textiles", "Textile Industries",
+            "Trading Company", "Trading Corporation", "Trading Group", "Logistics", "Transport", "Transport Systems",
+            "Construction", "Construction Group", "Infrastructure", "Infrastructure Corporation", "Development", "Development Group",
+            "Research Institute", "Research Laboratories", "Laboratories", "Technology Institute", "Systems", "Systems Corporation",
+            "Information Systems", "Digital Solutions", "Communications", "Telecommunications", "Networks", "Software",
+            "Software Corporation", "Robotics", "Automation", "Robotics Industries", "Energy", "Energy Systems",
+            "Power Corporation", "Power Industries", "Shipbuilding", "Shipyards", "Aerospace", "Aerospace Industries",
+            "Optics", "Optical Industries", "Medical Systems", "Pharmaceuticals", "Pharmaceutical Industries", "Food Industries",
+            "Foods", "Consumer Products", "Consumer Electronics", "Precision Instruments", "Instruments", "Components",
+            "Components Corporation", "Parts Manufacturing", "Industrial Systems", "Industrial Solutions", "International",
+            "International Holdings", "Holdings", "Enterprise Group", "Business Group", "Global Industries", "Global Corporation",
+            "Japan", "Japan Corporation", "Japan Industries", "Nippon Group", "Nihon Corporation", "Enterprise"
+          ]
+        }
+      ]
+    },
+    {
+      "countryName": "Sweden",
+      "primaryBusiness": "Manufacturing",
+      "personNames": [
+        {
+          "prefix": [
+            "Adam", "Oscar", "Oskar", "Fredrik", "Göran", "Sven-Erik", "Lina", "Lisa",
+            "Eva", "Lena", "Gabriel", "Lotta", "Lovisa", "Peter", "Marcus", "Markus", "Per",
+            "Anders", "Johan", "Erik", "Karl", "Carl", "Nils", "Gustav", "Gustaf", "Magnus",
+            "Mikael", "Michael", "Daniel", "Andreas", "Alexander", "Filip", "Philip", "Emil",
+            "Anton", "Axel", "Arvid", "Albin", "Viktor", "Victor", "Henrik", "Håkan",
+            "Lars", "Leif", "Bengt", "Bo", "Stig", "Åke", "Rune", "Kjell", "Christer",
+            "Stefan", "Thomas", "Tomas", "Mattias", "Martin", "Jonas", "Niklas", "Patrik",
+            "Robert", "André", "Jesper", "Linus", "Simon", "Jonathan", "Isak", "Elias",
+            "Hugo", "William", "Ludvig", "Ludvig", "Theo", "Noah", "Oliver", "Viggo",
+            "Alice", "Astrid", "Elsa", "Maja", "Agnes", "Alma", "Ella", "Wilma",
+            "Ebba", "Ida", "Elin", "Karin", "Maria", "Anna", "Annika", "Birgitta",
+            "Ingrid", "Kerstin", "Monica", "Susanne", "Helena", "Carina", "Malin", "Sara",
+            "Sofia", "Sofie", "Emma", "Julia", "Frida", "Hanna", "Johanna", "Matilda"
+          ],
+          "suffix": [
+            "Oscarsson", "Gabrielsson", "Hammarsten", "Lind", "Lund", "Ekfeldt", "Rund",
+            "Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Larsson", "Olsson",
+            "Persson", "Svensson", "Gustafsson", "Pettersson", "Jonsson", "Jansson",
+            "Hansson", "Bengtsson", "Jönsson", "Lindberg", "Jakobsson", "Magnusson",
+            "Olofsson", "Lindström", "Lindqvist", "Lindgren", "Berg", "Axelsson",
+            "Bergström", "Lundberg", "Lindahl", "Björk", "Björklund", "Sandberg",
+            "Eklund", "Forsberg", "Holm", "Lundgren", "Sjöberg", "Hedlund",
+            "Lindholm", "Nyström", "Engström", "Wallin", "Sundberg", "Berglund",
+            "Åberg", "Dahlberg", "Nordström", "Löfgren", "Ström", "Ekström",
+            "Holmberg", "Söderberg", "Blom", "Blomqvist", "Månsson", "Falk",
+            "Dahl", "Norberg", "Håkansson", "Hellström", "Isaksson", "Wikström",
+            "Sundström", "Fransson", "Bäckström", "Westberg", "Bergman", "Nyberg",
+            "Lundin", "Edlund", "Åkesson", "Holmqvist", "Höglund", "Öberg",
+            "Lindén", "Rosén", "Strand", "Ek", "Nordin", "Wahlberg",
+            "Hult", "Borg", "Stenberg", "Sjögren", "Norén", "Sandström",
+            "Östberg", "Hultgren", "Boman", "Kvist", "Åström", "Dahlgren",
+            "Sundin", "Vikström", "Bergqvist", "Lundström"
+          ]
+        }
+      ],
+      "businessNames": [
+        {
+          "prefix": [
+            "Svensk data", "Adamsson", "Skärgården", "Rimfrost", "Dimdal", "Skogaholm",
+            "Gårdstjärn", "Indea", "Nordic", "Svea", "Svenska", "Norrland",
+            "Svealand", "Götaland", "Västkust", "Östkust", "Bergslagen", "Lappland",
+            "Norrsken", "Midnatt", "Vintergatan", "Fjäll", "Skog", "Älv",
+            "Fjällström", "Silverberg", "Järnverk", "Nordstjärna", "Polaris", "Isbjörn",
+            "Varg", "Räv", "Ulv", "Björn", "Älg", "Lodjur", "Falk",
+            "Havsbris", "Stormvind", "Snöfall", "Frostlinje", "Granit", "Koppar",
+            "Stålverk", "Järnväg", "Bergström", "Lindqvist", "Ekholm", "Björk",
+            "Tallheden", "Granbacken", "Ängsmark", "Solglimt", "Morgondis", "Kvällsljus",
+            "Skymning", "Gryning", "Västerdal", "Österdal", "Söderhamn", "Norrhamn",
+            "Mälardal", "Göta", "SveaTek", "NordTek", "DataNorr", "Teknikbolaget",
+            "Industrinord", "Mekaniska", "Precisionsverk", "Verkstadsgruppen", "Stjärnfall",
+            "Kronberg", "Silverdal", "Guldheden", "Röda Linjen", "Blå Linjen", "Gröna Dalen",
+            "Klarälv", "Vättervik", "Mälaren", "Siljan", "Vänern", "Tornedalen",
+            "Höga Kusten", "Skogsvik", "Bergdala", "Lindholmen", "Ekbacken", "Hammarby",
+            "Södermalm", "Norrsken", "Nordhamn", "Fyrtorn", "Kustlinjen", "Sjöfart",
+            "Stål & Maskin", "Svensk Mekanik", "Folkhem", "Framtidsverket", "Industria"
+          ],
+          "suffix": [
+            "AB", "Aktiebolag", "Group", "Industries", "Industri", "Industrier",
+            "Teknik", "Teknik AB", "Teknologier", "Teknologi", "Mekanik", "Mekaniska",
+            "Verkstad", "Verkstäder", "Verkstadsindustri", "Tillverkning", "Produkter", "Produktutveckling",
+            "System", "System AB", "Systemgruppen", "Datateknik", "Data", "Datasystem",
+            "IT", "IT-konsult", "Digital", "Digitala System", "Elektronik", "Elektroteknik",
+            "Automation", "Robotik", "Maskin", "Maskinindustri", "Maskinverkstad", "Precision",
+            "Precisionsindustri", "Ingenjörsbyrå", "Konstruktion", "Konstruktionsbyrå", "Utveckling", "Utvecklingsgruppen",
+            "Konsult", "Konsultgruppen", "Konsultbolag", "Handel", "Handelsbolag", "Grossist",
+            "Distribution", "Logistik", "Transport", "Frakt", "Sjöfart", "Energi",
+            "Kraft", "Kraftteknik", "Elteknik", "Bygg", "Byggindustri", "Entreprenad",
+            "Fastigheter", "Fastighetsbolag", "Förvaltning", "Invest", "Investeringar", "Kapital",
+            "Finans", "Holding", "Holdings", "Förlag", "Media", "Kommunikation",
+            "Telekom", "Nätverk", "Nätverksteknik", "Säkerhet", "Säkerhetssystem", "Larmteknik",
+            "Medicinteknik", "Läkemedel", "Livsmedel", "Livsmedelsindustri", "Skogsindustri", "Trävaror",
+            "Pappersbruk", "Stål", "Metall", "Metallindustri", "Gruvindustri", "Råvaror",
+            "Forskning", "Forskningsinstitut", "Laboratorium", "Laboratorier", "Nordic Group", "International",
+            "Sverige AB", "Svenska Gruppen", "Norden", "Nordic Industries", "Företagsgruppen", "Koncernen"
+          ]
+        }
+      ]
+    }
+  ]
+}
