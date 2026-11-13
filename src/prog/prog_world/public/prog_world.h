@@ -13,5 +13,4 @@ namespace Programs
 	ProcessTask CmdSave(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdLoad(Proc& proc, std::vector<std::string> args);
 	ProcessTask CmdGen(Proc& proc, std::vector<std::string> args);
-	ProcessTask CmdGenEdit(Proc& proc, std::vector<std::string> args);
 };

@@ -6,7 +6,16 @@
 #include "os.h"
 #include "os_basic.h"
 
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/screen/screen.hpp>
+#include <ftxui/component/app.hpp>             // for Component, App
+#include <ftxui/component/captured_mouse.hpp>  // for ftxui
+#include <ftxui/component/component.hpp>  // for Slider, Checkbox, Vertical, Renderer, Button, Input, Menu, Radiobox, Toggle
+#include <ftxui/component/component_base.hpp>  // for ComponentBase
+#include <ftxui/dom/elements.hpp>  // for separator, operator|, Element, size, xflex, text, WIDTH, hbox, vbox, EQUAL, border, GREATER_THAN
+
 #include "CLI/CLI.hpp"
+#include "ftxui_host.h"
 
 #include <string>
 #include <cstdlib>
@@ -20,6 +29,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 {
 	World& world = *proc.owning_os->get_outer_as<World*>();
 
+	/* Begin hard coded test generation */
 	Host* remote = HostUtils::create_host<BasicOS>(world, "remote");
 	Host* middle = HostUtils::create_host<BasicOS>(world, "middle");
 	OS& local_os = *proc.owning_os;
@@ -52,6 +62,12 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 	proc.put("\n");
 	proc.putln("Linked {}<->{}.", local_os.get_uid(), middle_os.get_uid());
 	proc.putln("Linked {}<->{}.", middle_os.get_uid(), remote_os.get_uid());
+	/* End hard coded test generation */
+
+	/* TODO: Add ftxui app for controlling generation. */
+	FtxuiHost host{component, term_width, term_height};
+
+	co_await host.run(&proc, step_size);
 
 	co_return 0;
 }
