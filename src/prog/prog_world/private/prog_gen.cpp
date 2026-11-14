@@ -143,7 +143,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
-		World& world = *proc.owning_os->get_outer_as<World*>();
+		World& outer_world = *proc.owning_os->get_outer_as<World*>();
 
 		auto gen_data = std::make_shared<WorldData>();
 		WorldBuilder builder{gen_data};
@@ -205,7 +205,6 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			Cluster& isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster);
 		};
 
-
 		Uid64 hub = builder.generate_host("Central Routing Node");
 		
 		for (auto&& country : gen_params.countries())
@@ -215,6 +214,10 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		}
 
 		proc.putln("Imported data succesfully.");
+
+		builder.build();
+		outer_world.import_data(builder.data());
+		
 	}
 
 	co_return 0;

@@ -51,4 +51,8 @@ namespace WorldGen
 		}
 		return cluster;
 	}
+	
+	void WorldBuilder::build()
+	{
+	}
 }

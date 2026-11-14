@@ -72,6 +72,8 @@ int main(int argc, char* argv[])
 		.audio_impl = audio.get()
 	}};
 
+	our_world.create_world();
+
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
 	OS& client_os = client->get_os();
 	FileSystem* client_fs = client_os.get_filesystem();

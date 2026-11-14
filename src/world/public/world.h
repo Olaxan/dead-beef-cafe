@@ -28,6 +28,8 @@ struct WorldExts
     IAudioBase* audio_impl;
 };
 
+struct WorldData;
+
 class World
 {
 public:
@@ -37,11 +39,13 @@ public:
 
 public:
 
+    void create_world();
     void init_world();
     void update_world(float delta_seconds);
     void deinit_world();
 
     void launch();
+    void stop();
 
     LinkServer& get_link_server() { return net_; }
     WorldUpdateQueue& get_update_queue() { return queue_; }
@@ -57,12 +61,14 @@ public:
     HostContext create_host_context();
     HostContext create_host_context(Uid64 uid);
 
+    void import_data(std::shared_ptr<WorldData> data);
+
 private:
 
     /* World runner variables. */
     const float min_timestep{0.01f};
 
-    bool run_{true};
+    std::atomic<bool> run_{true};
     std::jthread worker_{};
     std::chrono::steady_clock::time_point last_update_{};
 
@@ -77,6 +83,9 @@ private:
     /* Implementation-specific dependencies (i.e. sound). */
     WorldExts exts_;
 
+    /* The world. */
+    std::shared_ptr<WorldData> data_{nullptr};
+
     /* Views and contexts into world-owned members. */
     GameServices services_
     {
@@ -84,19 +93,5 @@ private:
         .timers = &timers_,
         .audio = exts_.audio_impl
     };
-
-    struct WorldData
-    {
-        std::unordered_map<PersonId, Person> people;
-        std::unordered_map<CorpId, Corp> corps;
-        std::unordered_map<Uid64, std::unique_ptr<Host>> hosts;
-    } data;
-
-    struct WorldRelations
-    {
-        RelationManager<RelationshipType::OneToOne, PersonId, CorpId> employment;
-        RelationManager<RelationshipType::OneToMany, PersonId, Uid64> ownership;
-        RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links;
-    } relations;
     
 };

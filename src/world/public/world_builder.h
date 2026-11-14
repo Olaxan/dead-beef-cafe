@@ -44,8 +44,9 @@ namespace WorldGen
 
 		Uid64 generate_host(std::string hostname);
 		Cluster& generate_cluster(std::string name, Uid64 link_from, ClusterParams params);
-	
-	
+
+		void build();
+		std::shared_ptr<WorldData> data() { return world_data_; }
 	
 	protected:
 	

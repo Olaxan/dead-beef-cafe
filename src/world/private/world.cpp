@@ -6,6 +6,8 @@
 
 #include "audio_base.h"
 
+#include "world_data.h"
+
 #include <chrono>
 #include <cmath>
 #include <thread>
@@ -14,17 +16,16 @@ World::World(WorldExts&& exts)
 : exts_(std::move(exts))
 { }
 
+void World::create_world()
+{
+	data_ = std::make_shared<WorldData>();
+}
+
 void World::init_world()
 {
 	if (exts_.audio_impl)
 	{
 		exts_.audio_impl->init();
-	}
-
-	for (auto&& [uid, host] : data.hosts)
-	{
-		host->setup(services_, create_host_context(uid));
-		host->start_host();
 	}
 }
 
@@ -51,11 +52,16 @@ void World::deinit_world()
 
 void World::launch()
 {
-	init_world();
-	
+
+	for (auto&& [uid, host] : data_->hosts)
+	{
+		host->setup(services_, create_host_context(uid));
+		host->start_host();
+	}
+
 	worker_ = std::jthread([this]
 	{
-		while (run_)
+		while (run_.load())
 		{
 			auto t1 = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<float> sec(t1 - last_update_);
@@ -69,15 +75,21 @@ void World::launch()
 	});
 }
 
+void World::stop()
+{
+	run_.store(false);
+	worker_.join();
+}
+
 Host* World::add_host(Uid64 id, std::unique_ptr<Host>&& new_host)
 {
-	auto [it, success] = data.hosts.emplace(id, std::move(new_host));
+	auto [it, success] = data_->hosts.emplace(id, std::move(new_host));
 	return (success) ? it->second.get() : nullptr;
 }
 
 bool World::serialize(world::World* to)
 {
-	for (auto& [id, host] : data.hosts)
+	for (auto& [id, host] : data_->hosts)
 	{
 		world::Host* ar = to->add_hosts();
 		ar->set_uid(id.num);
@@ -92,7 +104,7 @@ bool World::deserialize(const world::World* from)
 	for (auto&& ar : from->hosts())
 	{
 		Uid64 id = ar.uid();
-		if (auto it = data.hosts.find(id); it != data.hosts.end())
+		if (auto it = data_->hosts.find(id); it != data_->hosts.end())
 		{
 			Host* host = it->second.get();
 			host->deserialize(ar);
@@ -117,4 +129,13 @@ HostContext World::create_host_context(Uid64 uid)
 		.uid = uid,
 		.internet = &internet_
 	};
+}
+
+void World::import_data(std::shared_ptr<WorldData> new_data)
+{
+	stop();
+	std::println("Deinitializing world...");
+	std::println("Setting up world...");
+	data_ = new_data;
+	launch();
 }
