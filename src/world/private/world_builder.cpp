@@ -4,6 +4,8 @@
 #include "os.h"
 #include "world_data.h"
 
+#include <stdexcept>
+
 namespace WorldGen
 {
 
@@ -56,6 +58,67 @@ namespace WorldGen
 		}
 
 		return hub_uid;
+	}
+
+	std::vector<GeneratedModule> WorldBuilder::execute(
+		const GenerationPlan& plan,
+		Uid64 upstream,
+		std::mt19937& gen)
+	{
+		return execute_modules(plan.modules, upstream, gen);
+	}
+
+	std::vector<GeneratedModule> WorldBuilder::execute_modules(
+		const std::vector<GenerationModule>& modules,
+		Uid64 upstream,
+		std::mt19937& gen)
+	{
+		std::vector<GeneratedModule> generated;
+
+		for (const GenerationModule& module : modules)
+		{
+			if (module.min_instances > module.max_instances || module.min_hosts > module.max_hosts)
+				throw std::invalid_argument("Generation module range minimum exceeds maximum.");
+
+			std::uniform_int_distribution<std::size_t> instance_count(module.min_instances, module.max_instances);
+			std::uniform_int_distribution<std::size_t> host_count(module.min_hosts, module.max_hosts);
+
+			for (std::size_t i = 0, count = instance_count(gen); i < count; ++i)
+			{
+				std::string name = module.name_generator
+					? module.name_generator()
+					: std::format("{}-{}", module.name, i + 1);
+				std::size_t hosts = host_count(gen);
+				std::vector<std::string> hostnames;
+				ClusterParams cluster_params
+				{
+					.number_of_hosts = hosts,
+					.hostname_generator = [&hostnames]()
+					{
+						std::string hostname = std::format("Host-{}", hostnames.size());
+						hostnames.emplace_back(hostname);
+						return hostname;
+					}
+				};
+
+				Uid64 root = generate_cluster(
+					name,
+					upstream,
+					std::move(cluster_params));
+
+				GeneratedModule instance
+				{
+					.name = module.name,
+					.hostname = std::move(name),
+					.root = root,
+					.hosts = std::move(hostnames)
+				};
+				instance.children = execute_modules(module.children, root, gen);
+				generated.emplace_back(std::move(instance));
+			}
+		}
+
+		return generated;
 	}
 
 	void WorldBuilder::build()

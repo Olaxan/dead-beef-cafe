@@ -226,5 +226,28 @@
         }
       ]
     }
+  ],
+  "modules": [
+    {
+      "moduleName": "ISP",
+      "minInstances": 4,
+      "maxInstances": 8,
+      "children": [
+        {
+          "moduleName": "Household",
+          "minInstances": 2,
+          "maxInstances": 5,
+          "minHosts": 1,
+          "maxHosts": 6
+        },
+        {
+          "moduleName": "Corporation",
+          "minInstances": 1,
+          "maxInstances": 3,
+          "minHosts": 3,
+          "maxHosts": 10
+        }
+      ]
+    }
   ]
 }

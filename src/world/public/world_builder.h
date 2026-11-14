@@ -8,6 +8,8 @@
 #include <tuple>
 #include <functional>
 #include <unordered_map>
+#include <random>
+#include <string>
 
 class Host;
 struct WorldData;
@@ -24,6 +26,31 @@ namespace WorldGen
 
 		Address6 subnet;
 		int32_t prefix{0};
+	};
+
+	struct GenerationModule
+	{
+		std::string name;
+		std::size_t min_instances{1};
+		std::size_t max_instances{1};
+		std::size_t min_hosts{0};
+		std::size_t max_hosts{0};
+		NameGenerator name_generator{nullptr};
+		std::vector<GenerationModule> children;
+	};
+
+	struct GenerationPlan
+	{
+		std::vector<GenerationModule> modules;
+	};
+
+	struct GeneratedModule
+	{
+		std::string name;
+		std::string hostname;
+		Uid64 root{0};
+		std::vector<std::string> hosts;
+		std::vector<GeneratedModule> children;
 	};
 
 	class Cluster
@@ -52,12 +79,17 @@ namespace WorldGen
 
 		Uid64 generate_host(std::string hostname);
 		Uid64 generate_cluster(std::string name, Uid64 link_from, ClusterParams params);
+		std::vector<GeneratedModule> execute(const GenerationPlan& plan, Uid64 upstream, std::mt19937& gen);
 
 		void build();
 		std::shared_ptr<WorldData> data() { return world_data_; }
 
 	protected:
 
+		std::vector<GeneratedModule> execute_modules(
+			const std::vector<GenerationModule>& modules,
+			Uid64 upstream,
+			std::mt19937& gen);
 		Host* get_host(Uid64 uid);
 	
 	protected:

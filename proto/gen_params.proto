@@ -28,7 +28,19 @@ message GenCountry
 	optional NamePool isp_names = 5 [json_name = "ispNames"];
 }
 
+message GenModule
+{
+	string module_name = 1 [json_name = "moduleName"];
+	optional uint32 min_instances = 2 [json_name = "minInstances"];
+	optional uint32 max_instances = 3 [json_name = "maxInstances"];
+	optional uint32 min_hosts = 4 [json_name = "minHosts"];
+	optional uint32 max_hosts = 5 [json_name = "maxHosts"];
+	optional NamePool name_pool = 6 [json_name = "namePool"];
+	repeated GenModule children = 7;
+}
+
 message GenParams
 {
 	repeated GenCountry countries = 1;
+	repeated GenModule modules = 2;
 }

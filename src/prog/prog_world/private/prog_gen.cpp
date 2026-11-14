@@ -46,6 +46,25 @@ const T& get_random_from_vector(std::mt19937& gen, std::vector<T>& v)
 	return v.at(idx);
 }
 
+void print_generated_modules(
+	Proc& proc,
+	const std::vector<GeneratedModule>& modules,
+	std::size_t depth)
+{
+	const std::string indentation(depth * 2, ' ');
+	for (const GeneratedModule& module : modules)
+	{
+		proc.putln("{}- {}: {}", indentation, module.name, module.hostname);
+		if (not module.hosts.empty())
+		{
+			proc.putln("{}  Hosts:", indentation);
+			for (const std::string& hostname : module.hosts)
+				proc.putln("{}    - {}", indentation, hostname);
+		}
+		print_generated_modules(proc, module.children, depth + 1);
+	}
+}
+
 int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 {
 	std::ofstream file{path, std::ofstream::out};
@@ -71,6 +90,25 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 	world::NamePool& isp_names = *country.mutable_isp_names();
 	isp_names.add_prefix("Example ISP prefix");
 	isp_names.add_suffix("Example ISP suffix");
+
+	world::GenModule& isp_module = *out_params.add_modules();
+	isp_module.set_module_name("ISP");
+	isp_module.set_min_instances(4);
+	isp_module.set_max_instances(8);
+
+	world::GenModule& household_module = *isp_module.add_children();
+	household_module.set_module_name("Household");
+	household_module.set_min_instances(2);
+	household_module.set_max_instances(5);
+	household_module.set_min_hosts(1);
+	household_module.set_max_hosts(6);
+
+	world::GenModule& corporation_module = *isp_module.add_children();
+	corporation_module.set_module_name("Corporation");
+	corporation_module.set_min_instances(1);
+	corporation_module.set_max_instances(3);
+	corporation_module.set_min_hosts(3);
+	corporation_module.set_max_hosts(10);
 
 	std::string out_str{};
 	if (auto status = google::protobuf::json::MessageToJsonString(out_params, &out_str); status.ok())
@@ -157,16 +195,10 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		auto gen_data = std::make_shared<WorldData>();
 		WorldBuilder builder{gen_data};
 
-		std::vector<Uid64> isps;
-
 		std::size_t shared_index{0};
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_int_distribution<std::size_t> distribution_regional_isp(4, 8);
-		std::uniform_int_distribution<std::size_t> distribution_100(0, 100);
-
-		std::uniform_int_distribution<uint16_t> distribution_regional_isp_addr(1, std::numeric_limits<uint16_t>::max());
 
 		auto pick_from_string_field = [&](std::string fallback, const google::protobuf::RepeatedPtrField<std::string>& field) -> std::string
 		{
@@ -177,62 +209,131 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			return field.at(dist(gen));
 		};
 
-		auto generate_name_from_pool = [&](const world::NamePool& pool, bool use_suffix = true) -> std::string
+		auto generate_name_from_pool = [&](const world::NamePool& pool, const std::string& fallback) -> std::string
 		{
-			if (use_suffix)
-			{
-				return std::format("{} {}", 
-					pick_from_string_field("<INVALID PREFIX>", pool.prefix()),
-					pick_from_string_field("<INVALID SUFFIX>", pool.suffix())
-				); 
-			}
-			else
-			{
-				return pick_from_string_field("<INVALID PREFIX>", pool.prefix());
-			}
+			std::string prefix = pick_from_string_field(fallback, pool.prefix());
+			if (pool.suffix().empty())
+				return prefix;
+
+			return std::format("{} {}", prefix, pick_from_string_field(fallback, pool.suffix()));
 		};
 
-		auto generate_country = [&](const world::GenCountry& country, Uid64 upstream)
+		auto has_names = [](const world::NamePool& pool)
 		{
-			auto generate_isp_name = [&]() -> std::string
-			{
-				bool has_suffix = (distribution_100(gen) > 40);
-
-				std::string res = (country.has_isp_names())
-					? generate_name_from_pool(country.isp_names(), has_suffix)
-					: std::format("ISP-{}", shared_index);
-				
-				proc.putln(" ├── Generated '{}'.", res);
-				return std::move(res);
-			};
-
-			uint16_t regional_header = distribution_regional_isp_addr(gen);
-			Address6 regional_addr{regional_header};
-
-			ClusterParams cluster_params
-			{
-				.number_of_hosts = distribution_regional_isp(gen),
-				.hostname_generator = generate_isp_name,
-				.subnet = regional_addr,
-				.prefix = 16
-			};
-
-			proc.putln("Generating '{}' with {} ISP(s)...", country.country_name(), cluster_params.number_of_hosts);
-			std::string cluster_name = std::format("{} Regional Gateway", country.country_name());
-
-			Uid64 isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster_params);
-			isps.emplace_back(isp_cluster);
+			return not pool.prefix().empty() or not pool.suffix().empty();
 		};
 
-		Uid64 hub = builder.generate_host("Central Routing Node");
-		
-		for (auto&& country : gen_params.countries())
+		std::function<bool(const world::GenModule&)> module_is_valid =
+			[&](const world::GenModule& module)
 		{
-			int32_t num_isp = distribution_regional_isp(gen);
-			generate_country(country, hub);
+			if (module.module_name().empty())
+			{
+				proc.errln("Generation modules must have a moduleName.");
+				return false;
+			}
+			const uint32_t min_instances = module.has_min_instances() ? module.min_instances() : 1;
+			const uint32_t max_instances = module.has_max_instances() ? module.max_instances() : min_instances;
+			const uint32_t min_hosts = module.has_min_hosts() ? module.min_hosts() : 0;
+			const uint32_t max_hosts = module.has_max_hosts() ? module.max_hosts() : min_hosts;
+			if (min_instances > max_instances)
+			{
+				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module.module_name());
+				return false;
+			}
+			if (min_hosts > max_hosts)
+			{
+				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module.module_name());
+				return false;
+			}
+			for (const world::GenModule& child : module.children())
+			{
+				if (not module_is_valid(child))
+					return false;
+			}
+			return true;
+		};
+
+		for (const world::GenModule& module : gen_params.modules())
+		{
+			if (not module_is_valid(module))
+				co_return 1;
 		}
 
-		proc.putln("Imported data succesfully.");
+		GenerationPlan plan;
+		std::function<GenerationModule(const world::GenModule&, const world::GenCountry&)> convert_module;
+		convert_module = [&](const world::GenModule& source, const world::GenCountry& country)
+		{
+			GenerationModule module;
+			module.name = source.module_name();
+			module.min_instances = source.has_min_instances() ? source.min_instances() : 1;
+			module.max_instances = source.has_max_instances() ? source.max_instances() : module.min_instances;
+			module.min_hosts = source.has_min_hosts() ? source.min_hosts() : 0;
+			module.max_hosts = source.has_max_hosts() ? source.max_hosts() : module.min_hosts;
+
+			const world::NamePool* name_pool = nullptr;
+			if (source.has_name_pool())
+				name_pool = &source.name_pool();
+			else if (module.name == "ISP" and country.has_isp_names())
+				name_pool = &country.isp_names();
+			else if (module.name == "Corporation" and country.has_business_names())
+				name_pool = &country.business_names();
+			else if (module.name == "Household" and country.has_person_names())
+				name_pool = &country.person_names();
+
+			if (name_pool and has_names(*name_pool))
+			{
+				module.name_generator = [&, name_pool, fallback = module.name]()
+				{
+					return generate_name_from_pool(*name_pool, fallback);
+				};
+			}
+
+			for (const world::GenModule& child : source.children())
+				module.children.emplace_back(convert_module(child, country));
+
+			return module;
+		};
+
+		for (const world::GenCountry& country : gen_params.countries())
+		{
+			GenerationModule country_module;
+			country_module.name = "Country";
+			const world::GenCountry* country_ptr = &country;
+			country_module.name_generator = [country_ptr]()
+			{
+				return country_ptr->country_name();
+			};
+			for (const world::GenModule& module : gen_params.modules())
+				country_module.children.emplace_back(convert_module(module, country));
+
+			if (gen_params.modules().empty())
+			{
+				world::GenModule fallback;
+				fallback.set_module_name("ISP");
+				fallback.set_min_instances(4);
+				fallback.set_max_instances(8);
+				fallback.set_min_hosts(4);
+				fallback.set_max_hosts(8);
+				country_module.children.emplace_back(convert_module(fallback, country));
+			}
+			plan.modules.emplace_back(std::move(country_module));
+		}
+
+		Uid64 hub = builder.generate_host("Central Routing Node");
+		std::vector<GeneratedModule> generated = builder.execute(plan, hub, gen);
+
+		std::vector<Uid64> isps;
+		std::function<void(const std::vector<GeneratedModule>&)> collect_isps =
+			[&](const std::vector<GeneratedModule>& modules)
+		{
+			for (const GeneratedModule& module : modules)
+			{
+				if (module.name == "ISP")
+					isps.emplace_back(module.root);
+				collect_isps(module.children);
+			}
+		};
+		collect_isps(generated);
 
 		builder.build();
 
@@ -244,6 +345,10 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		proc.putln("This host will be migrated to {}.", get_random_from_vector(gen, isps));
 		outer_world.import_data(builder.data());
+		proc.putln("Imported data successfully.");
+		proc.putln("Generated network:");
+		proc.putln("- Central Routing Node");
+		print_generated_modules(proc, generated, 1);
 
 	}
 
