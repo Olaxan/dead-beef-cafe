@@ -86,12 +86,54 @@ struct std::formatter<Address6> : std::formatter<std::string>
 {
     auto format(const Address6& addr, auto& ctx) const
 	{
+        std::array<uint16_t, 8> segments{};
+        for (size_t i = 0; i < segments.size(); ++i)
+        {
+            segments[i] = static_cast<uint16_t>(
+                (static_cast<uint16_t>(addr.bytes[i * 2]) << 8) | addr.bytes[i * 2 + 1]);
+        }
+
+        size_t best_start = segments.size();
+        size_t best_length = 0;
+        for (size_t i = 0; i < segments.size();)
+        {
+            if (segments[i] != 0)
+            {
+                ++i;
+                continue;
+            }
+
+            size_t run_start = i;
+            while (i < segments.size() && segments[i] == 0)
+                ++i;
+
+            size_t run_length = i - run_start;
+            if (run_length >= 2 && run_length > best_length)
+            {
+                best_start = run_start;
+                best_length = run_length;
+            }
+        }
+
         std::ostringstream oss;
-        for (size_t i = 0; i < 16; i += 2) 
+        bool has_output = false;
+        bool after_compression = false;
+        for (size_t i = 0; i < segments.size(); ++i)
 		{
-            uint16_t segment = (addr.bytes[i] << 8) | addr.bytes[i + 1];
-            oss << std::hex << std::setw(4) << std::setfill('0') << segment;
-            if (i < 14) oss << ":";
+            if (i == best_start)
+            {
+                oss << "::";
+                has_output = true;
+                after_compression = true;
+                i += best_length - 1;
+                continue;
+            }
+
+            if (has_output && !after_compression)
+                oss << ":";
+            oss << std::hex << segments[i];
+            has_output = true;
+            after_compression = false;
         }
 
         return std::formatter<std::string>::format(oss.str(), ctx);
