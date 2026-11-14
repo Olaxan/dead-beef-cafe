@@ -94,6 +94,9 @@ public:
 	static bool same_subnet(Address6 a, Address6 b, uint8_t prefix_length);
 	bool same_subnet(Address6 addr) const;
 
+	void register_node();
+	void unregister_node();
+
 protected:
 
 	void handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, const Address6& src_addr, const Address6& dest_addr);
@@ -113,10 +116,11 @@ protected:
 	OpenSocketHandle get_handle();
 	void return_handle(OpenSocketHandle h);
 
+	Internet& get_internet();
+
 protected:
 	
 	OS& os_;
-	Internet& internet_;
 
 	std::shared_ptr<NetNode> node_{nullptr};
 

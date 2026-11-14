@@ -8,7 +8,7 @@ class IAudioBase;
 
 struct GameServices
 {
-	std::any outer;
+	std::any outer{nullptr};
 	ITimerBase* timers{nullptr};
 	IAudioBase* audio{nullptr};
 };

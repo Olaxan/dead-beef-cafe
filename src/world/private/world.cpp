@@ -20,6 +20,12 @@ void World::init_world()
 	{
 		exts_.audio_impl->init();
 	}
+
+	for (auto&& [uid, host] : data.hosts)
+	{
+		host->setup(services_, create_host_context(uid));
+		host->start_host();
+	}
 }
 
 void World::update_world(float delta_seconds)
@@ -102,8 +108,13 @@ bool World::deserialize(const world::World* from)
 
 HostContext World::create_host_context()
 {
+	return create_host_context(Uid64Generator::generate());
+}
+
+HostContext World::create_host_context(Uid64 uid)
+{
 	return HostContext{
-		.uid = Uid64Generator::generate(),
-		.internet = internet_
+		.uid = uid,
+		.internet = &internet_
 	};
 }

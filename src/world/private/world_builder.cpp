@@ -12,36 +12,42 @@ namespace WorldGen
 	{
 	}
 
+	void Cluster::add_host(Uid64 uid)
+	{
+		hosts_.emplace_back(uid);
+	}
+
 	WorldBuilder::WorldBuilder(std::shared_ptr<WorldData> data)
 		: world_data_(data) { }
 	
-	Uid64 WorldBuilder::add_host(std::string hostname)
+	Uid64 WorldBuilder::generate_host(std::string hostname)
 	{
-		// Uid64 uid = Uid64Generator::generate();
-		// auto host_ptr = std::make_unique<Host>(hostname, uid);
+		Uid64 uid = Uid64Generator::generate();
+		auto host_ptr = std::make_unique<Host>(hostname);
 
-		// if (auto pair = data_->hosts.emplace(uid, std::move(host_ptr)); pair.second)
-		// {
-		// 	return std::make_pair(uid, pair.first)
-		// }
-		// else return std::make_pair(uid{0}, nullptr);
-		return Uid64{0};
+		/* Error check here, for uniqueness. */
+		world_data_->hosts.emplace(uid, std::move(host_ptr));
+
+		return uid;
 	}
 
 	Cluster& WorldBuilder::generate_cluster(std::string name, Uid64 link_from, ClusterParams params)
 	{
 		Cluster& cluster = gen_data_.clusters_.emplace_back(name);
 
-		std::string hub_hostname = params.hostname_generator();
-		Uid64 hub_uid = add_host(hub_hostname);
+		Uid64 hub_uid = generate_host(name);
 		world_data_->links.relate(hub_uid, link_from);
 
 		for (std::size_t i = 0; i < params.number_of_hosts; ++i)
 		{
-			std::string hostname = params.hostname_generator();
-			//Host& host = add_host(hostname);
-			
-			//data_->links.relate(link_from, uid);
+			std::string hostname = (params.hostname_generator)
+				? params.hostname_generator()
+				: std::format("Host-{}", i);
+
+			Uid64 host_uid = generate_host(hostname);
+			cluster.add_host(host_uid);
+
+			world_data_->links.relate(hub_uid, host_uid);
 		}
 		return cluster;
 	}

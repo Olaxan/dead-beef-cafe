@@ -19,11 +19,20 @@
 #include <iostream>
 #include <chrono>
 
-Host::Host(GameServices& services, HostContext ctx, std::string Hostname)
-: services_(services), context_(ctx), hostname_(Hostname) 
-{ }
+
+
+Host::Host(std::string hostname)
+    : hostname_(hostname) { }
 
 Host::~Host() = default;
+
+void Host::setup(GameServices services, HostContext context)
+{
+    os_->setup(services, context);
+    
+    services_ = std::move(services);
+    context_ = std::move(context);
+}
 
 OS& Host::get_os()
 {

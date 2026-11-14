@@ -55,6 +55,7 @@ public:
 
     GameServices& get_services() { return services_; }
     HostContext create_host_context();
+    HostContext create_host_context(Uid64 uid);
 
 private:
 
@@ -97,6 +98,5 @@ private:
         RelationManager<RelationshipType::OneToMany, PersonId, Uid64> ownership;
         RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links;
     } relations;
-
-
+    
 };

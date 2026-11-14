@@ -73,15 +73,11 @@ int main(int argc, char* argv[])
 	}};
 
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
-	NIC* client_nic = client->get_device<NIC>();
 	OS& client_os = client->get_os();
 	FileSystem* client_fs = client_os.get_filesystem();
 	NetManager* client_net_mgr = client_os.get_network_manager();
-	assert(client_nic && client_net_mgr && client_fs);
 	
 	Address6 local_addr = client_net_mgr->get_primary_ip();
-	
-	client->start_host();
 
 	client_fs->create_file("/bin/join", 
 	{

@@ -23,8 +23,10 @@ class Host
 public:
 
 	Host() = delete;
-	Host(GameServices& services, HostContext ctx, std::string Hostname);
+	Host(std::string hostname);
 	~Host();
+
+	void setup(GameServices services, HostContext context);
 
 	const std::string& get_hostname() const { return hostname_; }
 	OS& get_os();
@@ -77,7 +79,7 @@ public:
 
 private:
 	
-	GameServices& services_;
+	GameServices services_;
 	HostContext context_;
 
 	std::string hostname_ = {};

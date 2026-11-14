@@ -21,9 +21,9 @@
 #include <iso646.h>
 
 NetManager::NetManager(OS* owner) 
-: os_(*owner), internet_(owner->get_context().internet), node_(std::make_shared<NetNode>())  
+: os_(*owner), node_(std::make_shared<NetNode>())  
 { 
-	internet_.register_node(os_.get_uid(), node_);
+	//get_internet().register_node(os_.get_uid(), node_);
 
 	Uid64 tail = Uid64Generator::generate();
 	address_ = Address6(os_.get_uid().num, tail.num);
@@ -31,7 +31,7 @@ NetManager::NetManager(OS* owner)
 
 NetManager::~NetManager()
 {
-	internet_.unregister_node(os_.get_uid());
+	//get_internet().unregister_node(os_.get_uid());
 };
 
 std::expected<OpenSocketPair, std::error_condition> NetManager::create_socket(SocketType type)
@@ -344,7 +344,7 @@ void NetManager::send(ip::IpPackage&& package)
 
 void NetManager::send(ip::DataFrame&& frame)
 {
-	internet_.link_unicast(std::move(frame));
+	get_internet().link_unicast(std::move(frame));
 }
 
 void NetManager::send(ip::IpPackage&& package, Uid64 mac)
@@ -355,7 +355,7 @@ void NetManager::send(ip::IpPackage&& package, Uid64 mac)
 	frame.set_payload(package.SerializeAsString());
 	frame.set_frame_type(ip::FrameType::IP);
 
-	internet_.link_unicast(std::move(frame));
+	get_internet().link_unicast(std::move(frame));
 }
 
 void NetManager::unpack(ip::IpPackage&& package)
@@ -716,6 +716,13 @@ void NetManager::return_handle(OpenSocketHandle h)
 	free_handles_.insert(h);
 }
 
+Internet& NetManager::get_internet()
+{
+	Internet* inet = os_.get_context().internet;
+	assert(inet);
+	return *inet;
+}
+
 std::optional<Uid64> NetManager::arp_lookup(Address6 addr) const
 {
 	if (auto it = arp_cache_.find(addr); it != arp_cache_.end())
@@ -766,4 +773,14 @@ bool NetManager::same_subnet(Address6 a, Address6 b, uint8_t prefix_length)
 bool NetManager::same_subnet(Address6 addr) const
 {
 	return same_subnet(addr, get_primary_ip(), prefix_length_);
+}
+
+void NetManager::register_node()
+{
+	get_internet().register_node(get_mac(), node_);
+}
+
+void NetManager::unregister_node()
+{
+	get_internet().unregister_node(get_mac());
 }

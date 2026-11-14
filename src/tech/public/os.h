@@ -35,8 +35,10 @@ public:
 
 	using SchedulerFn = std::function<void()>;
 
-	OS(GameServices& services, HostContext ctx);
+	OS();
 	virtual ~OS();
+
+	void setup(GameServices serv, HostContext ctx);
 
 	/* Start the host environment (and then the host). */
 	virtual void start_os();
@@ -121,7 +123,7 @@ public:
 
 protected:
 
-	GameServices& services_;
+	GameServices services_;
 	HostContext context_;
 
 	int32_t pid_counter_{0};

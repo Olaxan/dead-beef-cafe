@@ -85,6 +85,9 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 	proc.putln("Local ip: {}, mac={}.", local_addr, net->get_mac());
 	proc.putln("Log file at {}.", log_path);
 
+	net->register_node();
+	proc.putln("Registered netnode.");
+
 	while (true)
 	{
 		ip::IpPackage packet = co_await net->async_read_tx();
@@ -127,6 +130,8 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		}
 	}
 
+	net->unregister_node();
+	proc.putln("Unregistered netnode.");
 	/*TODO: This will probably crash on exit because we're not keeping track of our spawned coroutines!! Fix it!*/
 
 	co_return 0;

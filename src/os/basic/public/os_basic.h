@@ -7,8 +7,7 @@ class BasicOS : public OS
 {
 public:
 
-	BasicOS() = delete;
-	BasicOS(GameServices& services, HostContext& ctx);
+	BasicOS();
 	~BasicOS();
 
 	virtual void start_os() override;

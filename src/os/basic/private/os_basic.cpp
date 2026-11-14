@@ -13,7 +13,7 @@
 #include <print>
 
 
-BasicOS::BasicOS(GameServices& services, HostContext& ctx) : OS(services, ctx)
+BasicOS::BasicOS() : OS()
 {
 	reinstall_os();
 }

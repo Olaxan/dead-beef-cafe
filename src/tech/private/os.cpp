@@ -22,13 +22,14 @@
 
 #include <signal.h>
 
-OS::OS(GameServices& services, HostContext ctx) 
-: services_(services), context_(ctx) 
-{
-
-};
-
+OS::OS() = default;
 OS::~OS() = default;
+
+void OS::setup(GameServices serv, HostContext ctx)
+{
+    services_ = std::move(serv);
+    context_ = std::move(ctx);
+}
 
 void OS::start_os()
 {

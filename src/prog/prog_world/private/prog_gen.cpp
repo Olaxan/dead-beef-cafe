@@ -145,15 +145,15 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		World& world = *proc.owning_os->get_outer_as<World*>();
 
-		Uid64 out;
-		std::random_device rd;
-		std::mt19937 gen(rd());
-
 		auto gen_data = std::make_shared<WorldData>();
-
 		WorldBuilder builder{gen_data};
 
 		std::size_t shared_index{0};
+
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<std::size_t> distribution_regional_isp(4, 8);
+		std::uniform_int_distribution<std::size_t> distribution_100(0, 100);
 
 		auto pick_from_string_field = [&](std::string fallback, const google::protobuf::RepeatedPtrField<std::string>& field) -> std::string
 		{
@@ -178,9 +178,6 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				return pick_from_string_field("<INVALID PREFIX>", pool.prefix());
 			}
 		};
-
-		std::uniform_int_distribution<std::size_t> distribution_regional_isp(4, 8);
-		std::uniform_int_distribution<std::size_t> distribution_100(0, 100);
 
 		auto generate_country = [&](const world::GenCountry& country, Uid64 upstream)
 		{
@@ -209,7 +206,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		};
 
 
-		Uid64 hub = builder.add_host("Central Routing Node");
+		Uid64 hub = builder.generate_host("Central Routing Node");
 		
 		for (auto&& country : gen_params.countries())
 		{
