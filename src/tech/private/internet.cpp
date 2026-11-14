@@ -19,7 +19,7 @@ void Internet::unregister_node(Uid64 mac)
 
 void Internet::link(Uid64 from, Uid64 to)
 {
-	if (nodes_.contains(from) && nodes_.contains(to))
+	if (nodes_.contains(from) && nodes_.contains(to) && not links_.is_related(from, to))
 	{
 		links_.relate(from, to);
 		nodes_[from]->notify_link(to);

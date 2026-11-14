@@ -59,6 +59,7 @@ namespace WorldGen
 		Uid64 root{0};
 		Address6 subnet;
 		Address6 address;
+		Address6 next_host_address;
 		uint8_t network_prefix{64};
 		std::vector<GeneratedHost> hosts;
 		std::vector<GeneratedModule> children;

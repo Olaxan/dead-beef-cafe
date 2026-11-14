@@ -542,12 +542,22 @@ Address6 NetManager::get_primary_ip() const
 void NetManager::set_primary_ip(const std::string& addr)
 {
 	if (auto parsed = Address6::from_string(addr); parsed.has_value())
-		address_ = *parsed;
+		set_primary_ip(*parsed);
 }
 
 void NetManager::set_primary_ip(Address6 addr)
 {
+	const Address6 previous_address = address_;
 	address_ = addr;
+
+	for (auto& entry : sockets_)
+	{
+		OpenSocketEntry& socket = entry.second;
+		if (socket.binding and socket.binding->addr == previous_address)
+			socket.binding->addr = addr;
+		if (socket.local_endpoint.addr == previous_address)
+			socket.local_endpoint.addr = addr;
+	}
 }
 
 Uid64 NetManager::get_mac() const
@@ -739,6 +749,11 @@ void NetManager::arp_refresh(Uid64 mac, Address6 addr)
 
 void NetManager::add_route(Address6 to, uint8_t prefix, Address6 via, RouteType type)
 {
+	std::erase_if(routes_, [to, prefix](const RoutingTableEntry& route)
+	{
+		return route.address == to and route.prefix == prefix;
+	});
+
 	auto insertion_point = std::find_if(
 		routes_.begin(),
 		routes_.end(),

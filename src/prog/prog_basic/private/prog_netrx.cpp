@@ -26,7 +26,6 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();
-	Address6 local_ip = net->get_primary_ip();
 
 	FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
 	FileScope log{proc, "/var/log/rx.log", flags};
@@ -99,7 +98,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 			//net->arp_refresh(src_mac, src_ip);
 
-			if (dest_ip == local_ip)
+			if (dest_ip == net->get_primary_ip())
 			{
 				net->unpack(std::move(packet), src_ip, dest_ip);
 			}

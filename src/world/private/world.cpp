@@ -59,6 +59,12 @@ void World::launch()
 		host->start_host();
 	}
 
+	for (const auto& [uid, host] : data_->hosts)
+	{
+		for (Uid64 downstream : data_->links.get_all_related(uid))
+			internet_.link(uid, downstream);
+	}
+
 	worker_ = std::jthread([this]
 	{
 		while (run_.load())
@@ -135,6 +141,12 @@ HostContext World::create_host_context(Uid64 uid)
 void World::import_data(std::shared_ptr<WorldData> new_data)
 {
 	stop();
+
+	for (const auto& [uid, host] : new_data->hosts)
+	{
+		for (Uid64 downstream : new_data->links.get_all_related(uid))
+			data_->links.relate(uid, downstream);
+	}
 
 	for (auto&& [uid, host] : new_data->hosts)
 	{

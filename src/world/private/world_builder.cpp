@@ -116,7 +116,7 @@ namespace WorldGen
 		gen_data_.clusters_.try_emplace(hub_uid, name, hub_uid);
 		Cluster& cluster = gen_data_.clusters_.at(hub_uid);
 
-		world_data_->links.relate(hub_uid, link_from);
+		world_data_->links.relate(link_from, hub_uid);
 
 		for (std::size_t i = 0; i < params.number_of_hosts; ++i)
 		{
@@ -217,6 +217,7 @@ namespace WorldGen
 					upstream,
 					std::move(cluster_params));
 
+				const std::vector<Uid64>& host_uids = gen_data_.clusters_.at(root).get_hosts();
 				GeneratedModule instance
 				{
 					.name = module.name,
@@ -224,9 +225,9 @@ namespace WorldGen
 					.root = root,
 					.subnet = subnet,
 					.address = add_address_offset(subnet, 1),
+					.next_host_address = add_address_offset(subnet, host_uids.size() + 2),
 					.network_prefix = module.network_prefix
 				};
-				const std::vector<Uid64>& host_uids = gen_data_.clusters_.at(root).get_hosts();
 				for (std::size_t host_index = 0; host_index < host_uids.size(); ++host_index)
 				{
 					instance.hosts.emplace_back(GeneratedHost{

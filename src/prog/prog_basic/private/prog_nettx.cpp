@@ -70,7 +70,6 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();
-	Address6 local_addr = net->get_primary_ip();
 
 	std::atomic<int32_t> arp_holdoff_count{0};
 
@@ -82,7 +81,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 	});
 
 	proc.putln("TX service running.");
-	proc.putln("Local ip: {}, mac={}.", local_addr, net->get_mac());
+	proc.putln("Local ip: {}, mac={}.", net->get_primary_ip(), net->get_mac());
 	proc.putln("Log file at {}.", log_path);
 
 	net->register_node();
@@ -96,7 +95,7 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		{
 			const Address6& dest_addr = *exp_dest_ip;
 
-			if (dest_addr == local_addr)
+			if (dest_addr == net->get_primary_ip())
 			{
 				net->unpack(std::move(packet));
 				continue;

@@ -57,18 +57,13 @@ void print_generated_modules(
 	for (const GeneratedModule& module : modules)
 	{
 		proc.putln(
-			"{}- {}: {} ({}/{})",
+			"{}- {}: {} ({}/{}) [{} host(s)]",
 			indentation,
 			module.name,
 			module.hostname,
 			module.address,
-			static_cast<unsigned int>(module.network_prefix));
-		if (not module.hosts.empty())
-		{
-			proc.putln("{}  Hosts:", indentation);
-			for (const GeneratedHost& host : module.hosts)
-				proc.putln("{}    - {} ({})", indentation, host.hostname, host.address);
-		}
+			static_cast<unsigned int>(module.network_prefix),
+			module.hosts.size());
 		print_generated_modules(proc, module.children, depth + 1);
 	}
 }
@@ -376,14 +371,14 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
-		std::vector<Uid64> isps;
-		std::function<void(const std::vector<GeneratedModule>&)> collect_isps =
-			[&](const std::vector<GeneratedModule>& modules)
+		std::vector<GeneratedModule*> isps;
+		std::function<void(std::vector<GeneratedModule>&)> collect_isps =
+			[&](std::vector<GeneratedModule>& modules)
 		{
-			for (const GeneratedModule& module : modules)
+			for (GeneratedModule& module : modules)
 			{
 				if (module.name == "ISP")
-					isps.emplace_back(module.root);
+					isps.emplace_back(&module);
 				collect_isps(module.children);
 			}
 		};
@@ -396,6 +391,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			proc.errln("No new ISPs were created, so the existing host cannot be migrated.");
 			co_return 1;
 		}
+		GeneratedModule* target_isp = get_random_from_vector(gen, isps);
 
 		auto hub_address_result = Address6::from_string("fd00::1");
 		if (not hub_address_result)
@@ -467,7 +463,44 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				co_return 1;
 		}
 
-		proc.putln("This host will be migrated to {}.", get_random_from_vector(gen, isps));
+		const Address6 player_address = target_isp->next_host_address;
+		if (not NetManager::same_subnet(player_address, target_isp->subnet, target_isp->network_prefix))
+		{
+			proc.errln("The selected ISP has no available address for this host.");
+			co_return 1;
+		}
+
+		NetManager* player_network = proc.owning_os->get_network_manager();
+		if (player_network == nullptr)
+		{
+			proc.errln("The current host has no network manager.");
+			co_return 1;
+		}
+
+		player_network->set_primary_ip(player_address);
+		player_network->add_route(Address6{}, 0, target_isp->address, RouteType::Static);
+
+		auto target_isp_host = gen_data->hosts.find(target_isp->root);
+		if (target_isp_host == gen_data->hosts.end() or not target_isp_host->second)
+		{
+			proc.errln("Selected ISP '{}' was not found.", target_isp->hostname);
+			co_return 1;
+		}
+		NetManager* target_isp_network = target_isp_host->second->get_os().get_network_manager();
+		if (target_isp_network == nullptr)
+		{
+			proc.errln("Selected ISP '{}' has no network manager.", target_isp->hostname);
+			co_return 1;
+		}
+		target_isp_network->add_route(player_address, 128, player_address, RouteType::Static);
+		gen_data->links.relate(target_isp->root, proc.owning_os->get_uid());
+		target_isp->hosts.emplace_back(GeneratedHost{
+			.uid = proc.owning_os->get_uid(),
+			.hostname = std::string(proc.owning_os->get_hostname()),
+			.address = player_address
+		});
+
+		proc.putln("Connecting this host to ISP '{}'.", target_isp->hostname);
 		outer_world.import_data(builder.data());
 		proc.putln("Imported data successfully.");
 		proc.putln("Generated network:");
