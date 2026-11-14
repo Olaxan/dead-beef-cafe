@@ -88,8 +88,11 @@ public:
 	std::optional<Uid64> arp_lookup(Address6 addr) const;
 	void arp_refresh(Uid64 mac, Address6 addr);
 
+	const std::unordered_map<Address6, Uid64>& get_arp_cache() const;
+
 	void add_route(Address6 to, uint8_t prefix, Address6 via, RouteType type);
 	std::optional<Address6> get_route(Address6 dest) const;
+	const std::vector<RoutingTableEntry>& get_routes() const;
 
 	static bool same_subnet(Address6 a, Address6 b, uint8_t prefix_length);
 	bool same_subnet(Address6 addr) const;

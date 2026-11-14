@@ -736,6 +736,11 @@ std::optional<Uid64> NetManager::arp_lookup(Address6 addr) const
 	return std::nullopt;
 }
 
+const std::unordered_map<Address6, Uid64>& NetManager::get_arp_cache() const
+{
+	return arp_cache_;
+}
+
 void NetManager::arp_refresh(Uid64 mac, Address6 addr)
 {
 	arp_cache_[addr] = mac;
@@ -756,6 +761,11 @@ void NetManager::add_route(Address6 to, uint8_t prefix, Address6 via, RouteType 
 			return route.prefix < prefix;
 		});
 	routes_.insert(insertion_point, RoutingTableEntry{to, prefix, via, type});
+}
+
+const std::vector<RoutingTableEntry>& NetManager::get_routes() const
+{
+	return routes_;
 }
 
 std::optional<Address6> NetManager::get_route(Address6 dest) const
