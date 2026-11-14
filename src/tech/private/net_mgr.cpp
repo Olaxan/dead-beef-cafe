@@ -21,13 +21,7 @@
 #include <iso646.h>
 
 NetManager::NetManager(OS* owner) 
-: os_(*owner), node_(std::make_shared<NetNode>())  
-{ 
-	//get_internet().register_node(os_.get_uid(), node_);
-
-	Uid64 tail = Uid64Generator::generate();
-	address_ = Address6(os_.get_uid().num, tail.num);
-}
+: os_(*owner), node_(std::make_shared<NetNode>()) { }
 
 NetManager::~NetManager()
 {

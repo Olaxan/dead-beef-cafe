@@ -14,6 +14,7 @@ class Host;
 struct NetNode;
 
 using NetPathResult = std::pair<bool, std::vector<Uid64>>;
+using InternetLinks = RelationManager<RelationshipType::ManyToMany, Uid64, Uid64>;
 
 class Internet
 {
@@ -25,6 +26,7 @@ public:
 	void register_node(Uid64 mac, std::shared_ptr<NetNode> node);
 	void unregister_node(Uid64 mac);
 
+	void use_links(std::shared_ptr<InternetLinks> links);
 	void link(Uid64 from, Uid64 to);
 	void unlink(Uid64 from, Uid64 to);
 	void unlink_all(Uid64 node);
@@ -42,6 +44,6 @@ protected:
 private:
 
 	std::unordered_map<Uid64, std::shared_ptr<NetNode>> nodes_;
-	RelationManager<RelationshipType::ManyToMany, Uid64, Uid64> links_;
+	std::shared_ptr<InternetLinks> links_{std::make_shared<InternetLinks>()};
 
 };

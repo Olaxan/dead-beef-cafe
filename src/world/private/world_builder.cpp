@@ -116,7 +116,7 @@ namespace WorldGen
 		gen_data_.clusters_.try_emplace(hub_uid, name, hub_uid);
 		Cluster& cluster = gen_data_.clusters_.at(hub_uid);
 
-		world_data_->links.relate(link_from, hub_uid);
+		world_data_->links->relate(link_from, hub_uid);
 
 		for (std::size_t i = 0; i < params.number_of_hosts; ++i)
 		{
@@ -127,7 +127,7 @@ namespace WorldGen
 			Uid64 host_uid = generate_host(hostname);
 			cluster.add_host(host_uid);
 
-			world_data_->links.relate(hub_uid, host_uid);
+			world_data_->links->relate(hub_uid, host_uid);
 		}
 
 		return hub_uid;

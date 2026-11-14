@@ -6,6 +6,7 @@
 #include "host.h"
 #include "person.h"
 #include "corp.h"
+#include "internet.h"
 
 #include <memory>
 #include <vector>
@@ -20,5 +21,5 @@ struct WorldData
 
 	RelationManager<RelationshipType::OneToOne, PersonId, CorpId> employment;
     RelationManager<RelationshipType::OneToMany, PersonId, Uid64> ownership;
-    RelationManager<RelationshipType::OneToMany, Uid64, Uid64> links;
+    std::shared_ptr<InternetLinks> links{std::make_shared<InternetLinks>()};
 };

@@ -3,12 +3,24 @@
 
 #include <queue>
 #include <ranges>
+#include <stdexcept>
 
 #include <iso646.h>
 
 void Internet::register_node(Uid64 mac, std::shared_ptr<NetNode> node)
 {
-	nodes_[mac] = std::move(node);
+	auto [node_it, inserted] = nodes_.insert_or_assign(mac, std::move(node));
+	if (not inserted)
+		return;
+
+	for (Uid64 neighbor : links_->get_all_related(mac))
+	{
+		if (auto neighbor_it = nodes_.find(neighbor); neighbor_it != nodes_.end())
+		{
+			node_it->second->notify_link(neighbor);
+			neighbor_it->second->notify_link(mac);
+		}
+	}
 }
 
 void Internet::unregister_node(Uid64 mac)
@@ -17,11 +29,21 @@ void Internet::unregister_node(Uid64 mac)
 	nodes_.erase(mac);
 }
 
+void Internet::use_links(std::shared_ptr<InternetLinks> links)
+{
+	if (not links)
+		throw std::invalid_argument("Internet link graph cannot be null.");
+
+	links_ = std::move(links);
+}
+
 void Internet::link(Uid64 from, Uid64 to)
 {
-	if (nodes_.contains(from) && nodes_.contains(to) && not links_.is_related(from, to))
+	const bool already_linked = links_->is_related(from, to);
+	links_->relate(from, to);
+
+	if (not already_linked && nodes_.contains(from) && nodes_.contains(to))
 	{
-		links_.relate(from, to);
 		nodes_[from]->notify_link(to);
 		nodes_[to]->notify_link(from);
 	}
@@ -39,17 +61,17 @@ void Internet::unlink(Uid64 from, Uid64 to)
 		it->second->notify_unlink(from);
 	}
 
-	links_.unrelate(from, to);
+	links_->unrelate(from, to);
 }
 
 void Internet::unlink_all(Uid64 node)
 {
-	for (auto&& idx : links_.get_all_related(node))
+	for (auto&& idx : links_->get_all_related(node))
 	{
 		nodes_[node]->notify_unlink(idx);
 	}
 
-	links_.unrelate_all(node);
+	links_->unrelate_all(node);
 }
 
 NetPathResult Internet::get_path(Uid64 from, Uid64 to) const
@@ -67,7 +89,7 @@ NetPathResult Internet::get_path(Uid64 from, Uid64 to) const
 		if (current == to)
 			break;
 
-		for (auto&& next : links_.get_all_related(current))
+		for (auto&& next : links_->get_all_related(current))
 		{
 			if (not came_from.contains(next))
 			{
@@ -109,14 +131,14 @@ bool Internet::link_unicast(ip::DataFrame&& pak)
 	Uid64 from = pak.src_mac();
 	Uid64 to = pak.dest_mac();
 
-	//std::println("INTERNET: {} bytes from {} to {}.", pak.ByteSizeLong(), from, to);
+	std::println("INTERNET: {} bytes from {} to {}.", pak.ByteSizeLong(), from, to);
 
 	if (to == uint64_t(-1))
 	{
 		return link_broadcast(std::move(pak));
 	}
 
-	if (links_.is_related(from, to))
+	if (links_->is_related(from, to))
 	{
 		return link_receive(to, std::move(pak));
 	}
@@ -129,7 +151,7 @@ int32_t Internet::link_broadcast(ip::DataFrame&& pak)
 	Uid64 from = pak.src_mac();
 
 	int32_t rx = 0;
-	for (auto&& rec : links_.get_all_related(from))
+	for (auto&& rec : links_->get_all_related(from))
 	{
 		if (rec == from)
 			continue;

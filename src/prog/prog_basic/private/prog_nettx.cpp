@@ -71,14 +71,16 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 	OS& os = *proc.owning_os;
 	NetManager* net = os.get_network_manager();
 
-	std::atomic<int32_t> arp_holdoff_count{0};
-
 	FileAccessFlags flags = FileAccessFlags::Create | FileAccessFlags::Write | FileAccessFlags::Append;
 	FileScope log{proc, log_path, flags};
 	proc.set_writer([log = std::move(log)](Proc& wproc, WriteInput str)
 	{
 		if (str) { std::ignore = log.write(*str); }
 	});
+
+	Uid64 tail = Uid64Generator::generate();
+	Address6 slaac_addr = Address6(os.get_uid().num, tail.num);
+	net->set_primary_ip(slaac_addr);
 
 	proc.putln("TX service running.");
 	proc.putln("Local ip: {}, mac={}.", net->get_primary_ip(), net->get_mac());

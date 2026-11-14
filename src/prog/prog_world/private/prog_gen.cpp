@@ -493,7 +493,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 		target_isp_network->add_route(player_address, 128, player_address, RouteType::Static);
-		gen_data->links.relate(target_isp->root, proc.owning_os->get_uid());
+		gen_data->links->relate(target_isp->root, proc.owning_os->get_uid());
 		target_isp->hosts.emplace_back(GeneratedHost{
 			.uid = proc.owning_os->get_uid(),
 			.hostname = std::string(proc.owning_os->get_hostname()),
