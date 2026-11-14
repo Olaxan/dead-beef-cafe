@@ -49,6 +49,7 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 	for (std::size_t i = 0; i < 3; ++i)
 	{
 		float holdoff = static_cast<float>(1 << i) * 0.25f;
+		proc.putln("Waiting {} seconds for ARP reply.", holdoff);
 		co_await proc.wait(holdoff);
 
 		if (std::optional<Uid64> arp_entry = net->arp_lookup(dest_addr); arp_entry.has_value())
@@ -56,6 +57,10 @@ EagerTask<int32_t> ArpDelay(Proc& proc, ip::IpPackage&& packet, Address6 dest_ad
 			proc.putln("Received ARP reply ({}), transmitting...", *arp_entry);
 			net->send(std::move(local_packet), *arp_entry);
 			co_return 0;
+		}
+		else
+		{
+			proc.putln("No ARP reply ({}/{}).", i + 1, 3);
 		}
 	}
 
@@ -78,9 +83,12 @@ ProcessTask Programs::SrvNetTx(Proc& proc, std::vector<std::string> args)
 		if (str) { std::ignore = log.write(*str); }
 	});
 
-	Uid64 tail = Uid64Generator::generate();
-	Address6 slaac_addr = Address6(os.get_uid().num, tail.num);
-	net->set_primary_ip(slaac_addr);
+	if (not net->get_primary_ip().is_valid())
+	{
+		Uid64 tail = Uid64Generator::generate();
+		Address6 slaac_addr = Address6(os.get_uid().num, tail.num);
+		net->set_primary_ip(slaac_addr);
+	}
 
 	proc.putln("TX service running.");
 	proc.putln("Local ip: {}, mac={}.", net->get_primary_ip(), net->get_mac());

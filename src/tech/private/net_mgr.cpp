@@ -141,7 +141,7 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 			co_return std::error_condition{EIO, std::generic_category()};
 
 		ip::IpPackage ip;
-		ip.set_src_ip(src.addr.raw);
+		ip.set_src_ip(src.addr.data_str());
 		ip.set_dest_ip(dest.addr.raw);
 		ip.set_protocol(ip::Protocol::TCP);
 		ip.set_payload(tcp_data);
@@ -357,8 +357,8 @@ void NetManager::unpack(ip::IpPackage&& package)
 	const std::string& src_ip_bytes = package.src_ip();
 	const std::string& dest_ip_bytes = package.dest_ip();
 
-	auto exp_src_addr = Address6::from_bytes(src_ip_bytes.data());
-	auto exp_dest_addr = Address6::from_bytes(dest_ip_bytes.data());
+	auto exp_src_addr = Address6::from_bytes(src_ip_bytes);
+	auto exp_dest_addr = Address6::from_bytes(dest_ip_bytes);
 
 	if (exp_src_addr && exp_dest_addr)
 	{
@@ -427,7 +427,7 @@ void NetManager::handle_packet(ip::IcmpPacket&& packet, ip::IpPackage&& outer, c
 
 			ip::IpPackage pak;
 			pak.set_dest_ip(outer.src_ip());
-			pak.set_src_ip(get_primary_ip().raw);
+			pak.set_src_ip(get_primary_ip().data_str());
 			pak.set_protocol(ip::Protocol::ICMP);
 			pak.set_payload(reply.SerializeAsString());
 
@@ -654,8 +654,8 @@ std::optional<ip::IpPackage> NetManager::make_tcp_query_ip(OpenSocketHandle h, i
 	opt->SerializeToString(&tcp_str);
 
 	ip::IpPackage pak;
-	pak.set_dest_ip(local.addr.raw);
-	pak.set_src_ip(remote.addr.raw);
+	pak.set_dest_ip(local.addr.data_str());
+	pak.set_src_ip(remote.addr.data_str());
 	pak.set_protocol(ip::Protocol::TCP);
 	pak.set_payload(std::move(tcp_str));
 
@@ -699,8 +699,8 @@ std::optional<ip::IpPackage> NetManager::make_tcp_reply_ip(OpenSocketHandle h, i
 	std::string tcp_str = opt->SerializeAsString();
 
 	ip::IpPackage pak;
-	pak.set_dest_ip(remote.addr.raw);
-	pak.set_src_ip(local.addr.raw);
+	pak.set_dest_ip(remote.addr.data_str());
+	pak.set_src_ip(local.addr.data_str());
 	pak.set_protocol(ip::Protocol::TCP);
 	pak.set_payload(std::move(tcp_str));
 
