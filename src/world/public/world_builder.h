@@ -25,13 +25,16 @@ namespace WorldGen
 	{
 	public:
 
-		Cluster(std::string name);
+		Cluster(std::string name, Uid64 root);
 
 		void add_host(Uid64 uid);
+
+		Uid64 get_root() const { return root_; }
 	
 	protected:
 
 		std::string name_;
+		Uid64 root_{0};
 		std::vector<Uid64> hosts_;
 		
 	};

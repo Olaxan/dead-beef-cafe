@@ -7,15 +7,18 @@
 namespace WorldGen
 {
 
-	Cluster::Cluster(std::string name)
-		: name_(std::move(name))
-	{
-	}
+	/* --- Cluster --- */
+
+	Cluster::Cluster(std::string name, Uid64 root)
+		: name_(std::move(name)), root_(root) { }
 
 	void Cluster::add_host(Uid64 uid)
 	{
 		hosts_.emplace_back(uid);
 	}
+
+
+	/* --- WorldBuilder --- */
 
 	WorldBuilder::WorldBuilder(std::shared_ptr<WorldData> data)
 		: world_data_(data) { }
@@ -33,9 +36,10 @@ namespace WorldGen
 
 	Cluster& WorldBuilder::generate_cluster(std::string name, Uid64 link_from, ClusterParams params)
 	{
-		Cluster& cluster = gen_data_.clusters_.emplace_back(name);
-
 		Uid64 hub_uid = generate_host(name);
+
+		Cluster& cluster = gen_data_.clusters_.emplace_back(name, hub_uid);
+
 		world_data_->links.relate(hub_uid, link_from);
 
 		for (std::size_t i = 0; i < params.number_of_hosts; ++i)
@@ -49,9 +53,10 @@ namespace WorldGen
 
 			world_data_->links.relate(hub_uid, host_uid);
 		}
+		
 		return cluster;
 	}
-	
+
 	void WorldBuilder::build()
 	{
 	}

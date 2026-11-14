@@ -134,8 +134,11 @@ HostContext World::create_host_context(Uid64 uid)
 void World::import_data(std::shared_ptr<WorldData> new_data)
 {
 	stop();
-	std::println("Deinitializing world...");
-	std::println("Setting up world...");
-	data_ = new_data;
+
+	for (auto&& [uid, host] : new_data->hosts)
+	{
+		add_host(uid, std::move(host));
+	}
+
 	launch();
 }

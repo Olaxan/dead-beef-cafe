@@ -37,6 +37,15 @@
 
 using namespace WorldGen;
 
+template<typename T>
+const T& get_random_from_vector(std::mt19937& gen, std::vector<T>& v)
+{
+	assert(v.size());
+	std::uniform_int_distribution<std::size_t> r{0, v.size() - 1};
+	std::size_t idx = r(gen);
+	return v.at(idx);
+}
+
 int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 {
 	std::ofstream file{path, std::ofstream::out};
@@ -148,6 +157,8 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		auto gen_data = std::make_shared<WorldData>();
 		WorldBuilder builder{gen_data};
 
+		std::vector<Uid64> isps;
+
 		std::size_t shared_index{0};
 
 		std::random_device rd;
@@ -193,16 +204,17 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				return std::move(res);
 			};
 
-			ClusterParams cluster
+			ClusterParams cluster_params
 			{
 				.number_of_hosts = distribution_regional_isp(gen),
 				.hostname_generator = generate_isp_name
 			};
 
-			proc.putln("Generating '{}' with {} ISP(s)...", country.country_name(), cluster.number_of_hosts);
+			proc.putln("Generating '{}' with {} ISP(s)...", country.country_name(), cluster_params.number_of_hosts);
 			std::string cluster_name = std::format("{} Regional Gateway", country.country_name());
 
-			Cluster& isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster);
+			Cluster& isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster_params);
+			isps.emplace_back(isp_cluster.get_root());
 		};
 
 		Uid64 hub = builder.generate_host("Central Routing Node");
@@ -216,8 +228,16 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		proc.putln("Imported data succesfully.");
 
 		builder.build();
+
+		if (isps.empty())
+		{
+			proc.errln("No new ISPs were created, so the existing host cannot be migrated.");
+			co_return 1;
+		}
+
+		proc.putln("This host will be migrated to {}.", get_random_from_vector(gen, isps));
 		outer_world.import_data(builder.data());
-		
+
 	}
 
 	co_return 0;

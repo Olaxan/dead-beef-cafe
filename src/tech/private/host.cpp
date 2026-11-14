@@ -28,8 +28,11 @@ Host::~Host() = default;
 
 void Host::setup(GameServices services, HostContext context)
 {
-    os_->setup(services, context);
-    
+    if (os_)
+    {
+        os_->setup(services, context);
+    }
+
     services_ = std::move(services);
     context_ = std::move(context);
 }
@@ -49,7 +52,10 @@ bool Host::start_host()
     for (auto& device : devices_)
         device->start_device(this);
 
-    os_->start_os();
+    if (os_)
+    {
+        os_->start_os();
+    }
 
     state_ = DeviceState::PoweredOn;
 
