@@ -23,8 +23,9 @@ message GenCountry
 	
 	BusinessType primary_business = 2 [json_name = "primaryBusiness"];
 
-	repeated NamePool person_names = 3 [json_name = "personNames"];
-	repeated NamePool business_names = 4 [json_name = "businessNames"];
+	optional NamePool person_names = 3 [json_name = "personNames"];
+	optional NamePool business_names = 4 [json_name = "businessNames"];
+	optional NamePool isp_names = 5 [json_name = "ispNames"];
 }
 
 message GenParams

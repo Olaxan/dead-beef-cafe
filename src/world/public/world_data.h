@@ -12,12 +12,8 @@
 #include <thread>
 #include <random>
 
-class WorldData
+struct WorldData
 {
-public:
-
-protected:
-
 	std::unordered_map<PersonId, Person> people;
     std::unordered_map<CorpId, Corp> corps;
     std::unordered_map<Uid64, std::unique_ptr<Host>> hosts;

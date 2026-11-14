@@ -8,18 +8,17 @@
 #include <functional>
 
 class Host;
-class WorldData;
+struct WorldData;
 
 namespace WorldGen
 {
 
-	template<typename T>
-	using NameGenerator<T> = std::function<std::string(const T&)>;
+	using NameGenerator = std::function<std::string(void)>;
 
 	struct ClusterParams
 	{
 		std::size_t number_of_hosts{1};
-		NameGenerator<Host> hostname_generator{nullptr};
+		NameGenerator hostname_generator{nullptr};
 	};
 
 	class Cluster
@@ -43,13 +42,18 @@ namespace WorldGen
 	
 		WorldBuilder(std::shared_ptr<WorldData> data);
 
-		std::pair<Uid64, Host*> add_host(std::string hostname);
+		Uid64 add_host(std::string hostname);
 		Cluster& generate_cluster(std::string name, Uid64 link_from, ClusterParams params);
 	
 	
 	
 	protected:
 	
-		std::shared_ptr<WorldData> data_{};
+		std::shared_ptr<WorldData> world_data_{};
+
+		struct GenerationData
+		{
+			std::vector<Cluster> clusters_{};
+		} gen_data_;
 	};
 };

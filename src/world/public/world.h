@@ -47,7 +47,6 @@ public:
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
     Internet& get_internet() { return internet_; }
-    std::mt19937& get_random_stream() { return randomness_; }
 
     Host* add_host(Uid64 id, std::unique_ptr<Host>&& new_host);
 
@@ -65,7 +64,6 @@ private:
     bool run_{true};
     std::jthread worker_{};
     std::chrono::steady_clock::time_point last_update_{};
-    std::mt19937 randomness_;
 
 private:
 
