@@ -35,6 +35,7 @@ namespace WorldGen
 		std::size_t max_instances{1};
 		std::size_t min_hosts{0};
 		std::size_t max_hosts{0};
+		uint8_t network_prefix{64};
 		NameGenerator name_generator{nullptr};
 		std::vector<GenerationModule> children;
 	};
@@ -44,12 +45,22 @@ namespace WorldGen
 		std::vector<GenerationModule> modules;
 	};
 
+	struct GeneratedHost
+	{
+		Uid64 uid{0};
+		std::string hostname;
+		Address6 address;
+	};
+
 	struct GeneratedModule
 	{
 		std::string name;
 		std::string hostname;
 		Uid64 root{0};
-		std::vector<std::string> hosts;
+		Address6 subnet;
+		Address6 address;
+		uint8_t network_prefix{64};
+		std::vector<GeneratedHost> hosts;
 		std::vector<GeneratedModule> children;
 	};
 
@@ -62,6 +73,7 @@ namespace WorldGen
 		void add_host(Uid64 uid);
 
 		Uid64 get_root() const { return root_; }
+		const std::vector<Uid64>& get_hosts() const { return hosts_; }
 	
 	protected:
 
@@ -79,7 +91,12 @@ namespace WorldGen
 
 		Uid64 generate_host(std::string hostname);
 		Uid64 generate_cluster(std::string name, Uid64 link_from, ClusterParams params);
-		std::vector<GeneratedModule> execute(const GenerationPlan& plan, Uid64 upstream, std::mt19937& gen);
+		std::vector<GeneratedModule> execute(
+			const GenerationPlan& plan,
+			Uid64 upstream,
+			std::mt19937& gen,
+			Address6 address_space = {},
+			uint8_t address_space_prefix = 0);
 
 		void build();
 		std::shared_ptr<WorldData> data() { return world_data_; }
@@ -89,6 +106,8 @@ namespace WorldGen
 		std::vector<GeneratedModule> execute_modules(
 			const std::vector<GenerationModule>& modules,
 			Uid64 upstream,
+			Address6 address_space,
+			uint8_t address_space_prefix,
 			std::mt19937& gen);
 		Host* get_host(Uid64 uid);
 	

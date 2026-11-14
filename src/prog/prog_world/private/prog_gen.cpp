@@ -25,6 +25,7 @@
 #include <google/protobuf/json/json.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 
+#include <algorithm>
 #include <string>
 #include <cstdlib>
 #include <print>
@@ -32,6 +33,7 @@
 #include <fstream>
 #include <filesystem>
 #include <functional>
+#include <stdexcept>
 
 #include <iso646.h>
 
@@ -54,12 +56,18 @@ void print_generated_modules(
 	const std::string indentation(depth * 2, ' ');
 	for (const GeneratedModule& module : modules)
 	{
-		proc.putln("{}- {}: {}", indentation, module.name, module.hostname);
+		proc.putln(
+			"{}- {}: {} ({}/{})",
+			indentation,
+			module.name,
+			module.hostname,
+			module.address,
+			static_cast<unsigned int>(module.network_prefix));
 		if (not module.hosts.empty())
 		{
 			proc.putln("{}  Hosts:", indentation);
-			for (const std::string& hostname : module.hosts)
-				proc.putln("{}    - {}", indentation, hostname);
+			for (const GeneratedHost& host : module.hosts)
+				proc.putln("{}    - {} ({})", indentation, host.hostname, host.address);
 		}
 		print_generated_modules(proc, module.children, depth + 1);
 	}
@@ -95,6 +103,7 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 	isp_module.set_module_name("ISP");
 	isp_module.set_min_instances(4);
 	isp_module.set_max_instances(8);
+	isp_module.set_network_prefix(16);
 
 	world::GenModule& household_module = *isp_module.add_children();
 	household_module.set_module_name("Household");
@@ -102,6 +111,7 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 	household_module.set_max_instances(5);
 	household_module.set_min_hosts(1);
 	household_module.set_max_hosts(6);
+	household_module.set_network_prefix(64);
 
 	world::GenModule& corporation_module = *isp_module.add_children();
 	corporation_module.set_module_name("Corporation");
@@ -109,6 +119,7 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 	corporation_module.set_max_instances(3);
 	corporation_module.set_min_hosts(3);
 	corporation_module.set_max_hosts(10);
+	corporation_module.set_network_prefix(32);
 
 	std::string out_str{};
 	if (auto status = google::protobuf::json::MessageToJsonString(out_params, &out_str); status.ok())
@@ -223,8 +234,19 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			return not pool.prefix().empty() or not pool.suffix().empty();
 		};
 
-		std::function<bool(const world::GenModule&)> module_is_valid =
-			[&](const world::GenModule& module)
+		auto default_network_prefix = [](const std::string& module_name, uint8_t parent_prefix) -> uint32_t
+		{
+			if (module_name == "ISP")
+				return 16;
+			if (module_name == "Corporation")
+				return 32;
+			if (module_name == "Household")
+				return 64;
+			return std::min<uint32_t>(static_cast<uint32_t>(parent_prefix) + 16, 127);
+		};
+
+		std::function<bool(const world::GenModule&, uint8_t)> module_is_valid =
+			[&](const world::GenModule& module, uint8_t parent_prefix)
 		{
 			if (module.module_name().empty())
 			{
@@ -235,6 +257,9 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			const uint32_t max_instances = module.has_max_instances() ? module.max_instances() : min_instances;
 			const uint32_t min_hosts = module.has_min_hosts() ? module.min_hosts() : 0;
 			const uint32_t max_hosts = module.has_max_hosts() ? module.max_hosts() : min_hosts;
+			const uint32_t network_prefix = module.has_network_prefix()
+				? module.network_prefix()
+				: default_network_prefix(module.module_name(), parent_prefix);
 			if (min_instances > max_instances)
 			{
 				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module.module_name());
@@ -245,9 +270,14 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module.module_name());
 				return false;
 			}
+			if (network_prefix <= parent_prefix || network_prefix > 127)
+			{
+				proc.errln("Generation module '{}' must have a networkPrefix between {} and 127.", module.module_name(), parent_prefix + 1);
+				return false;
+			}
 			for (const world::GenModule& child : module.children())
 			{
-				if (not module_is_valid(child))
+				if (not module_is_valid(child, static_cast<uint8_t>(network_prefix)))
 					return false;
 			}
 			return true;
@@ -255,13 +285,13 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		for (const world::GenModule& module : gen_params.modules())
 		{
-			if (not module_is_valid(module))
+			if (not module_is_valid(module, 8))
 				co_return 1;
 		}
 
 		GenerationPlan plan;
-		std::function<GenerationModule(const world::GenModule&, const world::GenCountry&)> convert_module;
-		convert_module = [&](const world::GenModule& source, const world::GenCountry& country)
+		std::function<GenerationModule(const world::GenModule&, const world::GenCountry&, uint8_t)> convert_module;
+		convert_module = [&](const world::GenModule& source, const world::GenCountry& country, uint8_t parent_prefix)
 		{
 			GenerationModule module;
 			module.name = source.module_name();
@@ -269,6 +299,9 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			module.max_instances = source.has_max_instances() ? source.max_instances() : module.min_instances;
 			module.min_hosts = source.has_min_hosts() ? source.min_hosts() : 0;
 			module.max_hosts = source.has_max_hosts() ? source.max_hosts() : module.min_hosts;
+			module.network_prefix = static_cast<uint8_t>(source.has_network_prefix()
+				? source.network_prefix()
+				: default_network_prefix(module.name, parent_prefix));
 
 			const world::NamePool* name_pool = nullptr;
 			if (source.has_name_pool())
@@ -289,7 +322,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			}
 
 			for (const world::GenModule& child : source.children())
-				module.children.emplace_back(convert_module(child, country));
+				module.children.emplace_back(convert_module(child, country, module.network_prefix));
 
 			return module;
 		};
@@ -298,13 +331,14 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		{
 			GenerationModule country_module;
 			country_module.name = "Country";
+			country_module.network_prefix = 8;
 			const world::GenCountry* country_ptr = &country;
 			country_module.name_generator = [country_ptr]()
 			{
 				return country_ptr->country_name();
 			};
 			for (const world::GenModule& module : gen_params.modules())
-				country_module.children.emplace_back(convert_module(module, country));
+				country_module.children.emplace_back(convert_module(module, country, country_module.network_prefix));
 
 			if (gen_params.modules().empty())
 			{
@@ -314,13 +348,33 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				fallback.set_max_instances(8);
 				fallback.set_min_hosts(4);
 				fallback.set_max_hosts(8);
-				country_module.children.emplace_back(convert_module(fallback, country));
+				fallback.set_network_prefix(16);
+				country_module.children.emplace_back(convert_module(fallback, country, country_module.network_prefix));
 			}
 			plan.modules.emplace_back(std::move(country_module));
 		}
 
 		Uid64 hub = builder.generate_host("Central Routing Node");
-		std::vector<GeneratedModule> generated = builder.execute(plan, hub, gen);
+		std::vector<GeneratedModule> generated;
+		try
+		{
+			generated = builder.execute(plan, hub, gen);
+		}
+		catch (const std::invalid_argument& error)
+		{
+			proc.errln("Invalid generation plan: {}.", error.what());
+			co_return 1;
+		}
+		catch (const std::length_error& error)
+		{
+			proc.errln("Generation plan exceeds its address space: {}.", error.what());
+			co_return 1;
+		}
+		catch (const std::overflow_error& error)
+		{
+			proc.errln("Generated address overflow: {}.", error.what());
+			co_return 1;
+		}
 
 		std::vector<Uid64> isps;
 		std::function<void(const std::vector<GeneratedModule>&)> collect_isps =
@@ -343,11 +397,81 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
+		auto hub_address_result = Address6::from_string("fd00::1");
+		if (not hub_address_result)
+		{
+			proc.errln("Failed to assign the central routing node address.");
+			co_return 1;
+		}
+		const Address6 hub_address = *hub_address_result;
+
+		auto configure_host = [&](Uid64 uid, Address6 address) -> NetManager*
+		{
+			auto it = gen_data->hosts.find(uid);
+			if (it == gen_data->hosts.end() or not it->second)
+			{
+				proc.errln("Generated host '{}' was not found.", uid);
+				return nullptr;
+			}
+
+			Host& host = *it->second;
+			HostUtils::prepare_host<BasicOS>(outer_world, host);
+			NetManager* net = host.get_os().get_network_manager();
+			if (net == nullptr)
+			{
+				proc.errln("Generated host '{}' has no network manager.", uid);
+				return nullptr;
+			}
+
+			net->set_primary_ip(address);
+			return net;
+		};
+
+		NetManager* hub_network = configure_host(hub, hub_address);
+		if (hub_network == nullptr)
+			co_return 1;
+
+		std::function<bool(const GeneratedModule&, Address6)> configure_module_network =
+			[&](const GeneratedModule& module, Address6 upstream_address)
+		{
+			NetManager* net = configure_host(module.root, module.address);
+			if (net == nullptr)
+				return false;
+
+			for (const GeneratedModule& child : module.children)
+			{
+				net->add_route(child.subnet, child.network_prefix, child.address, RouteType::Static);
+			}
+			net->add_route(Address6{}, 0, upstream_address, RouteType::Static);
+
+			for (const GeneratedHost& host : module.hosts)
+			{
+				NetManager* host_network = configure_host(host.uid, host.address);
+				if (host_network == nullptr)
+					return false;
+				host_network->add_route(Address6{}, 0, module.address, RouteType::Static);
+			}
+
+			for (const GeneratedModule& child : module.children)
+			{
+				if (not configure_module_network(child, module.address))
+					return false;
+			}
+			return true;
+		};
+
+		for (const GeneratedModule& country : generated)
+		{
+			hub_network->add_route(country.subnet, country.network_prefix, country.address, RouteType::Static);
+			if (not configure_module_network(country, hub_address))
+				co_return 1;
+		}
+
 		proc.putln("This host will be migrated to {}.", get_random_from_vector(gen, isps));
 		outer_world.import_data(builder.data());
 		proc.putln("Imported data successfully.");
 		proc.putln("Generated network:");
-		proc.putln("- Central Routing Node");
+		proc.putln("- Central Routing Node ({})", hub_address);
 		print_generated_modules(proc, generated, 1);
 
 	}

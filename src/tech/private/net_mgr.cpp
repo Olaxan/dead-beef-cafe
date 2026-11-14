@@ -739,8 +739,14 @@ void NetManager::arp_refresh(Uid64 mac, Address6 addr)
 
 void NetManager::add_route(Address6 to, uint8_t prefix, Address6 via, RouteType type)
 {
-	routes_.emplace_back(to, prefix, via, type);
-	// Sort routes based on prefix length and metric.
+	auto insertion_point = std::find_if(
+		routes_.begin(),
+		routes_.end(),
+		[prefix](const RoutingTableEntry& route)
+		{
+			return route.prefix < prefix;
+		});
+	routes_.insert(insertion_point, RoutingTableEntry{to, prefix, via, type});
 }
 
 std::optional<Address6> NetManager::get_route(Address6 dest) const

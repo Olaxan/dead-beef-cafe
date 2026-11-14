@@ -24,18 +24,21 @@ namespace HostUtils
 	}
 
 	template<std::derived_from<OS> T_OS>
+	void prepare_host(World& world, Host& host)
+	{
+		host.create_device<Disk>(500);
+		host.create_device<CPU>(1.5f);
+		host.create_device<NIC>(100.f);
+		create_os<T_OS>(world, host);
+	}
+
+	template<std::derived_from<OS> T_OS>
 	Host* create_host(World& world, std::string hostname)
 	{
 		std::unique_ptr<Host> ptr = std::make_unique<Host>(hostname);
 		Uid64 new_uid = Uid64Generator::generate();
 
-        Host& skel = *ptr;
-
-        Disk& my_disk = skel.create_device<Disk>(500);
-        CPU& my_cpu = skel.create_device<CPU>(1.5f);
-        NIC& my_nic = skel.create_device<NIC>(100.f);
-
-        HostUtils::create_os<T_OS>(world, skel);
+        HostUtils::prepare_host<T_OS>(world, *ptr);
 
 		return world.add_host(new_uid, std::move(ptr));
 	}
