@@ -60,6 +60,8 @@ void World::launch()
 		host->start_host();
 	}
 
+	run_.store(true);
+
 	worker_ = std::jthread([this]
 	{
 		while (run_.load())
