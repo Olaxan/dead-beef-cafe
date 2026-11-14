@@ -176,16 +176,19 @@ HostContext& OS::get_context()
 
 IAudioBase* OS::get_audio()
 {
+    assert(services_.audio);
     return services_.audio;
 }
 
 TimerAwaiter OS::wait(float seconds)
 {
+    assert(services_.timers);
 	return services_.timers->wait(seconds);
 }
 
 void OS::schedule(float seconds, SchedulerFn callback)
 {
+    assert(services_.timers);
     services_.timers->set_timer(seconds, callback);
 }
 

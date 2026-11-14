@@ -166,7 +166,7 @@ bool Internet::link_receive(Uid64 to, ip::DataFrame&& pak)
 {
 	if (auto it = nodes_.find(to); it != nodes_.end())
 	{
-		//std::println("INTERNET: Receiving to {}.", to);
+		std::println("INTERNET: Receiving to {}.", to);
 		/* If the node is local, we deliver the message. 
 		However, it could also be remote, meaning the message needs to be transmitted
 		over a real internet connection. */

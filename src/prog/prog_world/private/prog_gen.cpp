@@ -255,26 +255,31 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			const uint32_t network_prefix = module.has_network_prefix()
 				? module.network_prefix()
 				: default_network_prefix(module.module_name(), parent_prefix);
+
 			if (min_instances > max_instances)
 			{
 				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module.module_name());
 				return false;
 			}
+			
 			if (min_hosts > max_hosts)
 			{
 				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module.module_name());
 				return false;
 			}
+
 			if (network_prefix <= parent_prefix || network_prefix > 127)
 			{
 				proc.errln("Generation module '{}' must have a networkPrefix between {} and 127.", module.module_name(), parent_prefix + 1);
 				return false;
 			}
+
 			for (const world::GenModule& child : module.children())
 			{
 				if (not module_is_valid(child, static_cast<uint8_t>(network_prefix)))
 					return false;
 			}
+
 			return true;
 		};
 
@@ -486,13 +491,17 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			proc.errln("Selected ISP '{}' was not found.", target_isp->hostname);
 			co_return 1;
 		}
+
 		NetManager* target_isp_network = target_isp_host->second->get_os().get_network_manager();
+
 		if (target_isp_network == nullptr)
 		{
 			proc.errln("Selected ISP '{}' has no network manager.", target_isp->hostname);
 			co_return 1;
 		}
+
 		target_isp_network->add_route(player_address, 128, player_address, RouteType::Static);
+
 		gen_data->links->relate(target_isp->root, proc.owning_os->get_uid());
 		target_isp->hosts.emplace_back(GeneratedHost{
 			.uid = proc.owning_os->get_uid(),
