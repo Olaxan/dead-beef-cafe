@@ -89,14 +89,15 @@ Host* World::add_host(Uid64 id, std::unique_ptr<Host>&& new_host)
 
 bool World::serialize(world::World* to)
 {
+	bool success = true;
 	for (auto& [id, host] : data_->hosts)
 	{
 		world::Host* ar = to->add_hosts();
 		ar->set_uid(id.num);
-		host->serialize(ar);
+		success &= host->serialize(ar);
 	}
 
-	return true;
+	return success;
 }
 
 bool World::deserialize(const world::World* from)

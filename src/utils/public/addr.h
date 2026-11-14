@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <string_view>
+#include <concepts>
 
 class Address6 {
 public:
@@ -27,8 +28,20 @@ public:
 
 	Address6() = default;
 
-	Address6(uint64_t pre, uint64_t post = 0) noexcept
+	Address6(uint64_t pre, uint64_t post) noexcept
 		: head(pre), tail(post)	{ }
+
+	template<std::unsigned_integral T>
+		requires (!std::same_as<T, bool> && sizeof(T) <= 16)
+	Address6(T value) noexcept
+		: bytes{}
+	{
+		for (size_t i = 0; i < sizeof(T); ++i)
+		{
+			bytes[sizeof(T) - i - 1] = static_cast<uint8_t>(value & static_cast<T>(0xFF));
+			value >>= 8;
+		}
+	}
 
     explicit Address6(std::array<uint8_t, 16>&& raw_bytes) noexcept;
 

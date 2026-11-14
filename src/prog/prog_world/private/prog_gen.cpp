@@ -166,6 +166,8 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		std::uniform_int_distribution<std::size_t> distribution_regional_isp(4, 8);
 		std::uniform_int_distribution<std::size_t> distribution_100(0, 100);
 
+		std::uniform_int_distribution<uint16_t> distribution_regional_isp_addr(1, std::numeric_limits<uint16_t>::max());
+
 		auto pick_from_string_field = [&](std::string fallback, const google::protobuf::RepeatedPtrField<std::string>& field) -> std::string
 		{
 			if (field.empty())
@@ -204,17 +206,22 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				return std::move(res);
 			};
 
+			uint16_t regional_header = distribution_regional_isp_addr(gen);
+			Address6 regional_addr{regional_header};
+
 			ClusterParams cluster_params
 			{
 				.number_of_hosts = distribution_regional_isp(gen),
-				.hostname_generator = generate_isp_name
+				.hostname_generator = generate_isp_name,
+				.subnet = regional_addr,
+				.prefix = 16
 			};
 
 			proc.putln("Generating '{}' with {} ISP(s)...", country.country_name(), cluster_params.number_of_hosts);
 			std::string cluster_name = std::format("{} Regional Gateway", country.country_name());
 
-			Cluster& isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster_params);
-			isps.emplace_back(isp_cluster.get_root());
+			Uid64 isp_cluster = builder.generate_cluster(cluster_name, upstream, cluster_params);
+			isps.emplace_back(isp_cluster);
 		};
 
 		Uid64 hub = builder.generate_host("Central Routing Node");

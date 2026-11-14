@@ -34,11 +34,12 @@ namespace WorldGen
 		return uid;
 	}
 
-	Cluster& WorldBuilder::generate_cluster(std::string name, Uid64 link_from, ClusterParams params)
+	Uid64 WorldBuilder::generate_cluster(std::string name, Uid64 link_from, ClusterParams params)
 	{
 		Uid64 hub_uid = generate_host(name);
 
-		Cluster& cluster = gen_data_.clusters_.emplace_back(name, hub_uid);
+		gen_data_.clusters_.try_emplace(hub_uid, name, hub_uid);
+		Cluster& cluster = gen_data_.clusters_.at(hub_uid);
 
 		world_data_->links.relate(hub_uid, link_from);
 
@@ -53,11 +54,24 @@ namespace WorldGen
 
 			world_data_->links.relate(hub_uid, host_uid);
 		}
-		
-		return cluster;
+
+		return hub_uid;
 	}
 
 	void WorldBuilder::build()
 	{
+		for (auto&& [uid, cluster] : gen_data_.clusters_)
+		{
+
+		}
+	}
+
+	Host* WorldBuilder::get_host(Uid64 uid)
+	{
+		if (auto it = world_data_->hosts.find(uid); it != world_data_->hosts.end())
+		{
+			return it->second.get();
+		}
+		return nullptr;
 	}
 }
