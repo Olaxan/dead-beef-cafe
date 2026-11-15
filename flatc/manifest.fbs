@@ -1,0 +1,30 @@
+namespace DBC.Assets;
+
+enum AssetType:byte 
+{
+	PlainText = 0,
+	Animation = 1,
+	Audio = 2,
+	Script = 3
+}
+
+enum AssetImportance:byte 
+{
+	Inconsequential = 0,
+	BusinessDocument = 1
+}
+
+table ManifestPage
+{
+	name:string;
+	path:string;
+	type:AssetType;
+	importance:AssetImportance;
+}
+
+table Manifest
+{
+	pages:[ManifestPage];
+}
+
+root_type Manifest;

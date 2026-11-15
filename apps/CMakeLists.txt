@@ -36,6 +36,6 @@ ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     ${CMAKE_SOURCE_DIR}/lib
     $<TARGET_FILE_DIR:dbc_client>
     COMMAND "$<TARGET_FILE:dbc_packer>"
-        "$<TARGET_FILE_DIR:dbc_client>/assets/fluff"
-        "$<TARGET_FILE_DIR:dbc_client>/assets/fluff.pack"
+        "$<TARGET_FILE_DIR:dbc_client>/assets/data/manifest.json"
+        "$<TARGET_FILE_DIR:dbc_client>/assets/data.pack"
 )
