@@ -1,0 +1,10 @@
+// Example IDL file for our monster's schema.
+
+namespace MyGame.Sample;
+
+table Monster {
+  name:string;
+  health:int;
+}
+
+root_type Monster;

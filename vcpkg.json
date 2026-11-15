@@ -2,6 +2,7 @@
   "dependencies": [
     "asio",
     "protobuf",
+    "flatbuffers",
     "icu",
     "cli11"
   ]

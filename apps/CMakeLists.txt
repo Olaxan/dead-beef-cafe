@@ -14,10 +14,10 @@ FIND_PACKAGE(Protobuf REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
-TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common soloud)
+TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common soloud flatbuffers_schemas)
 
 ADD_EXECUTABLE(dbc_server ${files_server_app})
-TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos programs proto common)
+TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos programs proto common flatbuffers_schemas)
 
 ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

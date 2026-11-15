@@ -73,6 +73,7 @@ int main(int argc, char* argv[])
 	}};
 
 	our_world.create_world();
+	our_world.init_world();
 
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
 	OS& client_os = client->get_os();
