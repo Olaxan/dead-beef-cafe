@@ -82,29 +82,29 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 	{
 		const std::vector<flatbuffers::Offset<flatbuffers::String>> prefixes{builder.CreateString(prefix)};
 		const std::vector<flatbuffers::Offset<flatbuffers::String>> suffixes{builder.CreateString(suffix)};
-		return world::CreateNamePool(builder, builder.CreateVector(prefixes), builder.CreateVector(suffixes));
+		return DBC::World::CreateNamePool(builder, builder.CreateVector(prefixes), builder.CreateVector(suffixes));
 	};
 
 	const auto person_names = make_name_pool("Example given name", "Example family name");
 	const auto business_names = make_name_pool("Example business prefix", "Example business suffix");
 	const auto isp_names = make_name_pool("Example ISP prefix", "Example ISP suffix");
-	const auto country = world::CreateGenCountryDirect(
+	const auto country = DBC::World::CreateGenCountryDirect(
 		builder,
 		"Example country",
-		world::BusinessType_DigitalTechnology,
+		DBC::World::BusinessType_DigitalTechnology,
 		person_names,
 		business_names,
 		isp_names);
 
-	const auto household_module = world::CreateGenModuleDirect(
+	const auto household_module = DBC::World::CreateGenModuleDirect(
 		builder, "Household", 2u, 5u, 1u, 6u, 0, nullptr, 64u);
-	const auto corporation_module = world::CreateGenModuleDirect(
+	const auto corporation_module = DBC::World::CreateGenModuleDirect(
 		builder, "Corporation", 1u, 3u, 3u, 10u, 0, nullptr, 32u);
-	const std::vector<flatbuffers::Offset<world::GenModule>> isp_children{
+	const std::vector<flatbuffers::Offset<DBC::World::GenModule>> isp_children{
 		household_module,
 		corporation_module
 	};
-	const auto isp_module = world::CreateGenModuleDirect(
+	const auto isp_module = DBC::World::CreateGenModuleDirect(
 		builder,
 		"ISP",
 		4u,
@@ -114,13 +114,13 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 		0,
 		&isp_children,
 		16u);
-	const std::vector<flatbuffers::Offset<world::GenCountry>> countries{country};
-	const std::vector<flatbuffers::Offset<world::GenModule>> modules{isp_module};
-	const auto out_params = world::CreateGenParamsDirect(builder, &countries, &modules);
-	world::FinishGenParamsBuffer(builder, out_params);
+	const std::vector<flatbuffers::Offset<DBC::World::GenCountry>> countries{country};
+	const std::vector<flatbuffers::Offset<DBC::World::GenModule>> modules{isp_module};
+	const auto out_params = DBC::World::CreateGenParamsDirect(builder, &countries, &modules);
+	DBC::World::FinishGenParamsBuffer(builder, out_params);
 
 	flatbuffers::Parser json_parser;
-	if (not json_parser.Deserialize(world::GenParams::BinarySchema::data(), world::GenParams::BinarySchema::size()))
+	if (not json_parser.Deserialize(DBC::World::GenParams::BinarySchema::data(), DBC::World::GenParams::BinarySchema::size()))
 	{
 		proc.errln("Failed to load FlatBuffers schema: {}.", json_parser.error_);
 		return 1;
@@ -205,7 +205,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		}
 
 		flatbuffers::Parser json_parser;
-		if (not json_parser.Deserialize(world::GenParams::BinarySchema::data(), world::GenParams::BinarySchema::size()))
+		if (not json_parser.Deserialize(DBC::World::GenParams::BinarySchema::data(), DBC::World::GenParams::BinarySchema::size()))
 		{
 			proc.errln("Failed to load FlatBuffers schema: {}.", json_parser.error_);
 			co_return 1;
@@ -219,7 +219,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
-		const world::GenParams* gen_params = world::GetGenParams(json_parser.builder_.GetBufferPointer());
+		const DBC::World::GenParams* gen_params = DBC::World::GetGenParams(json_parser.builder_.GetBufferPointer());
 
 		proc.putln("Successfully read generation data from {}.", params.path.string());
 		proc.putln("Generating world...");
@@ -243,7 +243,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			return field->Get(dist(gen))->str();
 		};
 
-		auto generate_name_from_pool = [&](const world::NamePool& pool, const std::string& fallback) -> std::string
+		auto generate_name_from_pool = [&](const DBC::World::NamePool& pool, const std::string& fallback) -> std::string
 		{
 			std::string prefix = pick_from_string_field(fallback, pool.prefix());
 			if (pool.suffix() == nullptr or pool.suffix()->empty())
@@ -252,7 +252,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			return std::format("{} {}", prefix, pick_from_string_field(fallback, pool.suffix()));
 		};
 
-		auto has_names = [](const world::NamePool& pool)
+		auto has_names = [](const DBC::World::NamePool& pool)
 		{
 			return (pool.prefix() != nullptr and not pool.prefix()->empty())
 				or (pool.suffix() != nullptr and not pool.suffix()->empty());
@@ -274,8 +274,8 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			return std::min<uint32_t>(static_cast<uint32_t>(parent_prefix) + 16, 127);
 		};
 
-		std::function<bool(const world::GenModule&, uint8_t)> module_is_valid =
-			[&](const world::GenModule& module, uint8_t parent_prefix)
+		std::function<bool(const DBC::World::GenModule&, uint8_t)> module_is_valid =
+			[&](const DBC::World::GenModule& module, uint8_t parent_prefix)
 		{
 			const std::string module_name = get_string(module.moduleName());
 			if (module_name.empty())
@@ -310,7 +310,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 			if (const auto* children = module.children())
 			{
-				for (const world::GenModule* child : *children)
+				for (const DBC::World::GenModule* child : *children)
 				{
 					if (not module_is_valid(*child, static_cast<uint8_t>(network_prefix)))
 						return false;
@@ -322,7 +322,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		if (const auto* modules = gen_params->modules())
 		{
-			for (const world::GenModule* module : *modules)
+			for (const DBC::World::GenModule* module : *modules)
 			{
 				if (not module_is_valid(*module, 8))
 					co_return 1;
@@ -330,8 +330,8 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		}
 
 		GenerationPlan plan;
-		std::function<GenerationModule(const world::GenModule&, const world::GenCountry&, uint8_t)> convert_module;
-		convert_module = [&](const world::GenModule& source, const world::GenCountry& country, uint8_t parent_prefix)
+		std::function<GenerationModule(const DBC::World::GenModule&, const DBC::World::GenCountry&, uint8_t)> convert_module;
+		convert_module = [&](const DBC::World::GenModule& source, const DBC::World::GenCountry& country, uint8_t parent_prefix)
 		{
 			GenerationModule module;
 			module.name = get_string(source.moduleName());
@@ -342,7 +342,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			module.network_prefix = static_cast<uint8_t>(source.networkPrefix().value_or(
 				default_network_prefix(module.name, parent_prefix)));
 
-			const world::NamePool* name_pool = nullptr;
+			const DBC::World::NamePool* name_pool = nullptr;
 			if (source.namePool() != nullptr)
 				name_pool = source.namePool();
 			else if (module.name == "ISP")
@@ -362,7 +362,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 			if (const auto* children = source.children())
 			{
-				for (const world::GenModule* child : *children)
+				for (const DBC::World::GenModule* child : *children)
 					module.children.emplace_back(convert_module(*child, country, module.network_prefix));
 			}
 
@@ -371,7 +371,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		if (const auto* countries = gen_params->countries())
 		{
-			for (const world::GenCountry* country : *countries)
+			for (const DBC::World::GenCountry* country : *countries)
 			{
 				GenerationModule country_module;
 				country_module.name = "Country";
@@ -382,7 +382,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				};
 				if (const auto* modules = gen_params->modules())
 				{
-					for (const world::GenModule* module : *modules)
+					for (const DBC::World::GenModule* module : *modules)
 						country_module.children.emplace_back(convert_module(*module, *country, country_module.network_prefix));
 				}
 
@@ -395,7 +395,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 					fallback.min_hosts = 4;
 					fallback.max_hosts = 8;
 					fallback.network_prefix = 16;
-					const world::NamePool* name_pool = country->ispNames();
+					const DBC::World::NamePool* name_pool = country->ispNames();
 					if (name_pool != nullptr and has_names(*name_pool))
 					{
 						fallback.name_generator = [&, name_pool]()

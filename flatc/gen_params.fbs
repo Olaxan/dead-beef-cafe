@@ -1,40 +1,45 @@
-namespace world;
+namespace DBC.World;
 
-table NamePool {
-  prefix:[string];
-  suffix:[string];
+table NamePool 
+{
+  	prefix:[string];
+  	suffix:[string];
 }
 
-enum BusinessType:ubyte {
-  Manufacturing = 0,
-  DigitalTechnology = 1,
-  CyberSecurity = 2,
-  Banking = 3,
-  ResourceExtraction = 4
+enum BusinessType:ubyte 
+{
+  	Manufacturing = 0,
+  	DigitalTechnology = 1,
+  	CyberSecurity = 2,
+  	Banking = 3,
+  	ResourceExtraction = 4
 }
 
-table GenCountry {
-  countryName:string;
-  primaryBusiness:BusinessType = Manufacturing;
-  personNames:NamePool;
-  businessNames:NamePool;
-  ispNames:NamePool;
+table GenCountry 
+{
+	countryName:string;
+	primaryBusiness:BusinessType = Manufacturing;
+	personNames:NamePool;
+	businessNames:NamePool;
+	ispNames:NamePool;
 }
 
-table GenModule {
-  moduleName:string;
-  minInstances:uint = null;
-  maxInstances:uint = null;
-  minHosts:uint = null;
-  maxHosts:uint = null;
-  namePool:NamePool;
-  children:[GenModule];
-  networkPrefix:uint = null;
+table GenModule 
+{
+  	moduleName:string;
+  	minInstances:uint = null;
+  	maxInstances:uint = null;
+  	minHosts:uint = null;
+  	maxHosts:uint = null;
+  	namePool:NamePool;
+  	children:[GenModule];
+  	networkPrefix:uint = null;
 }
 
-table GenParams {
-  countries:[GenCountry];
-  modules:[GenModule];
+table GenParams 
+{
+  	countries:[GenCountry];
+  	modules:[GenModule];
 }
 
 root_type GenParams;
