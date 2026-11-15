@@ -248,21 +248,4 @@ namespace WorldGen
 
 		return generated;
 	}
-
-	void WorldBuilder::build()
-	{
-		for (auto&& [uid, cluster] : gen_data_.clusters_)
-		{
-
-		}
-	}
-
-	Host* WorldBuilder::get_host(Uid64 uid)
-	{
-		if (auto it = world_data_->hosts.find(uid); it != world_data_->hosts.end())
-		{
-			return it->second.get();
-		}
-		return nullptr;
-	}
 }

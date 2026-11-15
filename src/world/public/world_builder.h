@@ -99,7 +99,6 @@ namespace WorldGen
 			Address6 address_space = {},
 			uint8_t address_space_prefix = 0);
 
-		void build();
 		std::shared_ptr<WorldData> data() { return world_data_; }
 
 	protected:
@@ -110,7 +109,6 @@ namespace WorldGen
 			Address6 address_space,
 			uint8_t address_space_prefix,
 			std::mt19937& gen);
-		Host* get_host(Uid64 uid);
 	
 	protected:
 	

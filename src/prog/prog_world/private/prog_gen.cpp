@@ -261,7 +261,7 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module.module_name());
 				return false;
 			}
-			
+
 			if (min_hosts > max_hosts)
 			{
 				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module.module_name());
@@ -388,8 +388,6 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			}
 		};
 		collect_isps(generated);
-
-		builder.build();
 
 		if (isps.empty())
 		{

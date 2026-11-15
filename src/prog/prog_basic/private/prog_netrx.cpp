@@ -51,7 +51,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		{
 			case ip::ArpType::ANNOUNCE:
 			{
-				std::println("[{}]: received ARP announce.", net->get_primary_ip());
+				//std::println("[{}]: received ARP announce.", net->get_primary_ip());
 				auto exp_announce_ip = Address6::from_bytes(packet.src_ip());
 				Uid64 announce_mac = packet.src_mac();
 
@@ -70,7 +70,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 			}
 			case ip::ArpType::PROBE:
 			{
-				std::println("[{}]: received ARP probe.", net->get_primary_ip());
+				//std::println("[{}]: received ARP probe.", net->get_primary_ip());
 				if (packet.dest_ip() == net->get_primary_ip().data_str())
 				{
 					proc.putln("Received matched ARP probe.");
@@ -97,14 +97,14 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		auto exp_src_addr = Address6::from_bytes(packet.src_ip());
 		auto exp_dest_addr = Address6::from_bytes(packet.dest_ip());
 
-		std::println("[{}]: received IP.", net->get_primary_ip());
+		//std::println("[{}]: received IP.", net->get_primary_ip());
 
 		if (exp_src_addr && exp_dest_addr)
 		{
 			const Address6& src_ip = *exp_src_addr;
 			const Address6& dest_ip = *exp_dest_addr;
 
-			std::println("[{}]: from={} to={}.", net->get_primary_ip(), src_ip, dest_ip);
+			//std::println("[{}]: from={} to={}.", net->get_primary_ip(), src_ip, dest_ip);
 
 			//net->arp_refresh(src_mac, src_ip);
 
@@ -119,9 +119,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		}
 		else
 		{
-			std::println("[{}]: Dropped packet (invalid address).", net->get_primary_ip());
-			std::string src = packet.src_ip();
-			std::string dest = packet.dest_ip();
+			//std::println("[{}]: Dropped packet (invalid address).", net->get_primary_ip());
 			proc.warnln("Discarding malformed package (invalid address).");
 		}
 	};

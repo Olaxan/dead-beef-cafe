@@ -56,6 +56,10 @@ bool Host::start_host()
     {
         os_->start_os();
     }
+    else
+    {
+        std::println("Warning: Host {} has no OS.", context_.uid);
+    }
 
     state_ = DeviceState::PoweredOn;
 

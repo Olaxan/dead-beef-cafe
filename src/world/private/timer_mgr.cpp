@@ -5,8 +5,8 @@
 
 void TimerManager::step(float delta_seconds)
 {
-	std::lock_guard<std::mutex> lock(mutex_);
-	
+	//std::lock_guard<std::mutex> lock(mutex_);
+
 	for (std::size_t idx = 0; idx < timers_.size(); ++idx)
 	{
 		auto&& action = timers_[idx];
