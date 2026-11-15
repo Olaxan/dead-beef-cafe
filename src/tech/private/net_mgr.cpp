@@ -256,7 +256,10 @@ Task<bool> NetManager::async_socket_test_alive(OpenSocketHandle sock)
 		send(std::move(*pak));
 
 		auto res = co_await when_any(async_read_socket_tcp(sock), os_.wait(1.f));
-		co_return (res.index == 0);
+		if (res.index != 0)
+			co_return false;
+
+		co_return std::get<1>(res.value).has_value();
 	}
 
 	co_return false;
@@ -482,14 +485,24 @@ void NetManager::handle_packet(ip::TcpPacket&& packet, ip::IpPackage&& outer, co
 		{
 			if (OpenSocketEntry* sock = find_socket(sess))
 			{
-				auto opt_rep = make_tcp_reply_ip(sock->handle, ip::TcpType::Ack, {});
-				send(std::move(*opt_rep));
+				if (auto opt_rep = make_tcp_reply_ip(sock->handle, ip::TcpType::Ack, {}))
+					send(std::move(*opt_rep));
 			}
+			break;
+		}
+		case ip::TcpType::Ack:
+		{
+			OpenSocketEntry* sock = find_socket(sess);
+			if (sock == nullptr)
+				sock = find_socket(dest);
+
+			if (sock != nullptr)
+				sock->rx_queue.push(std::move(outer));
 			break;
 		}
 		default:
 		{
-			/* If this is a connection request or reply, check for a socket based on binding. */
+			/* If this is a connection request, check for a socket based on binding. */
 			if (OpenSocketEntry* sock = find_socket(dest))
 			{
 				sock->rx_queue.push(std::move(outer));
