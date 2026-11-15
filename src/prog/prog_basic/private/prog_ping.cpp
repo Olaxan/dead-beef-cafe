@@ -113,7 +113,7 @@ ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 
 	proc.putln("\nPing statistics for {}:", dest);
 	proc.putln("\tPackets: Sent = {}, Received = {}, Lost = {} ({}% loss),",
-		sent, hits, sent - hits, loss_ratio);
+		sent, hits, sent - hits, loss_ratio * 100);
 
 	proc.putln("Host {}.", (TermUtils::text(hits ? "reachable" : "unreachable")
 		| TermUtils::foreground(hits ? TermColor::Green : TermColor::Red)).str());

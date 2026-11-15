@@ -142,7 +142,7 @@ Task<std::error_condition> NetManager::async_connect_socket(OpenSocketHandle soc
 
 		ip::IpPackage ip;
 		ip.set_src_ip(src.addr.data_str());
-		ip.set_dest_ip(dest.addr.raw);
+		ip.set_dest_ip(dest.addr.data_str());
 		ip.set_protocol(ip::Protocol::TCP);
 		ip.set_payload(tcp_data);
 		
