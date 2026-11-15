@@ -10,8 +10,12 @@ SOURCE_GROUP("dbc_client" FILES ${files_client_app})
 SET(files_server_app "code/dbc.h" "code/dbc.cpp" "code/dbc_win.h" "code/dbc_win.cpp" "code/dbc_server.cpp")
 SOURCE_GROUP("dbc_server" FILES ${files_server_app})
 
+SET(files_packer_app "code/dbc_packer.cpp")
+SOURCE_GROUP("dbc_packer" FILES ${files_packer_app})
+
 FIND_PACKAGE(Protobuf REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
+FIND_PACKAGE(CLI11 REQUIRED)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
 TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common soloud)
@@ -19,14 +23,19 @@ TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common sol
 ADD_EXECUTABLE(dbc_server ${files_server_app})
 TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos programs proto common)
 
+ADD_EXECUTABLE(dbc_packer ${files_packer_app})
+TARGET_LINK_LIBRARIES(dbc_packer PRIVATE flatbuffers_schemas CLI11::CLI11)
+
+ADD_DEPENDENCIES(dbc_client dbc_packer)
+
 ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
     $<TARGET_FILE_DIR:dbc_client>/assets
-)
-
-ADD_CUSTOM_COMMAND(TARGET dbc_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/lib
     $<TARGET_FILE_DIR:dbc_client>
+    COMMAND "$<TARGET_FILE:dbc_packer>"
+        "$<TARGET_FILE_DIR:dbc_client>/assets/fluff"
+        "$<TARGET_FILE_DIR:dbc_client>/assets/fluff.pack"
 )
