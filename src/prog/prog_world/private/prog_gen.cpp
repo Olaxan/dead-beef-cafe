@@ -14,7 +14,7 @@
 #include <ftxui/component/component_base.hpp>  // for ComponentBase
 #include <ftxui/dom/elements.hpp>  // for separator, operator|, Element, size, xflex, text, WIDTH, hbox, vbox, EQUAL, border, GREATER_THAN
 
-#include "proto/gen_params.pb.h"
+#include "gen_params_generated.h"
 
 #include "world_builder.h"
 #include "world_data.h"
@@ -22,8 +22,7 @@
 #include "CLI/CLI.hpp"
 #include "ftxui_host.h"
 
-#include <google/protobuf/json/json.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <flatbuffers/idl.h>
 
 #include <algorithm>
 #include <string>
@@ -33,6 +32,7 @@
 #include <fstream>
 #include <filesystem>
 #include <functional>
+#include <iterator>
 #include <stdexcept>
 
 #include <iso646.h>
@@ -77,65 +77,71 @@ int32_t ExportSchema(Proc& proc, std::filesystem::path path)
 		return 1;
 	}
 
-	world::GenParams out_params;
-	world::GenCountry& country = *out_params.add_countries();
-	country.set_country_name("Example country");
-	country.set_primary_business(world::DigitalTechnology);
-
-	world::NamePool& person_names = *country.mutable_person_names();
-	person_names.add_prefix("Example given name");
-	person_names.add_suffix("Example family name");
-
-	world::NamePool& business_names = *country.mutable_business_names();
-	business_names.add_prefix("Example business prefix");
-	business_names.add_suffix("Example business suffix");
-
-	world::NamePool& isp_names = *country.mutable_isp_names();
-	isp_names.add_prefix("Example ISP prefix");
-	isp_names.add_suffix("Example ISP suffix");
-
-	world::GenModule& isp_module = *out_params.add_modules();
-	isp_module.set_module_name("ISP");
-	isp_module.set_min_instances(4);
-	isp_module.set_max_instances(8);
-	isp_module.set_network_prefix(16);
-
-	world::GenModule& household_module = *isp_module.add_children();
-	household_module.set_module_name("Household");
-	household_module.set_min_instances(2);
-	household_module.set_max_instances(5);
-	household_module.set_min_hosts(1);
-	household_module.set_max_hosts(6);
-	household_module.set_network_prefix(64);
-
-	world::GenModule& corporation_module = *isp_module.add_children();
-	corporation_module.set_module_name("Corporation");
-	corporation_module.set_min_instances(1);
-	corporation_module.set_max_instances(3);
-	corporation_module.set_min_hosts(3);
-	corporation_module.set_max_hosts(10);
-	corporation_module.set_network_prefix(32);
-
-	std::string out_str{};
-	if (auto status = google::protobuf::json::MessageToJsonString(out_params, &out_str); status.ok())
+	flatbuffers::FlatBufferBuilder builder;
+	auto make_name_pool = [&](const char* prefix, const char* suffix)
 	{
-		file << out_str << '\n';
-		if (file)
-		{
-			proc.putln("Exported schema template to {}.", path.string());
-			return 0;
-		}
-		else
-		{
-			proc.errln("Failed to write file '{}'.", path.string());
-			return 1;
-		}
-	}
-	else
+		const std::vector<flatbuffers::Offset<flatbuffers::String>> prefixes{builder.CreateString(prefix)};
+		const std::vector<flatbuffers::Offset<flatbuffers::String>> suffixes{builder.CreateString(suffix)};
+		return world::CreateNamePool(builder, builder.CreateVector(prefixes), builder.CreateVector(suffixes));
+	};
+
+	const auto person_names = make_name_pool("Example given name", "Example family name");
+	const auto business_names = make_name_pool("Example business prefix", "Example business suffix");
+	const auto isp_names = make_name_pool("Example ISP prefix", "Example ISP suffix");
+	const auto country = world::CreateGenCountryDirect(
+		builder,
+		"Example country",
+		world::BusinessType_DigitalTechnology,
+		person_names,
+		business_names,
+		isp_names);
+
+	const auto household_module = world::CreateGenModuleDirect(
+		builder, "Household", 2u, 5u, 1u, 6u, 0, nullptr, 64u);
+	const auto corporation_module = world::CreateGenModuleDirect(
+		builder, "Corporation", 1u, 3u, 3u, 10u, 0, nullptr, 32u);
+	const std::vector<flatbuffers::Offset<world::GenModule>> isp_children{
+		household_module,
+		corporation_module
+	};
+	const auto isp_module = world::CreateGenModuleDirect(
+		builder,
+		"ISP",
+		4u,
+		8u,
+		flatbuffers::nullopt,
+		flatbuffers::nullopt,
+		0,
+		&isp_children,
+		16u);
+	const std::vector<flatbuffers::Offset<world::GenCountry>> countries{country};
+	const std::vector<flatbuffers::Offset<world::GenModule>> modules{isp_module};
+	const auto out_params = world::CreateGenParamsDirect(builder, &countries, &modules);
+	world::FinishGenParamsBuffer(builder, out_params);
+
+	flatbuffers::Parser json_parser;
+	if (not json_parser.Deserialize(world::GenParams::BinarySchema::data(), world::GenParams::BinarySchema::size()))
 	{
-		proc.errln("Failed to write message: {}.", status.ToString());
+		proc.errln("Failed to load FlatBuffers schema: {}.", json_parser.error_);
 		return 1;
 	}
+
+	std::string out_str{};
+	if (const char* error = flatbuffers::GenerateText(json_parser, builder.GetBufferPointer(), &out_str))
+	{
+		proc.errln("Failed to serialize schema template: {}.", error);
+		return 1;
+	}
+
+	file << out_str << '\n';
+	if (not file)
+	{
+		proc.errln("Failed to write file '{}'.", path.string());
+		return 1;
+	}
+
+	proc.putln("Exported schema template to {}.", path.string());
+	return 0;
 }
 
 int32_t GenerateWorld(Proc& proc)
@@ -187,14 +193,28 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			co_return 1;
 		}
 
-		world::GenParams gen_params;
-		google::protobuf::io::IstreamInputStream reader{&f};
-		auto status = google::protobuf::json::JsonStreamToMessage(&reader, &gen_params);
-		if (not status.ok())
+		const std::string json{
+			std::istreambuf_iterator<char>{f},
+			std::istreambuf_iterator<char>{}
+		};
+		if (f.bad())
 		{
-			proc.errln("Failed to parse input file: {}.", status.ToString());
+			proc.errln("Failed to read input file: '{}'.", params.path.string());
 			co_return 1;
 		}
+		flatbuffers::Parser json_parser;
+		if (not json_parser.Deserialize(world::GenParams::BinarySchema::data(), world::GenParams::BinarySchema::size()))
+		{
+			proc.errln("Failed to load FlatBuffers schema: {}.", json_parser.error_);
+			co_return 1;
+		}
+		json_parser.opts.strict_json = true;
+		if (not json_parser.ParseJson(json.c_str()))
+		{
+			proc.errln("Failed to parse input file: {}.", json_parser.error_);
+			co_return 1;
+		}
+		const world::GenParams* gen_params = world::GetGenParams(json_parser.builder_.GetBufferPointer());
 
 		World& outer_world = *proc.owning_os->get_outer_as<World*>();
 
@@ -206,19 +226,19 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
-		auto pick_from_string_field = [&](std::string fallback, const google::protobuf::RepeatedPtrField<std::string>& field) -> std::string
+		auto pick_from_string_field = [&](std::string fallback, const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>* field) -> std::string
 		{
-			if (field.empty())
+			if (field == nullptr or field->empty())
 				return std::format("{}-{}", fallback, shared_index++);
 
-			std::uniform_int_distribution<> dist(0, field.size() - 1);
-			return field.at(dist(gen));
+			std::uniform_int_distribution<> dist(0, field->size() - 1);
+			return field->Get(dist(gen))->str();
 		};
 
 		auto generate_name_from_pool = [&](const world::NamePool& pool, const std::string& fallback) -> std::string
 		{
 			std::string prefix = pick_from_string_field(fallback, pool.prefix());
-			if (pool.suffix().empty())
+			if (pool.suffix() == nullptr or pool.suffix()->empty())
 				return prefix;
 
 			return std::format("{} {}", prefix, pick_from_string_field(fallback, pool.suffix()));
@@ -226,7 +246,13 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 
 		auto has_names = [](const world::NamePool& pool)
 		{
-			return not pool.prefix().empty() or not pool.suffix().empty();
+			return (pool.prefix() != nullptr and not pool.prefix()->empty())
+				or (pool.suffix() != nullptr and not pool.suffix()->empty());
+		};
+
+		auto get_string = [](const flatbuffers::String* value)
+		{
+			return value == nullptr ? std::string{} : value->str();
 		};
 
 		auto default_network_prefix = [](const std::string& module_name, uint8_t parent_prefix) -> uint32_t
@@ -243,50 +269,56 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		std::function<bool(const world::GenModule&, uint8_t)> module_is_valid =
 			[&](const world::GenModule& module, uint8_t parent_prefix)
 		{
-			if (module.module_name().empty())
+			const std::string module_name = get_string(module.moduleName());
+			if (module_name.empty())
 			{
 				proc.errln("Generation modules must have a moduleName.");
 				return false;
 			}
-			const uint32_t min_instances = module.has_min_instances() ? module.min_instances() : 1;
-			const uint32_t max_instances = module.has_max_instances() ? module.max_instances() : min_instances;
-			const uint32_t min_hosts = module.has_min_hosts() ? module.min_hosts() : 0;
-			const uint32_t max_hosts = module.has_max_hosts() ? module.max_hosts() : min_hosts;
-			const uint32_t network_prefix = module.has_network_prefix()
-				? module.network_prefix()
-				: default_network_prefix(module.module_name(), parent_prefix);
+			const uint32_t min_instances = module.minInstances().value_or(1);
+			const uint32_t max_instances = module.maxInstances().value_or(min_instances);
+			const uint32_t min_hosts = module.minHosts().value_or(0);
+			const uint32_t max_hosts = module.maxHosts().value_or(min_hosts);
+			const uint32_t network_prefix = module.networkPrefix().value_or(
+				default_network_prefix(module_name, parent_prefix));
 
 			if (min_instances > max_instances)
 			{
-				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module.module_name());
+				proc.errln("Generation module '{}' has minInstances greater than maxInstances.", module_name);
 				return false;
 			}
 
 			if (min_hosts > max_hosts)
 			{
-				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module.module_name());
+				proc.errln("Generation module '{}' has minHosts greater than maxHosts.", module_name);
 				return false;
 			}
 
 			if (network_prefix <= parent_prefix || network_prefix > 127)
 			{
-				proc.errln("Generation module '{}' must have a networkPrefix between {} and 127.", module.module_name(), parent_prefix + 1);
+				proc.errln("Generation module '{}' must have a networkPrefix between {} and 127.", module_name, parent_prefix + 1);
 				return false;
 			}
 
-			for (const world::GenModule& child : module.children())
+			if (const auto* children = module.children())
 			{
-				if (not module_is_valid(child, static_cast<uint8_t>(network_prefix)))
-					return false;
+				for (const world::GenModule* child : *children)
+				{
+					if (not module_is_valid(*child, static_cast<uint8_t>(network_prefix)))
+						return false;
+				}
 			}
 
 			return true;
 		};
 
-		for (const world::GenModule& module : gen_params.modules())
+		if (const auto* modules = gen_params->modules())
 		{
-			if (not module_is_valid(module, 8))
-				co_return 1;
+			for (const world::GenModule* module : *modules)
+			{
+				if (not module_is_valid(*module, 8))
+					co_return 1;
+			}
 		}
 
 		GenerationPlan plan;
@@ -294,26 +326,25 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 		convert_module = [&](const world::GenModule& source, const world::GenCountry& country, uint8_t parent_prefix)
 		{
 			GenerationModule module;
-			module.name = source.module_name();
-			module.min_instances = source.has_min_instances() ? source.min_instances() : 1;
-			module.max_instances = source.has_max_instances() ? source.max_instances() : module.min_instances;
-			module.min_hosts = source.has_min_hosts() ? source.min_hosts() : 0;
-			module.max_hosts = source.has_max_hosts() ? source.max_hosts() : module.min_hosts;
-			module.network_prefix = static_cast<uint8_t>(source.has_network_prefix()
-				? source.network_prefix()
-				: default_network_prefix(module.name, parent_prefix));
+			module.name = get_string(source.moduleName());
+			module.min_instances = source.minInstances().value_or(1);
+			module.max_instances = source.maxInstances().value_or(module.min_instances);
+			module.min_hosts = source.minHosts().value_or(0);
+			module.max_hosts = source.maxHosts().value_or(module.min_hosts);
+			module.network_prefix = static_cast<uint8_t>(source.networkPrefix().value_or(
+				default_network_prefix(module.name, parent_prefix)));
 
 			const world::NamePool* name_pool = nullptr;
-			if (source.has_name_pool())
-				name_pool = &source.name_pool();
-			else if (module.name == "ISP" and country.has_isp_names())
-				name_pool = &country.isp_names();
-			else if (module.name == "Corporation" and country.has_business_names())
-				name_pool = &country.business_names();
-			else if (module.name == "Household" and country.has_person_names())
-				name_pool = &country.person_names();
+			if (source.namePool() != nullptr)
+				name_pool = source.namePool();
+			else if (module.name == "ISP")
+				name_pool = country.ispNames();
+			else if (module.name == "Corporation")
+				name_pool = country.businessNames();
+			else if (module.name == "Household")
+				name_pool = country.personNames();
 
-			if (name_pool and has_names(*name_pool))
+			if (name_pool != nullptr and has_names(*name_pool))
 			{
 				module.name_generator = [&, name_pool, fallback = module.name]()
 				{
@@ -321,37 +352,53 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 				};
 			}
 
-			for (const world::GenModule& child : source.children())
-				module.children.emplace_back(convert_module(child, country, module.network_prefix));
+			if (const auto* children = source.children())
+			{
+				for (const world::GenModule* child : *children)
+					module.children.emplace_back(convert_module(*child, country, module.network_prefix));
+			}
 
 			return module;
 		};
 
-		for (const world::GenCountry& country : gen_params.countries())
+		if (const auto* countries = gen_params->countries())
 		{
-			GenerationModule country_module;
-			country_module.name = "Country";
-			country_module.network_prefix = 8;
-			const world::GenCountry* country_ptr = &country;
-			country_module.name_generator = [country_ptr]()
+			for (const world::GenCountry* country : *countries)
 			{
-				return country_ptr->country_name();
-			};
-			for (const world::GenModule& module : gen_params.modules())
-				country_module.children.emplace_back(convert_module(module, country, country_module.network_prefix));
+				GenerationModule country_module;
+				country_module.name = "Country";
+				country_module.network_prefix = 8;
+				country_module.name_generator = [country, get_string]()
+				{
+					return get_string(country->countryName());
+				};
+				if (const auto* modules = gen_params->modules())
+				{
+					for (const world::GenModule* module : *modules)
+						country_module.children.emplace_back(convert_module(*module, *country, country_module.network_prefix));
+				}
 
-			if (gen_params.modules().empty())
-			{
-				world::GenModule fallback;
-				fallback.set_module_name("ISP");
-				fallback.set_min_instances(4);
-				fallback.set_max_instances(8);
-				fallback.set_min_hosts(4);
-				fallback.set_max_hosts(8);
-				fallback.set_network_prefix(16);
-				country_module.children.emplace_back(convert_module(fallback, country, country_module.network_prefix));
+				if (gen_params->modules() == nullptr or gen_params->modules()->empty())
+				{
+					GenerationModule fallback;
+					fallback.name = "ISP";
+					fallback.min_instances = 4;
+					fallback.max_instances = 8;
+					fallback.min_hosts = 4;
+					fallback.max_hosts = 8;
+					fallback.network_prefix = 16;
+					const world::NamePool* name_pool = country->ispNames();
+					if (name_pool != nullptr and has_names(*name_pool))
+					{
+						fallback.name_generator = [&, name_pool]()
+						{
+							return generate_name_from_pool(*name_pool, "ISP");
+						};
+					}
+					country_module.children.emplace_back(std::move(fallback));
+				}
+				plan.modules.emplace_back(std::move(country_module));
 			}
-			plan.modules.emplace_back(std::move(country_module));
 		}
 
 		Uid64 hub = builder.generate_host("Central Routing Node");
