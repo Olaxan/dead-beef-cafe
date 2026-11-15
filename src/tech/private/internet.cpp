@@ -156,7 +156,8 @@ int32_t Internet::link_broadcast(ip::DataFrame&& pak)
 		if (rec == from)
 			continue;
 
-		rx += link_receive(rec, std::forward<ip::DataFrame>(pak));
+		ip::DataFrame recipient_pak = pak;
+		rx += link_receive(rec, std::move(recipient_pak));
 	}
 
 	return rx;

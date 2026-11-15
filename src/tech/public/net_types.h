@@ -16,7 +16,7 @@
 #include <print>
 #include <tuple>
 
-#define MAC_BROADCAST 18446744073709551615
+#define MAC_BROADCAST uint64_t(-1)
 
 class NIC;
 class NetManager;

@@ -38,6 +38,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 
 	auto make_frame = [&](Uid64 dest, ip::FrameType type) -> ip::DataFrame
 	{
+		assert(dest != 0);
 		ip::DataFrame frame;
 		frame.set_src_mac(net->get_mac().num);
 		frame.set_dest_mac(dest.num);
@@ -149,6 +150,7 @@ ProcessTask Programs::SrvNetRx(Proc& proc, std::vector<std::string> args)
 		if (not frame_is_for_us(frame))
 		{
 			proc.warnln("Discarding frame with incorrect address.");
+			std::println("Warning: incorrect frame address: {} (ours is {}).", frame.dest_mac(), net->get_mac());
 			continue;
 		}
 

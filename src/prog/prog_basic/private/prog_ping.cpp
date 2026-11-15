@@ -22,7 +22,7 @@
 ProcessTask Programs::CmdPing(Proc& proc, std::vector<std::string> args)
 {
 	OS& os = *proc.owning_os;
-	ProcNetApi& netapi = proc.net;;
+	ProcNetApi& netapi = proc.net;
 
 	CLI::App app{"Network utility to test connectivity and analyze routing."};
 	app.allow_windows_style_options(false);
