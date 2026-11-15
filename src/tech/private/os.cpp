@@ -195,7 +195,7 @@ void OS::schedule(float seconds, SchedulerFn callback)
 bool OS::serialize(world::Host* to)
 {
     to->set_hostname(std::string(get_hostname()));
-    to->set_addr(net_.get_primary_ip().raw);
+    to->set_addr(net_.get_primary_ip().data_str());
 
 	world::FileSystem* to_fs = to->mutable_files();
     if (FileSystem* fs = get_filesystem())
