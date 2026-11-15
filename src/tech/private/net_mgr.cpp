@@ -374,7 +374,8 @@ void NetManager::unpack(ip::IpPackage&& package, const Address6& src_addr, const
 	{
 		if (OpenSocketEntry* sock = find_socket(raw))
 		{
-			sock->rx_queue.push(std::forward<ip::IpPackage>(package));
+			ip::IpPackage raw_package = package;
+			sock->rx_queue.push(std::move(raw_package));
 		}
 	}
 
