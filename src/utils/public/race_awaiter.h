@@ -1,7 +1,8 @@
 #pragma once
 
 #include <coroutine>
-#include <atomic>
+#include <mutex>
+#include <memory>
 #include <tuple>
 #include <exception>
 #include <utility>
@@ -27,15 +28,19 @@ using await_result_t =
 template<typename... Awaitables>
 class when_any_awaitable 
 {
+    using awaitables_type = std::tuple<Awaitables...>;
+
 public:
 
-    explicit when_any_awaitable(Awaitables&&... aw)
-        : awaitables(std::forward<Awaitables>(aw)...) {}
+    explicit when_any_awaitable(std::shared_ptr<awaitables_type> awaitables)
+        : awaitables(std::move(awaitables)) {}
 
 	template<typename... Results>
     struct shared_state 
 	{
-        std::atomic<bool> completed{false};
+        std::mutex mutex;
+        bool starting{true};
+        bool completed{false};
         std::coroutine_handle<> continuation;
         std::exception_ptr exception;
 
@@ -71,6 +76,16 @@ public:
         state->continuation = h;
 
         start_all(std::index_sequence_for<Awaitables...>{});
+
+        bool resume = false;
+        {
+            std::lock_guard lock(state->mutex);
+            state->starting = false;
+            resume = state->completed;
+        }
+
+        if (resume)
+            state->continuation.resume();
     }
 
     auto await_resume() 
@@ -87,7 +102,7 @@ public:
 
 private:
 
-    std::tuple<Awaitables...> awaitables;
+    std::shared_ptr<awaitables_type> awaitables;
     std::shared_ptr<state_type> state;
 
     template<size_t... I>
@@ -99,47 +114,58 @@ private:
     template<size_t Index>
     void start_one()
 	{
-        auto& aw = std::get<Index>(awaitables);
-        run_one<Index>(aw);
+        run_one<Index>(awaitables, state);
     }
 
-    template<size_t Index, typename Awaitable>
-    void run_one(Awaitable& aw) 
+    template<size_t Index>
+    static detached_task run_one(
+        std::shared_ptr<awaitables_type> local_awaitables,
+        std::shared_ptr<state_type> local_state)
 	{
-        auto runner = [&aw](std::shared_ptr<state_type> local_state) -> Task<bool>
+        try
 		{
-            try 
-			{
-                auto value = co_await aw;
+            auto value = co_await std::get<Index>(*local_awaitables);
 
-                if (!local_state->completed.exchange(true))
-				{
+            bool resume = false;
+            {
+                std::lock_guard lock(local_state->mutex);
+                if (!local_state->completed)
+                {
+                    local_state->completed = true;
                     local_state->winner = Index;
-					local_state->result.template emplace<Index + 1>(std::move(value));
-                    local_state->continuation.resume();
-                }
-
-            } 
-			catch (...) 
-			{
-
-                if (!local_state->completed.exchange(true))
-				{
-                    local_state->exception = std::current_exception();
-                    local_state->winner = Index;
-                    local_state->continuation.resume();
+                    local_state->result.template emplace<Index + 1>(std::move(value));
+                    resume = !local_state->starting;
                 }
             }
 
-            co_return true;
-        };
+            if (resume)
+                local_state->continuation.resume();
+        }
+        catch (...)
+		{
+            bool resume = false;
+            {
+                std::lock_guard lock(local_state->mutex);
+                if (!local_state->completed)
+                {
+                    local_state->completed = true;
+                    local_state->exception = std::current_exception();
+                    local_state->winner = Index;
+                    resume = !local_state->starting;
+                }
+            }
 
-        runner(state);
-    }
+            if (resume)
+                local_state->continuation.resume();
+        }
+
+        co_return;
+	}
 };
 
 template<typename... Awaitables>
 auto when_any(Awaitables&&... aw) 
 {
-    return when_any_awaitable<Awaitables...>(std::forward<Awaitables>(aw)...);
+    return when_any_awaitable<Awaitables...>(
+        std::make_shared<std::tuple<Awaitables...>>(std::forward<Awaitables>(aw)...));
 }

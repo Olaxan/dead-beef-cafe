@@ -253,9 +253,11 @@ Task<bool> NetManager::async_socket_test_alive(OpenSocketHandle sock)
 		auto pak = make_tcp_reply_ip(sock, ip::TcpType::Test, {});
 		if (not pak) { co_return false; }
 		
+		auto read = async_read_socket_tcp(sock);
 		send(std::move(*pak));
 
-		auto res = co_await when_any(async_read_socket_tcp(sock), os_.wait(1.f));
+		auto res = co_await when_any(std::move(read), os_.wait(1.f));
+
 		if (res.index != 0)
 			co_return false;
 
