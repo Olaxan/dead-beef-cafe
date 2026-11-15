@@ -38,9 +38,11 @@ ProcessTask SSHSession(Proc& proc, std::vector<std::string> args)
 	{
 		if (auto exp_motd_read = proc.fs.read(*exp_motd))
 		{
-			proc.putln("\n{}\n", *exp_motd_read);
+			proc.putln("\n{}", *exp_motd_read);
 		}
 	}
+
+	proc.put("\n");
 
 	int32_t ret = co_await proc.sys.exec("/bin/shell");
 	auto status = co_await proc.net.async_close_socket(fd);
