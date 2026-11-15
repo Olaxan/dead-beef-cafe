@@ -197,24 +197,32 @@ ProcessTask Programs::CmdGen(Proc& proc, std::vector<std::string> args)
 			std::istreambuf_iterator<char>{f},
 			std::istreambuf_iterator<char>{}
 		};
+
 		if (f.bad())
 		{
 			proc.errln("Failed to read input file: '{}'.", params.path.string());
 			co_return 1;
 		}
+
 		flatbuffers::Parser json_parser;
 		if (not json_parser.Deserialize(world::GenParams::BinarySchema::data(), world::GenParams::BinarySchema::size()))
 		{
 			proc.errln("Failed to load FlatBuffers schema: {}.", json_parser.error_);
 			co_return 1;
 		}
+
 		json_parser.opts.strict_json = true;
+
 		if (not json_parser.ParseJson(json.c_str()))
 		{
 			proc.errln("Failed to parse input file: {}.", json_parser.error_);
 			co_return 1;
 		}
+
 		const world::GenParams* gen_params = world::GetGenParams(json_parser.builder_.GetBufferPointer());
+
+		proc.putln("Successfully read generation data from {}.", params.path.string());
+		proc.putln("Generating world...");
 
 		World& outer_world = *proc.owning_os->get_outer_as<World*>();
 
