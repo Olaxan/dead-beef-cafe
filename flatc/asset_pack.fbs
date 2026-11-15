@@ -1,0 +1,6 @@
+include "asset_data.fbs";
+
+table AssetData
+{
+	name:string;
+}
