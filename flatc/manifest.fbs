@@ -7,7 +7,7 @@ table ManifestPage
 	name:string;
 	path:string;
 	type:AssetType;
-	importance:AssetImportance;
+	tags:[string];
 }
 
 table Manifest

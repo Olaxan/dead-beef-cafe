@@ -1,6 +1,16 @@
 include "asset_data.fbs";
 
+table AssetDataView
+{
+	name:string;
+	offset:uint32;
+	length:uint32;
+	tags:[string];
+};
+
 table AssetData
 {
 	name:string;
+	bytes:[uint8];
+	parts:[AssetDataView];
 }

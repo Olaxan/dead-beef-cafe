@@ -4,13 +4,13 @@
       "name": "Mod Tracker Audio",
       "path": "mod",
       "type": "Audio",
-      "importance": "Inconsequential"
+	    "tags": ["junk", "music"]
     },
-	{
+	  {
       "name": "VT-100 Animations",
       "path": "vt100",
       "type": "Animation",
-      "importance": "Inconsequential"
+	    "tags": ["junk"]
     }
   ]
 }

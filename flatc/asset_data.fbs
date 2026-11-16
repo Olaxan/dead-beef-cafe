@@ -5,9 +5,3 @@ enum AssetType:byte
 	Audio = 2,
 	Script = 3
 }
-
-enum AssetImportance:byte 
-{
-	Inconsequential = 0,
-	BusinessDocument = 1
-}

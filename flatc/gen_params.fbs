@@ -34,6 +34,7 @@ table GenModule
   	namePool:NamePool;
   	children:[GenModule];
   	networkPrefix:uint = null;
+	hostTags:[string]
 }
 
 table GenParams 
