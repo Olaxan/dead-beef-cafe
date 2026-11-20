@@ -16,7 +16,6 @@ struct WorldData;
 
 namespace WorldGen
 {
-
 	using NameGenerator = std::function<std::string(void)>;
 
 	struct ClusterParams
@@ -26,6 +25,11 @@ namespace WorldGen
 
 		Address6 subnet;
 		int32_t prefix{0};
+	};
+
+	struct GenerationContext
+	{
+
 	};
 
 	struct GenerationModule
@@ -92,6 +96,7 @@ namespace WorldGen
 
 		Uid64 generate_host(std::string hostname);
 		Uid64 generate_cluster(std::string name, Uid64 link_from, ClusterParams params);
+
 		std::vector<GeneratedModule> execute(
 			const GenerationPlan& plan,
 			Uid64 upstream,

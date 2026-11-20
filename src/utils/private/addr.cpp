@@ -71,6 +71,62 @@ std::expected<Address6, std::invalid_argument> Address6::from_bytes(std::string_
 	return Address6(std::move(out_bytes));
 }
 
+std::expected<Address6, std::invalid_argument> Address6::mask_subnet(Address6 address, uint8_t prefix) noexcept
+{
+	if (prefix > 128)
+		return std::unexpected(std::invalid_argument("IPv6 network prefix exceeds 128 bits."));
+
+	for (std::size_t bit = prefix; bit < 128; ++bit)
+	{
+		address.bytes[bit / 8] &= static_cast<uint8_t>(~(1u << (7 - bit % 8)));
+	}
+	return address;
+}
+
+std::expected<Address6, std::invalid_argument> Address6::allocate_subnet(Address6 address_space, uint8_t address_space_prefix, uint8_t allocation_prefix, std::size_t index) noexcept
+{
+	if (address_space_prefix >= allocation_prefix || allocation_prefix > 128)
+		return std::unexpected(std::invalid_argument("Child network prefix must be longer than its address space prefix."));
+
+	const std::size_t index_bits = allocation_prefix - address_space_prefix;
+	if (index_bits < std::numeric_limits<std::size_t>::digits &&
+		index >= (std::size_t{1} << index_bits))
+	{
+		return std::unexpected(std::length_error("Generation plan exceeds the available IPv6 subnets."));
+	}
+
+	Address6 subnet = mask_subnet(address_space, allocation_prefix);
+
+	for (std::size_t bit = 0; bit < index_bits; ++bit)
+	{
+		const std::size_t index_bit = index_bits - bit - 1;
+		if (index_bit < std::numeric_limits<std::size_t>::digits &&
+			((index >> index_bit) & 1u) != 0)
+		{
+			subnet.bytes[(address_space_prefix + bit) / 8] |=
+				static_cast<uint8_t>(1u << (7 - (address_space_prefix + bit) % 8));
+		}
+	}
+
+	return subnet;
+}
+
+std::expected<Address6, std::invalid_argument> Address6::add_address_offset(Address6 address, std::size_t offset) noexcept
+{
+	std::size_t carry = offset;
+	for (std::size_t i = address.bytes.size(); i > 0 && carry > 0; --i)
+	{
+		const std::size_t sum = address.bytes[i - 1] + (carry & 0xFFu);
+		address.bytes[i - 1] = static_cast<uint8_t>(sum & 0xFFu);
+		carry = (carry >> 8) + (sum >> 8);
+	}
+
+	if (carry != 0)
+		return std::unexpected(std::overflow_error("Generated IPv6 host address overflowed."));
+
+	return address;
+}
+
 void Address6::split(const std::string& str, std::vector<std::string>& out)
 {
 	std::stringstream ss(str);

@@ -5,7 +5,9 @@
 
 #include "host.h"
 #include "person.h"
-#include "corp.h"
+#include "person_types.h"
+#include "business.h"
+#include "business_types.h"
 #include "internet.h"
 
 #include <memory>
@@ -16,7 +18,7 @@
 struct WorldData
 {
 	std::unordered_map<PersonId, Person> people;
-    std::unordered_map<CorpId, Corp> corps;
+    std::unordered_map<BusinessId, Business> corps;
     std::unordered_map<Uid64, std::unique_ptr<Host>> hosts;
 
 	RelationManager<RelationshipType::OneToOne, PersonId, CorpId> employment;

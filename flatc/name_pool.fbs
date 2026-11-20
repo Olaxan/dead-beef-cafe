@@ -1,0 +1,11 @@
+table NamePool {
+  prefix:[string];
+  suffix:[string];
+}
+
+table TaggedNamePool {
+	pool:NamePool;
+	tags:[string];
+}
+
+root_type NamePool;

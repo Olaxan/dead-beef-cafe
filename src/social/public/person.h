@@ -1,22 +1,9 @@
 #pragma once
 
+#include "person_types.h"
+
 #include <cstdint>
 #include <string>
-
-struct PersonId
-{
-	int32_t id{-1};
-	auto operator <=> (const PersonId&) const = default;
-};
-
-template <>
-struct std::hash<PersonId>
-{
-  	std::size_t operator()(const PersonId& k) const
-	{
-    	return std::hash<int32_t>()(k.id);
-	}
-};
 
 struct Person
 {

@@ -72,8 +72,11 @@ public:
         return (head > 0) || (tail > 0);
     }
 
-    static std::expected<Address6, std::invalid_argument> from_string(const std::string& address) noexcept;
-    static std::expected<Address6, std::invalid_argument> from_bytes(std::string_view address) noexcept;
+    [[nodiscard]] static std::expected<Address6, std::invalid_argument> from_string(const std::string& address) noexcept;
+    [[nodiscard]] static std::expected<Address6, std::invalid_argument> from_bytes(std::string_view address) noexcept;
+    [[nodiscard]] static std::expected<Address6, std::invalid_argument> mask_subnet(Address6 address, uint8_t prefix) noexcept;
+    [[nodiscard]] static std::expected<Address6, std::invalid_argument> allocate_subnet(Address6 address_space, uint8_t address_space_prefix,uint8_t allocation_prefix,std::size_t index) noexcept;
+    [[nodiscard]] static std::expected<Address6, std::overflow_error> add_address_offset(Address6 address, std::size_t offset) noexcept;
 
 private:
     
