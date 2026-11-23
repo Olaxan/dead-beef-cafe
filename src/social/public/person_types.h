@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstdint>
+#include <compare>
+
 struct PersonId
 {
 	int32_t id{-1};

@@ -7,9 +7,14 @@
 
 #include "business_template.h"
 
-void WorldGenerator::add_template(BusinessGenerationTemplate&& template)
+void WorldGenerator::add_template(BusinessGenerationTemplate&& temp)
 {
-	business_templates_.emplace_back(std::move(template));
+	business_templates_.emplace_back(std::move(temp));
+}
+
+void WorldGenerator::add_country(Country&& locale)
+{
+	countries_.emplace_back(std::move(locale));
 }
 
 void WorldGenerator::configure()
@@ -17,7 +22,7 @@ void WorldGenerator::configure()
 	add_template(BusinessGenerationTemplate{
 		.tag = "business_garage",
 		.num_employees_range = std::make_pair(1, 2),
-		.num_instances_per_country_range = std::make_pair(5, 10)
+		.num_instances_per_country_range = std::make_pair(5, 10),
 		.roles = {
 			BusinessRole::Owner
 		}
@@ -30,36 +35,36 @@ void WorldGenerator::configure()
 
 void WorldGenerator::generate()
 {
-	auto&& corps = world_->corps;
-	auto&& people = world_->people;
+	const auto& corps = world_->corps;
+	const auto& people = world_->people;
 
-	for (auto&& locale : locales_)
+	for (auto&& country : countries_)
 	{
-		for (const auto& template : business_templates_)
+		for (auto&& temp : business_templates_)
 		{
-			std::size_t instances = random_from_range(template.num_instances_per_country_range);
+			std::size_t instances = random_from_range(temp.num_instances_per_country_range);
 
 			for (std::size_t i = 0; i < instances; ++i)
 			{
-				generate_corporation(locale, template);
+				generate_business(country, temp);
 			}
 		}
 
-		for (const auto&& template : person_templates_)
+		for (auto&& temp : person_templates_)
 		{
-			std::size_t instances = random_from_range(template.num_instances_per_country_range);
+			std::size_t instances = random_from_range(temp.num_instances_per_country_range);
 
 			for (std::size_t i = 0; i < instances; ++i)
 			{
-				generate_person(locale, template);
+				generate_person(country, temp);
 			}
 		}
 	}
 }
 
-std::optional<BusinessId> WorldGenerator::generate_business(const ITagProvider& provider, const BusinessGenerationTemplate& template)
+std::optional<BusinessId> WorldGenerator::generate_business(const StringTagProvider& provider, const BusinessGenerationTemplate& temp)
 {
-	auto&& corps = world_->corps;
+	const auto& corps = world_->corps;
 
 	auto fill_roles = [&](const std::vector<BusinessRole>& roles) -> std::vector<BusinessRolePair>
 	{
@@ -93,7 +98,20 @@ std::optional<BusinessId> WorldGenerator::generate_business(const ITagProvider& 
 	return std::nullopt;
 }
 
-std::optional<PersonId> WorldGenerator::generate_person(const ITagProvider& provider)
+void WorldGenerator::set_logger(WorldGeneratorLogger&& logger)
+{
+	logger_ = std::move(logger);
+}
+
+void WorldGenerator::log(std::string line)
+{
+	if (logger_)
+	{
+		logger_(line);
+	}
+}
+
+std::optional<PersonId> WorldGenerator::generate_person(const StringTagProvider& provider, const PersonGenerationTemplate& temp)
 {
 	auto&& people = world_->people;
 
@@ -101,12 +119,12 @@ std::optional<PersonId> WorldGenerator::generate_person(const ITagProvider& prov
 	{
 		.forename = provider.get_by_tag("given_name").value_or("Anonymous"),
 		.surname = provider.get_by_tag("family_name").value_or("")
-	}
+	};
 
-	int32_t out_id = next_person_id_++
-	if (people.try_emplace(out_id, std::move(out)))
+	auto out_id = PersonId{ .id = ++next_person_id_ };
+	if (auto [it, success] = people.try_emplace(out_id, std::move(out)); success)
 	{
-		return PersonId{.id = out_id};
+		return out_id;
 	}
 
 	return std::nullopt;

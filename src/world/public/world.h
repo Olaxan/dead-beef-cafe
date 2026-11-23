@@ -11,7 +11,7 @@
 #include "internet.h"
 
 #include "person.h"
-#include "corp.h"
+#include "business.h"
 
 #include "proto/world.pb.h"
 

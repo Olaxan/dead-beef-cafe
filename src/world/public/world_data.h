@@ -21,7 +21,7 @@ struct WorldData
     std::unordered_map<BusinessId, Business> corps;
     std::unordered_map<Uid64, std::unique_ptr<Host>> hosts;
 
-	RelationManager<RelationshipType::OneToOne, PersonId, CorpId> employment;
+	RelationManager<RelationshipType::OneToOne, PersonId, BusinessId> employment;
     RelationManager<RelationshipType::OneToMany, PersonId, Uid64> ownership;
     std::shared_ptr<InternetLinks> links{std::make_shared<InternetLinks>()};
 };

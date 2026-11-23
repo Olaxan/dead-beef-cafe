@@ -92,26 +92,28 @@ std::expected<Address6, std::invalid_argument> Address6::allocate_subnet(Address
 	if (index_bits < std::numeric_limits<std::size_t>::digits &&
 		index >= (std::size_t{1} << index_bits))
 	{
-		return std::unexpected(std::length_error("Generation plan exceeds the available IPv6 subnets."));
+		return std::unexpected(std::invalid_argument("Generation plan exceeds the available IPv6 subnets."));
 	}
 
-	Address6 subnet = mask_subnet(address_space, allocation_prefix);
-
-	for (std::size_t bit = 0; bit < index_bits; ++bit)
+	return mask_subnet(address_space, allocation_prefix)
+	.transform([&](Address6 subnet)
 	{
-		const std::size_t index_bit = index_bits - bit - 1;
-		if (index_bit < std::numeric_limits<std::size_t>::digits &&
-			((index >> index_bit) & 1u) != 0)
+		for (std::size_t bit = 0; bit < index_bits; ++bit)
 		{
-			subnet.bytes[(address_space_prefix + bit) / 8] |=
-				static_cast<uint8_t>(1u << (7 - (address_space_prefix + bit) % 8));
+			const std::size_t index_bit = index_bits - bit - 1;
+			if (index_bit < std::numeric_limits<std::size_t>::digits &&
+				((index >> index_bit) & 1u) != 0)
+			{
+				subnet.bytes[(address_space_prefix + bit) / 8] |=
+					static_cast<uint8_t>(1u << (7 - (address_space_prefix + bit) % 8));
+			}
 		}
-	}
 
-	return subnet;
+		return subnet;
+	});
 }
 
-std::expected<Address6, std::invalid_argument> Address6::add_address_offset(Address6 address, std::size_t offset) noexcept
+std::expected<Address6, std::overflow_error> Address6::add_address_offset(Address6 address, std::size_t offset) noexcept
 {
 	std::size_t carry = offset;
 	for (std::size_t i = address.bytes.size(); i > 0 && carry > 0; --i)

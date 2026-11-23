@@ -2,6 +2,9 @@
 
 #include "person_types.h"
 
+#include <tuple>
+#include <functional>
+
 struct BusinessId
 {
 	int32_t id{-1};
