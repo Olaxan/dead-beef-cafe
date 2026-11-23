@@ -135,7 +135,6 @@ int main(int argc, char* argv[])
 	fs::path manifest_path = params.input.parent_path();
 
 	auto asset_name_offset = builder.CreateString(params.pack_name);
-	auto assets = CreateAssetData(builder, asset_name_offset);
 
 	std::vector<flatbuffers::Offset<AssetDataCollection>> collections;
 
@@ -155,12 +154,38 @@ int main(int argc, char* argv[])
 		auto real_path = pack_path.is_absolute() ? pack_path : manifest_path / pack_path;
 		auto pack_content = create_pack_content(real_path, pack_recurse);
 
-		auto collection_offset = CreateAssetDataCollection(builder, pack_name_offset, pack_type, *pack_tags);
+		std::vector<flatbuffers::Offset<flatbuffers::String>> pack_tag_offsets;
+		if (pack_tags)
+		{
+			pack_tag_offsets.reserve(pack_tags->size());
+			for (std::size_t tag_index = 0; tag_index < pack_tags->size(); ++tag_index)
+			{
+				pack_tag_offsets.emplace_back(builder.CreateString(pack_tags->Get(tag_index)->str()));
+			}
+		}
+
+		auto pack_tags_offset = builder.CreateVector(pack_tag_offsets);
+		auto pack_content_offset = builder.CreateVector(pack_content);
+		auto collection_offset = CreateAssetDataCollection
+		(
+			builder,
+			pack_name_offset,
+			pack_type,
+			pack_tags_offset,
+			pack_content_offset
+		);
+
+		collections.emplace_back(collection_offset);
 
 		std::println("Created asset collection '{}'.", pack_name->str());
 	}
+
+	auto collections_offset = builder.CreateVector(collections);
+	auto assets = CreateAssetData(builder, asset_name_offset, collections_offset);
+
+	builder.Finish(assets);
 	
-	std::ofstream out_stream{params.output, std::ofstream::out};
+	std::ofstream out_stream{params.output, std::ofstream::out | std::ofstream::binary};
 
 	if (not out_stream)
 	{
@@ -169,7 +194,17 @@ int main(int argc, char* argv[])
 
 	if (out_stream)
 	{
-		
+		out_stream.write(
+			reinterpret_cast<const char*>(builder.GetBufferPointer()),
+			static_cast<std::streamsize>(builder.GetSize()));
+
+		if (not out_stream)
+		{
+			std::println(std::cerr, "Failed to write {}.", params.output.string());
+			return 1;
+		}
+
+		std::println("Wrote asset pack '{}' ({} bytes).", params.output.string(), builder.GetSize());
 	}
 
 	return 0;
