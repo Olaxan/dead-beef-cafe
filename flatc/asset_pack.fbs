@@ -1,16 +1,23 @@
-include "asset_data.fbs";
+include "asset_types.fbs";
 
-table AssetDataView
+table AssetDataItem
 {
 	name:string;
-	offset:uint32;
-	length:uint32;
+	bytes:[uint8];
+}
+
+table AssetDataCollection
+{
+	name:string;
+	type:AssetType;
 	tags:[string];
-};
+	items:[AssetDataItem];
+}
 
 table AssetData
 {
 	name:string;
-	bytes:[uint8];
-	parts:[AssetDataView];
+	parts:[AssetDataCollection];
 }
+
+root_type AssetData;

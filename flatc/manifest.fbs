@@ -1,4 +1,4 @@
-include "asset_data.fbs";
+include "asset_types.fbs";
 
 namespace DBC.Assets;
 
@@ -6,6 +6,7 @@ table ManifestPage
 {
 	name:string;
 	path:string;
+	recurse:bool = false;
 	type:AssetType;
 	tags:[string];
 }
