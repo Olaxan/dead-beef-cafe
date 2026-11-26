@@ -16,6 +16,16 @@ std::optional<ArHandle> FileArchive::find_by_digest(std::string_view data) const
 	return std::nullopt;
 }
 
+std::optional<std::string_view> FileArchive::try_get_bytes(ArHandle h) const
+{
+	if (auto it = pages_.find(h); it != pages_.end())
+	{
+		return std::string_view{it->second.bytes};
+	}
+
+	return std::nullopt;
+}
+
 std::optional<ProcessFn> FileArchive::try_get_exec(std::string_view data) const
 {
 	return find_by_digest(data).and_then([&](const ArHandle& h)

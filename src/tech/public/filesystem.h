@@ -17,6 +17,7 @@
 
 class OS;
 struct SessionData;
+class FileArchive;
 
 namespace world { class FileSystem; }
 
@@ -87,7 +88,6 @@ public:
 		bool recurse{false};
 		FileMeta meta{};
 		std::string content{};
-		ProcessFn executable{nullptr};
 	};
 
 	/* Create a directory at the specified location (and optionally fills in missing directories). */
@@ -186,10 +186,9 @@ public:
 		if (auto [fid, ptr, err] = res; err.value() == 0)
 		{
 			if (!params.content.empty()) 
+			{
 				ptr->write(params.content);
-				
-			if (params.executable)
-				ptr->write(params.executable);
+			}
 		}
 		return res;
 	}
@@ -212,6 +211,8 @@ protected:
 
 	OpenFileHandle get_handle();
 	void return_handle(OpenFileHandle h);
+
+	FileArchive& get_archive() const;
 
 private:
 

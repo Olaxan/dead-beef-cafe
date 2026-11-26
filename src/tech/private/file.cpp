@@ -5,15 +5,10 @@ std::size_t File::size() const
 	return content_.size();
 }
 
-void File::write(ProcessFn exec)
-{
-	executable_ = std::move(exec);
-	content_ = "BIN64::";
-}
-
-void File::write(std::string content)
+std::size_t File::write(std::string content)
 {
 	content_ = std::move(content);
+	return content_.size();
 }
 
 std::optional<std::string> File::read() const
@@ -46,7 +41,10 @@ const std::string& File::get_string() const
 	return content_;
 }
 
-const ProcessFn& File::get_executable() const
+std::optional<ArHandle> File::get_link() const
 {
-	return executable_;
+	if (link_.is_valid())
+		return link_;
+	
+	return std::nullopt;
 }

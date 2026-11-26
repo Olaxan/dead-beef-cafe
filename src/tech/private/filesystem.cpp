@@ -1,5 +1,7 @@
 #include "filesystem.h"
+#include "file_archive.h"
 #include "session.h"
+#include "os.h"
 
 #include <ranges>
 #include <algorithm>
@@ -558,17 +560,25 @@ OpenFileTablePair FileSystem::open_file_entry(NodeIdx node, FileAccessFlags flag
 		.flags = flags
 	});
 	
-	if (success)
-	{
-		//std::println("Opening file {}, inode {}: mode {}.", h, node, static_cast<uint32_t>(flags));
-		return std::make_pair(h, &it->second);
-	}
-	else
+	if (not success)
 	{
 		return_handle(h);
 		return std::make_pair(-1, nullptr);
 	}
+	
+	File* file = find(node);
 
+	file->get_link()
+	.and_then([&](const ArHandle& h) -> std::optional<std::string_view>
+	{
+		return get_archive().try_get_bytes(h);
+	})
+	.and_then([&](std::string_view view) -> std::optional<std::size_t>
+	{
+		return file->write(std::string{view});
+	});
+
+	return std::make_pair(h, &it->second);
 }
 
 void FileSystem::close_file_entry(OpenFileHandle h)
@@ -733,4 +743,11 @@ OpenFileHandle FileSystem::get_handle()
 void FileSystem::return_handle(OpenFileHandle h)
 {
 	free_handles_.insert(h);
+}
+
+FileArchive& FileSystem::get_archive() const
+{
+	FileArchive* ar = os_.get_context().archive;
+	assert(ar);
+	return *ar;
 }

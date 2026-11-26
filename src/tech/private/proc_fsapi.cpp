@@ -2,6 +2,7 @@
 
 #include "users_mgr.h"
 #include "filesystem.h"
+#include "file_archive.h"
 #include "file.h"
 #include "proc.h"
 #include "os.h"
@@ -155,7 +156,15 @@ std::expected<ProcessFn, std::error_condition> ProcFsApi::read_exe(FileDescripto
 		if (auto exp_file = fs.get(h))
 		{
 			File* file = exp_file.value();
-			return file->get_executable();
+			FileArchive& ar = get_archive();
+			std::string_view data = file->get_view();
+
+			return ar.try_get_exec(data)
+			.transform([](ProcessFn func) -> std::expected<ProcessFn, std::error_condition>
+			{
+				return func;
+			})
+			.value_or(std::unexpected{std::error_condition{ENOEXEC, std::generic_category()}});
 		}
 	}
 	
@@ -443,4 +452,11 @@ NodeIdx ProcFsApi::check_remove_using(const FilePath& path, FileRemoverFn&& func
 
 	func(path, std::error_condition{ENOENT, std::generic_category()});
 	return 0;
+}
+
+FileArchive& ProcFsApi::get_archive() const
+{
+	FileArchive* ar = os.get_context().archive;
+	assert(ar);
+	return *ar;
 }

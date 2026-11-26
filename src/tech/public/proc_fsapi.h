@@ -14,6 +14,7 @@
 class Proc;
 class OS;
 class FileSystem;
+class FileArchive;
 
 using FileQueryResult = std::expected<NodeIdx, std::error_condition>;
 using FileRemoverFn = std::function<bool(const FilePath&, std::error_condition)>;
@@ -52,6 +53,8 @@ public:
 protected:
 
 	NodeIdx check_remove_using(const FilePath& path, FileRemoverFn&& func) const;
+
+	FileArchive& get_archive() const;
 
 protected:
 
