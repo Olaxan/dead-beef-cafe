@@ -18,7 +18,7 @@ FIND_PACKAGE(Threads REQUIRED)
 FIND_PACKAGE(CLI11 REQUIRED)
 
 ADD_EXECUTABLE(dbc_client ${files_client_app})
-TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common soloud)
+TARGET_LINK_LIBRARIES(dbc_client PRIVATE world basicos programs proto common soloud FlatbufDatasource)
 
 ADD_EXECUTABLE(dbc_server ${files_server_app})
 TARGET_LINK_LIBRARIES(dbc_server PRIVATE world basicos programs proto common)

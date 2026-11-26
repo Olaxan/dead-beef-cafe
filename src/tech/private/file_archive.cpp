@@ -1,12 +1,36 @@
 #include "file_archive.h"
 
+#include "rand_char.h"
+
 #include <string_view>
+#include <print>
 
 FileArchive::FileArchive() = default;
 
 void FileArchive::add_datasource(std::shared_ptr<IDatasourceBase> source)
 {
+	std::string name = source->get_name();
 	sources_.emplace_back(std::move(source));
+	std::println("Installed datapack '{}'.", name);
+}
+
+ArHandle FileArchive::add_file(std::string content, std::vector<std::string> tags)
+{
+	ArHandle h{ Uid64{0}, ++next_h_};
+	auto hash = std::hash<std::string>()(content);
+
+	pages_.try_emplace(h, content);
+	hash_lookup_.try_emplace(hash, h);
+
+	return h;
+}
+
+ArHandle FileArchive::add_program(ProcessFn&& func, std::vector<std::string> tags)
+{
+	std::string content = RandChars{}(1024);
+	ArHandle h = add_file(content, tags);
+	execs_.try_emplace(h, func);
+	return h;
 }
 
 std::optional<ArHandle> FileArchive::find_by_digest(std::string_view data) const

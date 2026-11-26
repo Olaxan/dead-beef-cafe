@@ -19,6 +19,8 @@
 
 #include "soloud_impl.h"
 
+#include "datasource_flatbuf.h"
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -73,6 +75,14 @@ int main(int argc, char* argv[])
 	}};
 
 	our_world.create_world();
+
+	auto&& archive = our_world.get_archive();
+
+	auto src_basic = std::make_shared<DatasourceFlatbuf>();
+	src_basic->init_from("assets/data.pack");
+
+	archive.add_datasource(src_basic);
+
 	our_world.init_world();
 
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");

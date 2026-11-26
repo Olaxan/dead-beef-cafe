@@ -36,6 +36,8 @@ public:
 	const std::string& get_string() const;
 
 	std::optional<ArHandle> get_link() const;
+	void set_link(ArHandle h);
+	void set_link_and_clear(ArHandle h);
 
 protected:
 

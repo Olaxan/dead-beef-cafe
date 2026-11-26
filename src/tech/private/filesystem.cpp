@@ -585,7 +585,18 @@ void FileSystem::close_file_entry(OpenFileHandle h)
 {
 	if (auto it = open_files_.find(h); it != open_files_.end())
 	{
+		File* file = find(it->second.node);
+
+		assert(file);
 		assert(it->second.instance_count == 0);
+
+		get_archive().find_by_digest(file->get_view())
+		.and_then([&file](ArHandle h) -> std::optional<ArHandle>
+		{
+			file->set_link_and_clear(h);
+			return h;
+		});
+
 		open_files_.erase(it);
 		return_handle(h);
 	}

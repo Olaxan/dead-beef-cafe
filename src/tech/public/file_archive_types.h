@@ -10,6 +10,9 @@ struct ArHandle
 {
 	ArHandle() = default;
 
+	ArHandle(Uid64 archive, int64_t h)
+	: archive_id(archive), handle(h) { }
+
 	Uid64 archive_id{0};
 	int64_t handle{-1};
 	auto operator <=> (const ArHandle&) const = default;

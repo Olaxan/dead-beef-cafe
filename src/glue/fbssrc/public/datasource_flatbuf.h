@@ -8,6 +8,8 @@
 
 namespace fs = std::filesystem;
 
+struct AssetData;
+
 class DatasourceFlatbuf : public IDatasourceBase
 {
 public:
@@ -19,10 +21,13 @@ public:
 	void open() override;
 	void close() override;
 
+	std::string get_name() override;
+
 	~DatasourceFlatbuf() = default;
 
 protected:
 
 	mio::mmap_source view_;
+	const AssetData* data_;
 
 };

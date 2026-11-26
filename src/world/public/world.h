@@ -52,6 +52,7 @@ public:
     WorldUpdateQueue& get_update_queue() { return queue_; }
     TimerManager& get_timer_manager() { return timers_; }
     Internet& get_internet() { return internet_; }
+    FileArchive& get_archive() { return archive_; }
 
     Host* add_host(Uid64 id, std::unique_ptr<Host>&& new_host);
 

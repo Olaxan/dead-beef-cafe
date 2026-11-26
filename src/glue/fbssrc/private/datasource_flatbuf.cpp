@@ -10,16 +10,20 @@
 
 #include <iso646.h>
 
+DatasourceFlatbuf::DatasourceFlatbuf() = default;
+
 void DatasourceFlatbuf::init_from(fs::path path)
 {
 	std::error_code error;
-	if (view_.map(path.string(), error); not error)
+	if (view_.map(path.string(), error); error)
 	{
 		std::println(std::cerr, "Failed to map {}!", path.string());
 		return;
 	}
 
-	const AssetData* data = GetAssetData(view_.data());
+	std::println("Mapped asset data from '{}' ({} bytes).", path.string(), view_.size());
+
+	data_ = GetAssetData(view_.data());
 }
 
 void DatasourceFlatbuf::open()
@@ -29,5 +33,10 @@ void DatasourceFlatbuf::open()
 
 void DatasourceFlatbuf::close()
 {
-	
+
+}
+
+std::string DatasourceFlatbuf::get_name()
+{
+	return data_->name()->str();
 }

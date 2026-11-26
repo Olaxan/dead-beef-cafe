@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	{
 		std::filesystem::path input{"assets/data/manifest.json"};
 		std::filesystem::path output{"assets/data.pack"};
-		std::string pack_name{"Assets"};
+		std::string pack_name{"Default"};
 		bool export_schema{false};
 		bool follow_symlinks{true};
 	} params;
