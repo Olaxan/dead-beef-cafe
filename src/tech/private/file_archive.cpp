@@ -38,9 +38,7 @@ std::optional<ArHandle> FileArchive::find_by_digest(std::string_view data) const
 	auto hash = std::hash<std::string_view>()(data);
 
 	if (auto it = hash_lookup_.find(hash); it != hash_lookup_.end())
-	{
 		return it->second;
-	}
 
 	return std::nullopt;
 }
@@ -48,9 +46,7 @@ std::optional<ArHandle> FileArchive::find_by_digest(std::string_view data) const
 std::optional<std::string_view> FileArchive::try_get_bytes(ArHandle h) const
 {
 	if (auto it = pages_.find(h); it != pages_.end())
-	{
 		return std::string_view{it->second.bytes};
-	}
 
 	return std::nullopt;
 }
@@ -66,9 +62,7 @@ std::optional<ProcessFn> FileArchive::try_get_exec(std::string_view data) const
 std::optional<ProcessFn> FileArchive::try_get_exec(ArHandle handle) const
 {
 	if (auto it = execs_.find(handle); it != execs_.end())
-	{
 		return it->second;
-	}
 
 	return std::nullopt;
 }
