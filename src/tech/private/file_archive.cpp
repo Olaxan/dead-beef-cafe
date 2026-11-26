@@ -4,6 +4,11 @@
 
 FileArchive::FileArchive() = default;
 
+void FileArchive::add_datasource(std::shared_ptr<IDatasourceBase> source)
+{
+	sources_.emplace_back(std::move(source));
+}
+
 std::optional<ArHandle> FileArchive::find_by_digest(std::string_view data) const
 {
 	auto hash = std::hash<std::string_view>()(data);

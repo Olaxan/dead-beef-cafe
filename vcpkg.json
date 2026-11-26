@@ -4,6 +4,7 @@
     "protobuf",
     "flatbuffers",
     "icu",
-    "cli11"
+    "cli11",
+    "mio"
   ]
 }

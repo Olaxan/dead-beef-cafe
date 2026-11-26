@@ -163,68 +163,6 @@ void BasicOS::reinstall_os()
 		}		
 	});
 
-	std::vector<std::pair<std::string, ProcessFn>> os_progs = 
-	{
-		{"/sbin/shutdown", Programs::CmdShutdown},
-		{"/sbin/boot", Programs::CmdBoot },
-		{"/sbin/login", Programs::CmdLogin},
-		{"/sbin/useradd", Programs::CmdUserAdd},
-		{"/sbin/groupadd", Programs::CmdGroupAdd},
-		{"/bin/proc", Programs::CmdProc},
-		{"/bin/wait", Programs::CmdWait},
-		{"/bin/shell", Programs::CmdShell},
-		{"/bin/ls", Programs::CmdList},
-		{"/bin/mkdir", Programs::CmdMakeDir},
-		{"/bin/touch", Programs::CmdTouch},
-		{"/bin/open", Programs::CmdOpenFile},
-		{"/bin/echo", Programs::CmdEcho},
-		{"/bin/rm", Programs::CmdRemoveFile},
-		{"/bin/cat", Programs::CmdCat},
-		{"/bin/ping", Programs::CmdPing},
-		{"/bin/ifconfig", Programs::CmdIfConfig},
-		{"/bin/nmap", Programs::CmdNetMap},
-		{"/bin/ssh", Programs::CmdSshServer},
-		{"/bin/slogin", Programs::CmdSshClient},
-		{"/bin/kill", Programs::CmdKill},
-		{"/bin/crypto", Programs::CmdCrypto},
-		{"/usr/bin/count", Programs::CmdCount},
-		{"/usr/bin/snake", Programs::CmdSnake},
-		{"/usr/bin/dogs", Programs::CmdDogs},
-		{"/usr/bin/edit", Programs::CmdEdit},
-		{"/usr/bin/radio", Programs::CmdRadio},
-		{"/usr/bin/speak", Programs::CmdSpeak},
-		{"/usr/bin/uwu", Programs::CmdUwu},
-		{"/usr/bin/markdown", Programs::CmdMarkdown},
-		{"/lib/modules/kernel/drivers/cpu", Programs::InitCpu},
-		{"/lib/modules/kernel/drivers/net", Programs::InitNet},
-		{"/lib/modules/kernel/drivers/disk", Programs::InitDisk}
-	};
-
-	for (auto& fn : os_progs)
-	{
-		fs->create_file(fn.first, 
-		{
-			.recurse = true,
-			.meta = {
-				.perm_owner = FilePermissionTriad::All,
-				.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-				.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-			},
-			.executable = std::forward<ProcessFn>(fn.second)
-		});
-	}
-
-	fs->create_file("/bin/sudo", 
-	{
-		.meta = {
-			.perm_owner = FilePermissionTriad::Execute,
-			.perm_group = FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Execute,
-			.extra = ExtraFileFlags::SetUid
-		},
-		.executable = std::forward<ProcessFn>(Programs::CmdSudo)
-	});
-
 	fs->create_file("/etc/passwd", 
 	{
 		.recurse = true,

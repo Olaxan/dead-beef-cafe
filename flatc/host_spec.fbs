@@ -1,0 +1,33 @@
+namespace DBC.Host;
+
+enum FileType:byte
+{
+	File = 0,
+	Directory = 1
+}
+
+table File
+{
+	path:string;
+	content:[uint8];
+	type:FileType;
+	owner_uid:int32;
+	owner_gid:int32;
+	perm_owner:uint32;
+	perm_group:uint32;
+	perm_users:uint32;
+	extra:uint32 = null;
+}
+
+table ProgramLocator
+{
+	path:string;
+	tags:[string];
+}
+
+table FileManifest
+{
+	files:[File];
+}
+
+root_type FileManifest;

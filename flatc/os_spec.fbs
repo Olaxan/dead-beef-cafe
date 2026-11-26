@@ -1,0 +1,13 @@
+include "host_spec.fbs";
+
+namespace DBC.Host;
+
+table OperatingSystemSpec
+{
+	name:string;
+	dir_separator:string;
+	default_files:[FileManifest];
+	default_programs:[ProgramLocator];
+}
+
+root_type OperatingSystemSpec;

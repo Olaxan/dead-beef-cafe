@@ -131,7 +131,8 @@ HostContext World::create_host_context(Uid64 uid)
 {
 	return HostContext{
 		.uid = uid,
-		.internet = &internet_
+		.internet = &internet_,
+		.archive = &archive_
 	};
 }
 

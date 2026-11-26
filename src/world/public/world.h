@@ -9,6 +9,7 @@
 #include "host.h"
 #include "host_context.h"
 #include "internet.h"
+#include "file_archive.h"
 
 #include "person.h"
 #include "corp.h"
@@ -79,6 +80,7 @@ private:
     LinkServer net_{};
     WorldUpdateQueue queue_{};
     Internet internet_{};
+    FileArchive archive_{};
 
     /* Implementation-specific dependencies (i.e. sound). */
     WorldExts exts_;

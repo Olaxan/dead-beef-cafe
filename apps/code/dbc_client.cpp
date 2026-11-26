@@ -82,61 +82,6 @@ int main(int argc, char* argv[])
 	
 	Address6 local_addr = client_net_mgr->get_primary_ip();
 
-	client_fs->create_file("/bin/join", 
-	{
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		},
-		.executable = Programs::CmdDbcClient
-	});
-
-	client_fs->create_file("/bin/host", 
-	{
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		},
-		.executable = Programs::CmdDbcServer
-	});
-
-	client_fs->create_file("/bin/save", 
-	{
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		},
-		.executable = Programs::CmdSave
-	});
-
-	client_fs->create_file("/bin/load", 
-	{
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		},
-		.executable = Programs::CmdLoad
-	});
-
-	client_fs->create_file("/bin/gen", 
-	{
-		.recurse = true,
-		.meta = {
-			.perm_owner = FilePermissionTriad::All,
-			.perm_group = FilePermissionTriad::Read | FilePermissionTriad::Execute,
-			.perm_users = FilePermissionTriad::Read | FilePermissionTriad::Execute
-		},
-		.executable = Programs::CmdGen
-	});
-
 	our_world.launch();
 	
 	auto queue_ptr = std::make_shared<MessageQueue<std::string>>();

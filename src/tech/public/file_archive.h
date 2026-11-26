@@ -6,6 +6,8 @@
 #include "proc_types.h"
 #include "tag_mgr.h"
 #include "tag_provider.h"
+#include "archive_base.h"
+#include "datasource_base.h"
 
 #include <variant>
 #include <optional>
@@ -13,11 +15,13 @@
 #include <string_view>
 
 
-class FileArchive
+class FileArchive : public IArchiveBase
 {
 public:
 
 	FileArchive();
+
+	void add_datasource(std::shared_ptr<IDatasourceBase> source) override;
 
 	std::optional<ArHandle> find_by_digest(std::string_view data) const;
 	
@@ -29,6 +33,8 @@ public:
 protected:
 
 protected:
+
+	std::vector<std::shared_ptr<IDatasourceBase>> sources_;
 
 	TagManager<ArHandle> tag_lookup_;
 	std::unordered_map<std::size_t, ArHandle> hash_lookup_;
