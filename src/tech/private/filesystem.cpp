@@ -590,6 +590,8 @@ void FileSystem::close_file_entry(OpenFileHandle h)
 		assert(file);
 		assert(it->second.instance_count == 0);
 
+		file->unlink();
+
 		get_archive().find_by_digest(file->get_view())
 		.and_then([&file](ArHandle h) -> std::optional<ArHandle>
 		{

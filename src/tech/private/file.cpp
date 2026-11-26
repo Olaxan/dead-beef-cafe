@@ -1,6 +1,4 @@
 #include "file.h"
-#include "file.h"
-#include "file.h"
 
 std::size_t File::size() const
 {
@@ -60,4 +58,9 @@ void File::set_link_and_clear(ArHandle h)
 {
 	set_link(h);
 	content_.clear();
+}
+
+void File::unlink()
+{
+	link_ = ArHandle{};
 }
