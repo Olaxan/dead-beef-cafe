@@ -145,7 +145,7 @@ struct std::hash<Address6>
 {
   	std::size_t operator()(const Address6& k) const
 	{
-    	return std::hash<uint64_t>()(k.tail);
+    	return std::hash<uint64_t>()(k.head) ^ std::hash<uint64_t>()(k.tail);
 	}
 };
 
