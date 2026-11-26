@@ -23,8 +23,8 @@ public:
 
 	void add_datasource(std::shared_ptr<IDatasourceBase> source) override;
 
-	ArHandle add_file(std::string content, std::vector<std::string> tags);
-	ArHandle add_program(ProcessFn&& func, std::vector<std::string> tags);
+	ArHandle add_file(std::string content, std::vector<std::string>&& tags);
+	ArHandle add_program(ProcessFn&& func, std::vector<std::string>&& tags);
 
 	std::optional<ArHandle> find_by_digest(std::string_view data) const;
 	

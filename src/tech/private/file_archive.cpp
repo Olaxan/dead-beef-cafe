@@ -14,7 +14,7 @@ void FileArchive::add_datasource(std::shared_ptr<IDatasourceBase> source)
 	std::println("Installed datapack '{}'.", name);
 }
 
-ArHandle FileArchive::add_file(std::string content, std::vector<std::string> tags)
+ArHandle FileArchive::add_file(std::string content, std::vector<std::string>&& tags)
 {
 	ArHandle h{ Uid64{0}, ++next_h_};
 	auto hash = std::hash<std::string>()(content);
@@ -25,10 +25,10 @@ ArHandle FileArchive::add_file(std::string content, std::vector<std::string> tag
 	return h;
 }
 
-ArHandle FileArchive::add_program(ProcessFn&& func, std::vector<std::string> tags)
+ArHandle FileArchive::add_program(ProcessFn&& func, std::vector<std::string>&& tags)
 {
 	std::string content = RandChars{}(1024);
-	ArHandle h = add_file(content, tags);
+	ArHandle h = add_file(content, std::forward<std::vector<std::string>>(tags));
 	execs_.try_emplace(h, func);
 	return h;
 }
