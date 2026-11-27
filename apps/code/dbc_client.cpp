@@ -83,6 +83,51 @@ int main(int argc, char* argv[])
 
 	archive.add_datasource(src_basic);
 
+	std::vector<std::pair<std::string, ProcessFn>> all_programs = 
+	{
+		{"shutdown", Programs::CmdShutdown},
+		{"boot", Programs::CmdBoot },
+		{"login", Programs::CmdLogin},
+		{"useradd", Programs::CmdUserAdd},
+		{"groupadd", Programs::CmdGroupAdd},
+		{"proc", Programs::CmdProc},
+		{"wait", Programs::CmdWait},
+		{"shell", Programs::CmdShell},
+		{"ls", Programs::CmdList},
+		{"mkdir", Programs::CmdMakeDir},
+		{"touch", Programs::CmdTouch},
+		{"open", Programs::CmdOpenFile},
+		{"echo", Programs::CmdEcho},
+		{"rm", Programs::CmdRemoveFile},
+		{"cat", Programs::CmdCat},
+		{"ping", Programs::CmdPing},
+		{"ifconfig", Programs::CmdIfConfig},
+		{"nmap", Programs::CmdNetMap},
+		{"ssh", Programs::CmdSshServer},
+		{"slogin", Programs::CmdSshClient},
+		{"kill", Programs::CmdKill},
+		{"crypto", Programs::CmdCrypto},
+		{"count", Programs::CmdCount},
+		{"snake", Programs::CmdSnake},
+		{"dogs", Programs::CmdDogs},
+		{"edit", Programs::CmdEdit},
+		{"radio", Programs::CmdRadio},
+		{"speak", Programs::CmdSpeak},
+		{"uwu", Programs::CmdUwu},
+		{"markdown", Programs::CmdMarkdown},
+		{"join", Programs::CmdDbcClient},
+		{"host", Programs::CmdDbcServer},
+		{"save", Programs::CmdSave},
+		{"load", Programs::CmdLoad},
+		{"gen", Programs::CmdGen},
+		{"arget", Programs::CmdArchive}
+	};
+
+	for (auto [tag, fn] : all_programs)
+	{
+		archive.add_program(std::move(fn), {tag});
+	}
+
 	our_world.init_world();
 
 	Host* client = HostUtils::create_host<BasicOS>(our_world, "Client");
@@ -121,6 +166,8 @@ int main(int argc, char* argv[])
 		.writer = std::move(local_writer),
 		.reader = std::move(local_reader),
 	});
+
+	client_os.run_process(Programs::CmdArchive, {"arget"});
 
 	while (client_os.process_is_running(shell_pid))
 	{

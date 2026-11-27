@@ -5,6 +5,7 @@
 #include <vector>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
 #include <functional>
 #include <variant>
@@ -22,6 +23,8 @@ public:
 
 	std::optional<T> get_by_tag(TagT tag) const override;
 	std::optional<T> get_by_tags(std::vector<TagT> tags, RequireTagMode mode = RequireTagMode::All) const override;
+
+	std::vector<TagT> get_tags_for(const T& val) const;
 
 protected:
 
@@ -126,6 +129,22 @@ inline std::optional<T> TagManager<T, TagT>::get_by_tags(std::vector<TagT> tags,
 	});
 
 	return get_by_index(best->first);
+}
+
+template<typename T, typename TagT>
+inline std::vector<TagT> TagManager<T, TagT>::get_tags_for(const T& val) const
+{
+	std::unordered_set<TagT> out;
+
+	for (auto&& [tag, idx] : lookup_)
+	{
+		if (get_by_index(idx) == val)
+		{
+			out.emplace(tag);
+		}
+	}
+
+	return std::vector(out.begin(), out.end());
 }
 
 template<typename T, typename TagT>

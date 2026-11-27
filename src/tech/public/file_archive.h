@@ -15,7 +15,7 @@
 #include <string_view>
 
 
-class FileArchive : public IArchiveBase
+class FileArchive : public IArchiveBase, ITagProvider<ArHandle>
 {
 public:
 
@@ -26,12 +26,18 @@ public:
 	ArHandle add_file(std::string content, std::vector<std::string>&& tags);
 	ArHandle add_program(ProcessFn&& func, std::vector<std::string>&& tags);
 
+	std::optional<ArHandle> get_by_tag(std::string tag) const override;
+	std::optional<ArHandle> get_by_tags(std::vector<std::string> tags, RequireTagMode mode = RequireTagMode::All) const override;
+
 	std::optional<ArHandle> find_by_digest(std::string_view data) const;
 	
 	std::optional<std::string_view> try_get_bytes(ArHandle h) const;
 
 	std::optional<ProcessFn> try_get_exec(std::string_view data) const;
 	std::optional<ProcessFn> try_get_exec(ArHandle handle) const;
+
+	std::vector<std::string> get_all_program_tags() const;
+	std::vector<ArHandle> get_all_programs() const;
 
 protected:
 
